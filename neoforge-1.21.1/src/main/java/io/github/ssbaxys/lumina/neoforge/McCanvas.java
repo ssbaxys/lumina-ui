@@ -12,6 +12,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.render.AbstractCanvas;
 import io.github.ssbaxys.lumina.render.BlendMode;
+import io.github.ssbaxys.lumina.render.EntityOptions;
 import io.github.ssbaxys.lumina.render.ShapePaint;
 import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.render.TextureRef;
@@ -23,6 +24,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
+import org.lwjgl.opengl.GL11;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,9 +42,12 @@ final class McCanvas extends AbstractCanvas {
     private final Matrix4f gradColorsB = new Matrix4f();
     private final Map<String, ResourceLocation> locations = new HashMap<>();
     private final Map<String, ItemStack> items = new HashMap<>();
+    /** После 3D-предмета или сущности в буфере глубины остались их пиксели (см. {@link #clearDepth()}). */
+    private boolean depthDirty;
 
     void begin(GuiGraphics graphics, int width, int height) {
         this.graphics = graphics;
+        this.depthDirty = false;
         beginFrame(width, height);
     }
 
@@ -197,6 +202,7 @@ final class McCanvas extends AbstractCanvas {
     @Override
     protected void drawTextImpl(String text, float x, float y, float scale, int argb, boolean shadow) {
         flushQuads();
+        clearDepth();
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate(x, y, 0f);
@@ -243,10 +249,24 @@ final class McCanvas extends AbstractCanvas {
             ResourceLocation rl = ResourceLocation.tryParse(id);
             return rl == null ? ItemStack.EMPTY : new ItemStack(BuiltInRegistries.ITEM.get(rl));
         });
+        renderStack(stack, x, y, size);
+    }
+
+    @Override
+    protected void drawItemImpl(String itemId, float x, float y, float size, boolean glint) {
+        if (!glint) {
+            drawItemImpl(itemId, x, y, size);
+            return;
+        }
+        renderStack(McModels.stack(itemId, true), x, y, size);
+    }
+
+    private void renderStack(ItemStack stack, float x, float y, float size) {
         if (stack.isEmpty()) {
             return;
         }
         flushQuads();
+        clearDepth();
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate(x, y, 0f);
@@ -254,6 +274,41 @@ final class McCanvas extends AbstractCanvas {
         graphics.renderItem(stack, 0, 0);
         pose.popPose();
         graphics.flush();
+        depthDirty = true;
+    }
+
+    @Override
+    protected void drawItem3dImpl(String itemId, float x, float y, float size, float yaw, float pitch, boolean glint) {
+        flushQuads();
+        // Крупная модель уходит по глубине и за z=0: чужая глубина под ней (фон экрана) её бы обрезала.
+        depthDirty = true;
+        clearDepth();
+        McModels.drawItem3d(graphics, itemId, glint, x, y, size, yaw, pitch);
+        depthDirty = true;
+    }
+
+    @Override
+    protected void drawEntityImpl(String entityTypeId, float x, float y, float size, float yaw, float pitch,
+                                  EntityOptions options) {
+        flushQuads();
+        // Крупная модель уходит по глубине и за z=0: чужая глубина под ней (фон экрана) её бы обрезала.
+        depthDirty = true;
+        clearDepth();
+        McModels.drawEntity(graphics, entityTypeId, x, y, size, yaw, pitch, options);
+        depthDirty = true;
+    }
+
+    /**
+     * Предметы рисуются на z=150, сущности около z=50, а текст — на z=0 с проверкой глубины, поэтому без
+     * очистки число поверх предмета (количество в слоте) пропало бы. Глубина нужна только внутри одной модели,
+     * так что перед следующим текстом или моделью буфер глубины очищается (в пределах текущего клипа).
+     */
+    private void clearDepth() {
+        if (depthDirty) {
+            depthDirty = false;
+            graphics.flush();
+            RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+        }
     }
 
     // ---------------------------------------------------------------- клип

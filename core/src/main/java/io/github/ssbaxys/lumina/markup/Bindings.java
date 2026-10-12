@@ -63,6 +63,20 @@ public final class Bindings {
         return this;
     }
 
+    /**
+     * Новые привязки с живыми данными игры: {@code {{health}}}, {@code {{food}}}, {@code {{pos}}},
+     * {@code {{time}}}, {@code {{biome}}}, {@code {{fps}}}... (все имена — {@code GameData.named()}).
+     */
+    public static Bindings gameData() {
+        return new Bindings().withGameData();
+    }
+
+    /** Добавить сигналы {@code GameData} под их короткими именами (свои сигналы с теми же именами заменяются). */
+    public Bindings withGameData() {
+        signals.putAll(io.github.ssbaxys.lumina.game.GameData.named());
+        return this;
+    }
+
     public Bindings handler(String name, Handler handler) {
         handlers.put(name, handler);
         return this;

@@ -16,6 +16,7 @@ final class LuminaForgeClient {
     static void init(IEventBus modBus) {
         Lumina.init(new McPlatform());
         modBus.addListener(LuminaShaders::register);
+        HudRenderer.init(modBus);
         MinecraftForge.EVENT_BUS.addListener(LuminaForgeClient::registerCommands);
     }
 

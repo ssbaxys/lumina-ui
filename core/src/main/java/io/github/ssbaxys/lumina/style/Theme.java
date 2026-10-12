@@ -179,7 +179,8 @@ public final class Theme {
     /** Стили виджетов, целиком построенные на токенах: тема = набор значений токенов. */
     private static Theme base() {
         Transition smooth = new Transition(0.16f, Easing.OUT_CUBIC);
-        return new Theme()
+        // Классы HUD (тосты, полосы, лента) — в отдельном классе, чтобы не раздувать этот список.
+        return io.github.ssbaxys.lumina.hud.HudStyles.install(new Theme())
                 .put("panel", Style.builder()
                         .fromTheme(Styles.BACKGROUND, t -> Brush.vertical(t.get(Tokens.SURFACE), t.get(Tokens.SURFACE_ALT)))
                         .bind(Styles.RADIUS, Tokens.CORNER, Radii::all)

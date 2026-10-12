@@ -656,5 +656,94 @@ new Panel("grid", new GridLayout(3, 8, 6));                   // просто р
 | `biomeId()` | `null` | id биома под игроком |
 | `narrate(text)` | ничего | озвучка для экранного диктора |
 | `playSound(id, volume, pitch)` | ничего | звуки интерфейса (уже был) |
+| `pollGameData(GameState out)` | `false` (нет мира) | снимок игрока для `GameData`, на каждом тике клиента |
+| `hudState()` | `0` | флаги F1 / F3 / чат / экран для правил видимости HUD, каждый кадр |
 
 Пример всего вместе — страница `ThemesPage` в тестовом моде.
+
+## HUD поверх игры и живые данные (`hud`, `game`)
+
+### HUD (`hud.Hud`)
+
+`Hud.get()` — общий HUD, который загрузчик рисует каждый кадр поверх интерфейса игры (Forge 1.20.1 —
+оверлей `luminaui:hud` над всеми ванильными, NeoForge 1.21.1 — слой `luminaui:hud`) и тикает на каждом
+тике клиента. Мышь и клавиатура в HUD не попадают. Пустой HUD ничего не стоит: кадр даже не начинается.
+
+```java
+Hud hud = Hud.get();
+hud.add(new SegmentedBar().bind(GameData.health()).bindMax(GameData.maxHealth()), HudAnchor.BOTTOM_CENTER)
+        .offset(0, 52)                       // внутрь экрана от привязанного края
+        .layer(10)                           // больший слой — поверх
+        .visibility(HudVisibility.GAMEPLAY); // прятать по F1, F3, в чате и под экранами
+hud.toast("Готово", "Мир сохранён");
+hud.feed().post("minecraft:diamond", "+1 алмаз", Toast.SUCCESS);
+hud.remove(element);
+```
+
+Привязки `HudAnchor`: `TOP_LEFT`, `TOP_CENTER`, `TOP_RIGHT`, `CENTER_LEFT`, `CENTER`, `CENTER_RIGHT`,
+`BOTTOM_LEFT`, `BOTTOM_CENTER`, `BOTTOM_RIGHT`. Смещение считается **внутрь экрана**, как `right: 4px`
+в CSS: у правых привязок положительный `dx` сдвигает влево, у нижних положительный `dy` — вверх.
+Элемент, поменявший размер, остаётся прижатым к своему краю.
+
+Правила видимости `HudVisibility` проверяются каждый кадр по маске `Platform.hudState()`:
+
+| Правило | Прячется |
+|---|---|
+| `ALWAYS` | никогда |
+| `DEFAULT` (общее правило HUD) | по F1 и на экране отладки F3 |
+| `GAMEPLAY` | по F1, F3, в чате и под любым открытым экраном |
+| `.hideWithGui/hideInDebug/hideInChat/hideInScreens(bool)` | своя комбинация |
+| `.when(() -> условие)` | дополнительное условие показа (дешёвое: читается каждый кадр) |
+
+Своё общее правило — `hud.setDefaultVisibility(...)`; своя видимость элемента (`setVisible`) не трогается —
+правило применяется к обёртке. `hud.setTheme(theme)`, `hud.setScale(1.25f)`, `hud.onClientTick(runnable)`.
+Свой экземпляр `new Hud()` можно рисовать самому: `hud.render(canvas, w, h, partialTick)`.
+
+### Виджеты HUD
+
+| Виджет | Что это |
+|---|---|
+| `Toast` | уведомление: иконка-предмет, заголовок, текст до 3 строк, полоса прогресса, время жизни (полоска внизу). `Toast.info/success/warning/error(...)`, `.icon(id)`, `.timeout(сек)` (0 — до `dismiss()`), `.progress(0..1)` / `.bindProgress(signal)`, `.onClose(...)`. Въезжает с ближнего края, уходит и схлопывается; под мышью время не идёт |
+| `ToastStack` | стопка тостов: `maxVisible(n)` (лишние — в очереди), `newestOnTop`, `slideFrom(±1)`, `dismissAll()`. Общая — `hud.toasts()` (справа сверху) |
+| `NotificationFeed` | компактная лента строк с цветной меткой и иконкой, тают через `lifetime` секунд, не больше `capacity`. Общая — `hud.feed()` (слева посередине) |
+| `Countdown` + `TimerDisplay` | обратный отсчёт / секундомер по реальным часам (`start/pause/toggle/reset/restart/add`, `onFinish`); виджет показывает «М:СС», с `tenthsBelow(5)` — десятые, последние `warnBelow` секунд краснеет и пульсирует |
+| `SegmentedBar` | полоса из делений как сердца: `segments`, `segmentSize`, `color`, `lowBelow` (мигает), след урона |
+| `BossBar` | широкая полоса с заголовком, градиентом `colors(from, to)` и делениями `notches(6/10/12/20)` |
+| `RadialGauge` | круговая шкала на 270° (`sweep`) с числом или процентом (`percent(true)`) и подписью |
+
+Все полосы принимают любой числовой сигнал (`bind(ReadableSignal<? extends Number>)`), отписываются,
+уходя из дерева, и рисуются без выделения памяти в кадре (строки — только при смене значения).
+
+Классы темы (во всех встроенных темах; для своей с нуля — `HudStyles.install(theme)`): `toast`, `hud-bar`,
+`hud-feed`, `hud-timer`, `hud-panel` (полупрозрачная подложка для группы). Свои свойства:
+`HudStyles.TRACK_COLOR` (пустая часть полос), `LOW_COLOR` (мало / время на исходе), `ROW_COLOR` (строки ленты).
+
+### Данные игры (`game.GameData`)
+
+Сигналы, которые загрузчик обновляет на каждом тике клиента через `Platform.pollGameData` (уведомляют только
+при реальном изменении): `inWorld`, `health`, `maxHealth`, `healthFraction`, `absorption`, `food`,
+`foodFraction`, `saturation`, `armor`, `air`, `maxAir`, `airFraction`, `xpLevel`, `xpProgress`, `x/y/z`
+(точные), `blockX/Y/Z`, `position` (`"12 64 -30"`), `yaw`, `pitch`, `facing`, `biome`, `dimension`,
+`dayTime` (0–23999), `clock` (`"06:00"`), `fps`, `selectedSlot`, `selectedItem`, `selectedCount`,
+`inventory` (снимок `Inventory`: `itemId(i)`, `count(i)`, `total(id)`, `contains(id)`; новый объект только
+при изменении). Без мира — значения как у нового игрока.
+
+```java
+Label.bound(GameData.position());
+GameData.inventory().subscribe(inv -> diamonds.set(inv.total("minecraft:diamond")));
+GameData.setSource(out -> { out.health = 7; return true; });   // свой источник (тесты, повтор)
+```
+
+Подписки на статические сигналы `GameData` живут, пока их не закрыть: в виджетах подписывайтесь в
+`onAttach` и закрывайте в `onDetach` (так делают все виджеты библиотеки), а не через `map(...)` при каждом
+создании страницы.
+
+В разметке — `Bindings.gameData()` (или `bindings.withGameData()`): короткие имена из `GameData.named()`.
+
+```html
+<label>❤ {{health}} / {{maxHealth}} · еда {{food}} · {{pos}} · {{time}} · {{biome}}</label>
+<progress value="{{healthFraction}}"/>
+```
+
+Пример всего вместе — страница `HudPage` и демо-HUD `HudDemo` в тестовом моде.
+

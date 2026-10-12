@@ -16,6 +16,7 @@ final class LuminaNeoForgeClient {
     static void init(IEventBus modBus) {
         Lumina.init(new McPlatform());
         modBus.addListener(LuminaShaders::register);
+        HudRenderer.init(modBus);
         NeoForge.EVENT_BUS.addListener(LuminaNeoForgeClient::registerCommands);
     }
 

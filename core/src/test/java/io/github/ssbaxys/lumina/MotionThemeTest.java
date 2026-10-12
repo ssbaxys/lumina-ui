@@ -7,7 +7,10 @@ import io.github.ssbaxys.lumina.anim.Keyframes;
 import io.github.ssbaxys.lumina.anim.Motion;
 import io.github.ssbaxys.lumina.anim.Playback;
 import io.github.ssbaxys.lumina.anim.Tween;
+import io.github.ssbaxys.lumina.fx.Effect;
 import io.github.ssbaxys.lumina.fx.FxLayer;
+import io.github.ssbaxys.lumina.fx.FxRegistry;
+import io.github.ssbaxys.lumina.fx.Particles;
 import io.github.ssbaxys.lumina.fx.VanillaFx;
 import io.github.ssbaxys.lumina.layout.FlexLayout;
 import io.github.ssbaxys.lumina.node.UiRoot;
@@ -172,6 +175,51 @@ class MotionThemeTest {
         }
         assertEquals(List.of("boom"), events);
         assertEquals(0, fx.effectCount(), "everything burns out");
-        assertEquals(Color.WHITE, Color.WHITE);
+    }
+
+    @Test
+    void everyRegisteredEffectRunsAndStops() {
+        FxLayer fx = new FxLayer();
+        UiRoot root = new UiRoot(Panel.box(FlexLayout.column()).fill().add(fx), Theme.dark());
+        root.resize(300, 200);
+        root.tick(0f);
+        assertTrue(FxRegistry.ids().contains("minecraft:snow"));
+        assertTrue(FxRegistry.ids().size() >= 20);
+        List<Effect> spawned = new ArrayList<>();
+        for (String id : FxRegistry.ids()) {
+            spawned.add(fx.spawn(id, 20, 20, 200, 150));
+        }
+        TestSupport.RecordingCanvas canvas = new TestSupport.RecordingCanvas();
+        for (int i = 0; i < 120; i++) {
+            root.tick(1f / 60f);
+            if (i % 20 == 0) {
+                canvas.begin(300, 200);
+                root.render(canvas, 0f);
+                canvas.end();
+            }
+        }
+        assertTrue(canvas.ops.stream().anyMatch(o -> o.contains("environment/snow")), "weather draws vanilla texture");
+        spawned.forEach(Effect::stop);
+        for (int i = 0; i < 60 * 12; i++) {
+            root.tick(1f / 60f);
+        }
+        assertEquals(0, fx.effectCount(), "stopped weather and emitters fade out");
+    }
+
+    @Test
+    void particlesLandOnFloorAndAttract() {
+        List<Float> landed = new ArrayList<>();
+        Particles p = new Particles(null).gravity(100f).floor(50f, (x, y, c) -> landed.add(y));
+        p.emit(0, 0, 0, 0, 10f, 1f);
+        Particles q = new Particles(null).attract(100f, 0f, 400f);
+        q.emit(0, 0, 0, 0, 10f, 1f);
+        FxLayer layer = new FxLayer();
+        for (int i = 0; i < 120; i++) {
+            p.tick(1f / 60f, layer);
+            q.tick(1f / 60f, layer);
+        }
+        assertEquals(List.of(50f), landed);
+        assertEquals(0, p.count());
+        assertEquals(0, q.count(), "attracted particle reaches the target and disappears");
     }
 }

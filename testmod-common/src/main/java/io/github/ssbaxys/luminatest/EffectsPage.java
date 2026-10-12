@@ -2,6 +2,8 @@ package io.github.ssbaxys.luminatest;
 
 import io.github.ssbaxys.lumina.fx.Effect;
 import io.github.ssbaxys.lumina.fx.FxLayer;
+import io.github.ssbaxys.lumina.fx.FxRegistry;
+import io.github.ssbaxys.lumina.fx.Particles;
 import io.github.ssbaxys.lumina.fx.SpriteSheet;
 import io.github.ssbaxys.lumina.fx.VanillaFx;
 import io.github.ssbaxys.lumina.layout.Align;
@@ -79,6 +81,52 @@ final class EffectsPage {
                         .clickSound(false),
                 new Button("Погасить", fx::clear).styleClass("button ghost").clickSound(false));
 
+        Effect[] weather = {null, null, null, null};
+        Panel weatherRow = Ui.grid(3, 6,
+                small("Снег", () -> weather[0] = toggle(fx, weather[0], () -> VanillaFx.snow(0, 0, stage.width(), FLOOR))),
+                small("Дождь", () -> weather[1] = toggle(fx, weather[1], () -> VanillaFx.rain(0, 0, stage.width(), FLOOR))),
+                small("Лепестки вишни", () -> weather[2] = toggle(fx, weather[2],
+                        () -> VanillaFx.cherryLeaves(0, 0, stage.width(), FLOOR))),
+                small("Капли", () -> weather[3] = toggle(fx, weather[3],
+                        () -> VanillaFx.drips(stage.width() / 2f, 0, stage.width() * 0.8f, FLOOR, random.nextBoolean()))),
+                small("Пузыри", () -> burst(fx, fx.spawn(VanillaFx.bubbles(stage.width() * 0.3f, FLOOR, 40f, 20f)), 3f)));
+        int[] notePitch = {0};
+        // Зачарование: руны стягиваются к столу зачарования.
+        Effect[] enchant = {null};
+        Panel mobRow = Ui.grid(4, 6,
+                small("Сердечки", () -> fx.spawn(VanillaFx.hearts(randX(stage, random), FLOOR - 40f, 7))),
+                small("Злой житель", () -> fx.spawn(VanillaFx.angry(randX(stage, random), FLOOR - 40f, 5))),
+                small("Довольный", () -> fx.spawn(VanillaFx.happy(randX(stage, random), FLOOR - 30f, 20f, 14))),
+                small("Нота", () -> {
+                    notePitch[0] = (notePitch[0] + 2) % 25;
+                    fx.spawn(VanillaFx.note(stage.width() * (0.1f + 0.8f * notePitch[0] / 24f), FLOOR - 20f, notePitch[0]));
+                }),
+                small("Крит", () -> fx.spawn(VanillaFx.crit(randX(stage, random), FLOOR - 50f, random.nextBoolean()))),
+                small("Тотем", () -> fx.spawn(VanillaFx.totem(stage.width() / 2f, FLOOR - 40f))),
+                small("Зачарование", () -> enchant[0] = toggle(fx, enchant[0],
+                        () -> Effect.group(VanillaFx.enchant(stage.width() / 2f, FLOOR - 30f, 70f),
+                                Effect.of((dt, t, l) -> true, (c, t) -> c.drawItem("minecraft:enchanting_table",
+                                        stage.width() / 2f - 12f, FLOOR - 24f, 24f))))));
+
+        // Свой эффект: регистрируется один раз по имени и создаётся как встроенные.
+        FxRegistry.register("luminatest:confetti", (x, y, w, h) -> {
+            Particles p = new Particles(null).gravity(140f).drag(0.4f).wobble(30f, 1.2f).fadeOut(false);
+            Random r = p.random();
+            for (int i = 0; i < 80; i++) {
+                p.emit(x + w / 2f, y + h / 2f, (r.nextFloat() - 0.5f) * 260f, -120f - r.nextFloat() * 140f,
+                        1.5f + r.nextFloat(), 2f + r.nextInt(2), Color.hsv(r.nextFloat() * 360f, 0.7f, 1f));
+            }
+            return p;
+        });
+        Panel custom = Ui.row(6,
+                small("luminatest:confetti", () -> fx.spawn("luminatest:confetti", 0, 0, stage.width(), FLOOR)),
+                small("Случайный из реестра", () -> {
+                    String[] ids = FxRegistry.ids().toArray(new String[0]);
+                    String id = ids[random.nextInt(ids.length)];
+                    burst(fx, fx.spawn(id, stage.width() * 0.25f, 20f, stage.width() * 0.5f, FLOOR - 20f), 4f);
+                }),
+                Ui.muted(FxRegistry.ids().size() + " эффектов в реестре"));
+
         Panel sprites = Ui.row(16,
                 Ui.labeled(spriteLoop(VanillaFx.FIRE_0, 32), "fire_0"),
                 Ui.labeled(spriteLoop(VanillaFx.SOUL_FIRE_0, 32), "soul_fire_0"),
@@ -103,9 +151,34 @@ final class EffectsPage {
         return Ui.page(
                 Ui.section("Сцена", "Кликните по сцене — будет взрыв. TNT падает, отскакивает, мигает и взрывается, "
                         + "окно трясётся", stage, controls, controls2),
+                Ui.section("Погода", "Ванильные текстуры дождя и снега двумя слоями, брызги, хлопья, лепестки, капли",
+                        weatherRow),
+                Ui.section("Частицы мобов и предметов", "Сердечки, жители, ноты (цвет по высоте), криты, тотем, "
+                        + "руны зачарования", mobRow),
+                Ui.section("Свои эффекты", "FxRegistry.register(\"мод:имя\", (x, y, w, h) -> эффект) — и "
+                        + "fx.spawn(\"мод:имя\", ...). Частицы собираются из готовых деталей", custom),
                 Ui.section("Анимированные спрайты", "SpriteSheet: полосы кадров как у ванильных текстур и "
                         + "наборы отдельных кадров частиц", sprites),
                 Ui.section("Предметы", "canvas.drawItem(\"minecraft:tnt\", x, y, size) — как в инвентаре", items));
+    }
+
+    private static Button small(String text, Runnable action) {
+        return new Button(text, action).clickSound(false).styleClass("button ghost");
+    }
+
+    private static float randX(Panel stage, Random random) {
+        return 30f + random.nextFloat() * (stage.width() - 60f);
+    }
+
+    /** Остановить бесконечный эффект через {@code seconds}: он плавно угаснет сам. */
+    private static void burst(FxLayer fx, Effect effect, float seconds) {
+        fx.spawn(Effect.of((dt, t, layer) -> {
+            if (t >= seconds) {
+                effect.stop();
+                return false;
+            }
+            return true;
+        }, (c, t) -> { }));
     }
 
     private static Effect toggle(FxLayer fx, Effect current, Supplier<Effect> create) {

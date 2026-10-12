@@ -121,9 +121,26 @@ fx.spawn(VanillaFx.primedTnt(x, -20, floorY, 22, 3f)    // падает, отс�
 fx.spawn(VanillaFx.flames(x, y, 24));  fx.spawn(VanillaFx.lavaPop(x, y, 14));  fx.spawn(VanillaFx.smokePuff(x, y, 20));
 ```
 
+Погода и частицы:
+- `snow` и `rain` используют ванильные текстуры осадков двумя слоями, плюс хлопья, капли и брызги; `cherryLeaves`, `drips` (вода или лава), `bubbles`.
+- Частицы: `hearts`, `angry`, `happy`, `note` (цвет зависит от высоты ноты), `crit` (обычный и магический), `totem`, `enchant` (руны стягиваются к точке).
+
 Эффекты используют ванильные текстуры и звуки по идентификаторам, поэтому подхватывают ресурспаки игрока.
-Для своих эффектов есть `Particles` (частицы в плоских массивах, гравитация, сопротивление, рост, тонировка,
-эмиттеры) и `SpriteSheet` (анимированные полосы кадров и наборы кадров).
+
+**Реестр по именам.** Все встроенные эффекты зарегистрированы как `minecraft:*`. Свои эффекты добавляются одной строкой:
+
+```java
+FxRegistry.register("mymod:confetti", (x, y, w, h) -> new Particles(null).gravity(140).wobble(30, 1.2f)
+        .emitter((p, r, dt) -> p.emit(x + r.nextFloat() * w, y, 0, 40, 2f, 2f, Color.hsv(r.nextFloat() * 360, 0.7f, 1)), 3f));
+fx.spawn("mymod:confetti");                 // на весь слой
+fx.spawn("minecraft:snow", x, y, w, h);     // встроенный по имени
+```
+
+Детали для своих частиц (`Particles`): `gravity`, `drag`, `growth`, `tint`, `blend`, `wobble` (покачивание),
+`attract` (притяжение к точке), `floor` и `ceiling` (с обработчиком приземления), `streak` (черточки по скорости),
+`frames(BY_LIFE | LOOP | RANDOM)`, `emitter`. Без спрайта (`new Particles(null)`) частицы рисуются пиксельными квадратиками.
+Готовые эффекты можно объединять: `Effect.group(a, b)`. Эффект без своего класса: `Effect.of(тик, отрисовка)`.
+Для анимированных текстур есть `SpriteSheet`.
 
 ## Markdown (`markdown.Markdown`)
 

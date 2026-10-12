@@ -11,6 +11,12 @@ import java.util.Random;
  * Система частиц со спрайтами. Данные лежат «структурой массивов» (x[], y[], vx[]…), поэтому тысячи
  * частиц не создают ни одного объекта за кадр. Частицы можно выпустить разово ({@link #emit}) или
  * испускать постоянно ({@link #emitter}).
+ *
+ * <p>Поведение собирается из готовых «деталей», поэтому новый эффект — это обычно несколько строк:
+ * гравитация, сопротивление, рост, покачивание ({@link #wobble}), притяжение к точке ({@link #attract}),
+ * «пол» с обработчиком приземления ({@link #floor}), растяжение по скорости ({@link #streak}),
+ * выбор кадра ({@link #frames}). Без спрайта ({@code new Particles(null)}) частицы рисуются квадратиками
+ * в пиксельном стиле — для снега, капель и искр.</p>
  */
 public final class Particles extends Effect {
     /** Постоянный источник частиц: вызывается каждый кадр. */
@@ -19,12 +25,39 @@ public final class Particles extends Effect {
         void emit(Particles particles, Random random, float dt);
     }
 
+    /** Частица долетела до пола ({@link #floor}): здесь можно выпустить брызги, сыграть звук. */
+    @FunctionalInterface
+    public interface Landing {
+        void land(float x, float y, int color);
+    }
+
+    /** Как выбирается кадр спрайта. */
+    public enum FrameMode {
+        /** От первого до последнего кадра за жизнь частицы (взрыв, дым). */
+        BY_LIFE,
+        /** Зацикленно с fps спрайта (огонь). */
+        LOOP,
+        /** Каждой частице — свой случайный кадр на всю жизнь (руны зачарования, лепестки). */
+        RANDOM
+    }
+
     private final SpriteSheet sprite;
     private float gravity;
     private float drag;
     private float growth = 1f;
     private boolean fadeOut = true;
-    private boolean animateByLife = true;
+    private FrameMode frameMode = FrameMode.BY_LIFE;
+    private float wobbleAmp;
+    private float wobbleFreq;
+    private boolean attracting;
+    private float attractX;
+    private float attractY;
+    private float attractStrength;
+    private float floorY = Float.NaN;
+    private Landing landing;
+    private float ceilingY = Float.NaN;
+    private Landing ceilingHit;
+    private float streak;
     private int tintStart = Color.WHITE;
     private int tintEnd = Color.WHITE;
     private BlendMode blend = BlendMode.NORMAL;
@@ -42,6 +75,7 @@ public final class Particles extends Effect {
     private float[] life = new float[32];
     private float[] size = new float[32];
     private int[] tint = new int[32];
+    private int[] seed = new int[32];
 
     public Particles(SpriteSheet sprite) {
         this(sprite, new Random());
@@ -77,7 +111,48 @@ public final class Particles extends Effect {
 
     /** {@code true}: кадры спрайта идут от рождения до смерти; {@code false}: крутятся с fps спрайта. */
     public Particles animateByLife(boolean byLife) {
-        this.animateByLife = byLife;
+        this.frameMode = byLife ? FrameMode.BY_LIFE : FrameMode.LOOP;
+        return this;
+    }
+
+    public Particles frames(FrameMode mode) {
+        this.frameMode = mode;
+        return this;
+    }
+
+    /** Покачивание из стороны в сторону: амплитуда скорости (px/с) и частота (Гц). Снег, листья, пузыри. */
+    public Particles wobble(float amplitude, float frequency) {
+        this.wobbleAmp = amplitude;
+        this.wobbleFreq = frequency;
+        return this;
+    }
+
+    /** Притяжение к точке с ускорением {@code strength} (px/с²): руны к столу зачарования, портал. */
+    public Particles attract(float x, float y, float strength) {
+        this.attracting = true;
+        this.attractX = x;
+        this.attractY = y;
+        this.attractStrength = strength;
+        return this;
+    }
+
+    /** Пол на высоте {@code y}: частица, долетевшая до него, исчезает и вызывает {@code onLand}. */
+    public Particles floor(float y, Landing onLand) {
+        this.floorY = y;
+        this.landing = onLand;
+        return this;
+    }
+
+    /** Потолок на высоте {@code y}: частица, поднявшаяся до него, исчезает (пузыри у поверхности воды). */
+    public Particles ceiling(float y, Landing onHit) {
+        this.ceilingY = y;
+        this.ceilingHit = onHit;
+        return this;
+    }
+
+    /** Рисовать вытянутой по скорости черточкой длиной {@code seconds} пути (дождь, быстрые искры). */
+    public Particles streak(float seconds) {
+        this.streak = seconds;
         return this;
     }
 
@@ -124,6 +199,7 @@ public final class Particles extends Effect {
             life = Arrays.copyOf(life, n);
             size = Arrays.copyOf(size, n);
             tint = Arrays.copyOf(tint, n);
+            seed = Arrays.copyOf(seed, n);
         }
         int i = count++;
         x[i] = px;
@@ -134,6 +210,7 @@ public final class Particles extends Effect {
         life[i] = Math.max(lifeSeconds, 1e-3f);
         size[i] = sizePx;
         tint[i] = color;
+        seed[i] = random.nextInt() & 0x7FFFFFFF;
         return this;
     }
 
@@ -152,10 +229,39 @@ public final class Particles extends Effect {
                 continue;
             }
             vy[i] += gravity * dt;
+            if (attracting) {
+                float dx = attractX - x[i];
+                float dy = attractY - y[i];
+                float d = (float) Math.sqrt(dx * dx + dy * dy);
+                if (d < 2f) {
+                    removeAt(i);
+                    i--;
+                    continue;
+                }
+                vx[i] += dx / d * attractStrength * dt;
+                vy[i] += dy / d * attractStrength * dt;
+            }
             vx[i] *= keep;
             vy[i] *= keep;
-            x[i] += vx[i] * dt;
+            float sway = 0f;
+            if (wobbleAmp != 0f) {
+                sway = (float) Math.sin(age[i] * wobbleFreq * 6.2831855f + (seed[i] & 1023) * 0.0061f) * wobbleAmp;
+            }
+            x[i] += (vx[i] + sway) * dt;
             y[i] += vy[i] * dt;
+            if (y[i] >= floorY) {
+                if (landing != null) {
+                    landing.land(x[i], floorY, tint[i]);
+                }
+                removeAt(i);
+                i--;
+            } else if (y[i] <= ceilingY) {
+                if (ceilingHit != null) {
+                    ceilingHit.land(x[i], ceilingY, tint[i]);
+                }
+                removeAt(i);
+                i--;
+            }
         }
         boolean emitting = emitter != null && !isStopped() && time <= emitFor;
         return count > 0 || emitting;
@@ -171,6 +277,7 @@ public final class Particles extends Effect {
         life[i] = life[last];
         size[i] = size[last];
         tint[i] = tint[last];
+        seed[i] = seed[last];
     }
 
     @Override
@@ -187,7 +294,19 @@ public final class Particles extends Effect {
             if (fadeOut) {
                 c = Color.mulAlpha(c, 1f - p * p);
             }
-            int frame = animateByLife ? sprite.frameOf(p) : sprite.frameAt(time + i * 0.37f);
+            if (streak > 0f) {
+                canvas.drawLine(x[i] - vx[i] * streak, y[i] - vy[i] * streak, x[i], y[i], s, c);
+                continue;
+            }
+            if (sprite == null) {
+                canvas.fillRect(x[i] - s / 2f, y[i] - s / 2f, s, s, c);
+                continue;
+            }
+            int frame = switch (frameMode) {
+                case BY_LIFE -> sprite.frameOf(p);
+                case LOOP -> sprite.frameAt(time + (seed[i] & 255) * 0.37f);
+                case RANDOM -> seed[i] % sprite.frameCount();
+            };
             sprite.draw(canvas, frame, x[i] - s / 2f, y[i] - s / 2f, s, s, c);
         }
         canvas.setBlendMode(prev);

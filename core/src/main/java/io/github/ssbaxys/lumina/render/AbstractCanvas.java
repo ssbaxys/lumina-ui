@@ -469,19 +469,56 @@ public abstract class AbstractCanvas implements Canvas {
     @Override
     public final void drawTexture(TextureRef texture, float x, float y, float w, float h,
                                   float u0, float v0, float u1, float v1, int tint) {
+        if (w <= 0f || h <= 0f) {
+            return;
+        }
+        drawTextureQuad(texture, x, y, x, y + h, x + w, y + h, x + w, y,
+                u0, v0, u0, v1, u1, v1, u1, v0, tint);
+    }
+
+    @Override
+    public final void drawTextureQuad(TextureRef texture,
+                                      float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                                      float u0, float v0, float u1, float v1, float u2, float v2, float u3, float v3,
+                                      int tint) {
         int c = Color.mulAlpha(tint, opacity);
-        if (texture == null || w <= 0f || h <= 0f || Color.alpha(c) == 0) {
+        if (texture == null || Color.alpha(c) == 0) {
+            return;
+        }
+        float ax = tx + x0 * sx;
+        float ay = ty + y0 * sy;
+        float bx = tx + x1 * sx;
+        float by = ty + y1 * sy;
+        float cx = tx + x2 * sx;
+        float cy = ty + y2 * sy;
+        float dx = tx + x3 * sx;
+        float dy = ty + y3 * sy;
+        if (culled(Math.min(Math.min(ax, bx), Math.min(cx, dx)), Math.min(Math.min(ay, by), Math.min(cy, dy)),
+                Math.max(Math.max(ax, bx), Math.max(cx, dx)), Math.max(Math.max(ay, by), Math.max(cy, dy)))) {
+            return;
+        }
+        syncClip();
+        float cross = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+        if (cross <= 0f) {
+            drawTextureQuadImpl(texture, ax, ay, bx, by, cx, cy, dx, dy, u0, v0, u1, v1, u2, v2, u3, v3, c);
+        } else {
+            drawTextureQuadImpl(texture, ax, ay, dx, dy, cx, cy, bx, by, u0, v0, u3, v3, u2, v2, u1, v1, c);
+        }
+    }
+
+    @Override
+    public final void drawItem(String itemId, float x, float y, float size) {
+        if (itemId == null || size <= 0f || opacity <= 0f) {
             return;
         }
         float x0 = tx + x * sx;
         float y0 = ty + y * sy;
-        float x1 = x0 + w * sx;
-        float y1 = y0 + h * sy;
-        if (culled(x0, y0, x1, y1)) {
+        float s = size * Math.min(sx, sy);
+        if (culled(x0, y0, x0 + s, y0 + s)) {
             return;
         }
         syncClip();
-        drawTextureImpl(texture, x0, y0, x1, y1, u0, v0, u1, v1, c);
+        drawItemImpl(itemId, x0, y0, s);
     }
 
     // ---------------------------------------------------------------- для бэкенда
@@ -519,8 +556,15 @@ public abstract class AbstractCanvas implements Canvas {
 
     protected abstract void drawTextImpl(String text, float x, float y, float scale, int argb, boolean shadow);
 
-    protected abstract void drawTextureImpl(TextureRef texture, float x0, float y0, float x1, float y1,
-                                            float u0, float v0, float u1, float v1, int tint);
+    /** Текстурированный четырёхугольник; вершины экранные, в порядке обхода как у {@link #drawQuad}. */
+    protected abstract void drawTextureQuadImpl(TextureRef texture,
+                                                float x0, float y0, float x1, float y1,
+                                                float x2, float y2, float x3, float y3,
+                                                float u0, float v0, float u1, float v1,
+                                                float u2, float v2, float u3, float v3, int tint);
+
+    /** Предмет размером {@code size} экранных пикселей с левым верхним углом в (x, y). */
+    protected abstract void drawItemImpl(String itemId, float x, float y, float size);
 
     /** Включить отсечение экранным прямоугольником (заменяет предыдущее). */
     protected abstract void applyClip(float x0, float y0, float x1, float y1);

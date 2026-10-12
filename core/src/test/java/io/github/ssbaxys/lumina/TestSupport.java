@@ -90,9 +90,16 @@ public final class TestSupport {
         }
 
         @Override
-        protected void drawTextureImpl(TextureRef texture, float x0, float y0, float x1, float y1,
-                                       float u0, float v0, float u1, float v1, int tint) {
+        protected void drawTextureQuadImpl(TextureRef texture, float x0, float y0, float x1, float y1,
+                                           float x2, float y2, float x3, float y3,
+                                           float u0, float v0, float u1, float v1,
+                                           float u2, float v2, float u3, float v3, int tint) {
             ops.add("tex " + texture.id());
+        }
+
+        @Override
+        protected void drawItemImpl(String itemId, float x, float y, float size) {
+            ops.add("item " + itemId);
         }
 
         @Override

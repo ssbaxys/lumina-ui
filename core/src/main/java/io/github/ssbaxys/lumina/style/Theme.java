@@ -4,6 +4,7 @@ import io.github.ssbaxys.lumina.anim.Easing;
 import io.github.ssbaxys.lumina.geom.Insets;
 import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Color;
+import io.github.ssbaxys.lumina.render.Outline;
 import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
 
@@ -211,6 +212,72 @@ public final class Theme {
                         .bind(Styles.RADIUS, Tokens.CORNER, c -> Radii.all(c * 0.5f))
                         .set(Styles.TRANSITION, smooth)
                         .disabled(d -> d.set(Styles.OPACITY, 0.45f))
+                        .build())
+                // Поля ввода: "field" — рамка, варианты добавляются вторым классом ("field filled").
+                .put("field", Style.builder()
+                        .bind(Styles.BACKGROUND, Tokens.WELL, Brush::solid)
+                        .bind(Styles.RADIUS, Tokens.CORNER, c -> Radii.all(c * 0.5f))
+                        .set(Styles.BORDER_WIDTH, 1f)
+                        .bind(Styles.BORDER_COLOR, Tokens.BORDER)
+                        .set(Styles.PADDING, Insets.of(5, 7))
+                        .bind(Styles.TEXT_COLOR, Tokens.TEXT)
+                        .bind(Styles.ACCENT_COLOR, Tokens.ACCENT)
+                        .set(Styles.TRANSITION, smooth)
+                        .hovered(h -> h.bind(Styles.BORDER_COLOR, Tokens.TEXT, t -> Color.withAlpha(t, 0x50)))
+                        .focused(f -> f
+                                .bind(Styles.BORDER_COLOR, Tokens.ACCENT)
+                                .bind(Styles.OUTLINE, Tokens.ACCENT, a -> Outline.of(2f, 0f, Color.withAlpha(a, 0x40))))
+                        .disabled(d -> d.set(Styles.OPACITY, 0.45f))
+                        .build())
+                .put("filled", Style.builder()
+                        .bind(Styles.BACKGROUND, Tokens.TEXT, t -> Brush.solid(Color.withAlpha(t, 0x14)))
+                        .set(Styles.BORDER_COLOR, Color.TRANSPARENT)
+                        .hovered(h -> h
+                                .bind(Styles.BACKGROUND, Tokens.TEXT, t -> Brush.solid(Color.withAlpha(t, 0x20)))
+                                .set(Styles.BORDER_COLOR, Color.TRANSPARENT))
+                        .focused(f -> f
+                                .bind(Styles.BACKGROUND, Tokens.TEXT, t -> Brush.solid(Color.withAlpha(t, 0x1A)))
+                                .bind(Styles.BORDER_COLOR, Tokens.ACCENT))
+                        .build())
+                .put("underline", Style.builder()
+                        .set(Styles.BACKGROUND, Brush.solid(Color.TRANSPARENT))
+                        .set(Styles.BORDER_WIDTH, 0f)
+                        .set(Styles.RADIUS, Radii.ZERO)
+                        .set(Styles.PADDING, Insets.of(5, 2))
+                        .set(Styles.UNDERLINE, true)
+                        .bind(Styles.BORDER_COLOR, Tokens.TEXT, t -> Color.withAlpha(t, 0x40))
+                        .hovered(h -> h.bind(Styles.BORDER_COLOR, Tokens.TEXT, t -> Color.withAlpha(t, 0x70)))
+                        .focused(f -> f
+                                .bind(Styles.BORDER_COLOR, Tokens.TEXT, t -> Color.withAlpha(t, 0x40))
+                                .set(Styles.OUTLINE, Outline.NONE))
+                        .build())
+                .put("pill", Style.builder()
+                        .set(Styles.RADIUS, Radii.all(100))
+                        .set(Styles.PADDING, Insets.of(5, 10))
+                        .build())
+                // Контекстное меню: тёмная карточка, подсвеченный пункт — состояние ContextMenu.ACTIVE.
+                .put("context-menu", Style.builder()
+                        .fromTheme(Styles.BACKGROUND, t -> Brush.vertical(
+                                Color.withAlpha(t.get(Tokens.SURFACE), 0xFA), Color.withAlpha(t.get(Tokens.SURFACE_ALT), 0xFA)))
+                        .set(Styles.RADIUS, Radii.all(6))
+                        .set(Styles.BORDER_WIDTH, 1f)
+                        .bind(Styles.BORDER_COLOR, Tokens.BORDER)
+                        .bind(Styles.SHADOW, Tokens.SHADOW, c -> new Shadow(0, 6, 18, 0, c))
+                        .set(Styles.PADDING, Insets.all(4))
+                        .bind(Styles.TEXT_COLOR, Tokens.TEXT)
+                        .bind(Styles.ACCENT_COLOR, Tokens.ACCENT)
+                        .build())
+                .put("menu-item", Style.builder()
+                        .set(Styles.RADIUS, Radii.all(4))
+                        .set(Styles.PADDING, Insets.of(4, 8))
+                        .set(Styles.TRANSITION, new Transition(0.08f, Easing.OUT_CUBIC))
+                        .when(State.FIRST_CUSTOM, a -> a
+                                .bind(Styles.BACKGROUND, Tokens.ACCENT, Brush::solid)
+                                .bind(Styles.TEXT_COLOR, Tokens.ACCENT, c -> Color.luminance(c) > 0.5f ? 0xFF1D2330 : Color.WHITE))
+                        .disabled(d -> d.set(Styles.OPACITY, 0.4f))
+                        .build())
+                .put("menu-separator", Style.builder()
+                        .bind(Styles.BACKGROUND, Tokens.BORDER, Brush::solid)
                         .build());
     }
 }

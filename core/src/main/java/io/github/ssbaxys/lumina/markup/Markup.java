@@ -25,14 +25,18 @@ import io.github.ssbaxys.lumina.style.Style;
 import io.github.ssbaxys.lumina.style.StyleKey;
 import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.widget.Button;
+import io.github.ssbaxys.lumina.widget.ColorField;
 import io.github.ssbaxys.lumina.widget.ColorPicker;
+import io.github.ssbaxys.lumina.widget.FieldBase;
 import io.github.ssbaxys.lumina.widget.Icon;
 import io.github.ssbaxys.lumina.widget.Label;
+import io.github.ssbaxys.lumina.widget.NumberField;
 import io.github.ssbaxys.lumina.widget.Panel;
 import io.github.ssbaxys.lumina.widget.ProgressBar;
 import io.github.ssbaxys.lumina.widget.RingProgress;
 import io.github.ssbaxys.lumina.widget.ScrollPanel;
 import io.github.ssbaxys.lumina.widget.Slider;
+import io.github.ssbaxys.lumina.widget.TextField;
 import io.github.ssbaxys.lumina.widget.Toggle;
 
 import java.util.ArrayList;
@@ -63,7 +67,8 @@ import java.util.regex.Pattern;
  * }</pre>
  *
  * Теги: {@code div column row stack scroll panel label span h1 h2 h3 p markdown button toggle slider
- * progress ring color-picker item img fx blocks spacer hr state style link}. Свои теги — {@link #tag}.
+ * progress ring color-picker input number color-field item img fx blocks spacer hr state style link}.
+ * Свои теги — {@link #tag}.
  * Атрибуты: {@code id class style width height grow gap align justify padding margin if enabled bind
  * on-click} и атрибуты конкретного тега. Логика — через {@link Bindings}.
  */
@@ -82,7 +87,7 @@ public final class Markup {
 
     private static final Map<String, TagFactory> TAGS = new HashMap<>();
     private static final Set<String> VOID = Set.of("img", "item", "br", "hr", "state", "link", "spacer", "toggle",
-            "slider", "progress", "ring", "color-picker", "fx", "input", "meta");
+            "slider", "progress", "ring", "color-picker", "fx", "input", "number", "color-field", "meta");
     private static final Set<String> RAW = Set.of("style", "markdown", "script", "blocks");
     private static final Pattern TEMPLATE = Pattern.compile("\\{\\{\\s*([\\w.-]+)\\s*(?:\\|\\s*(\\w+)\\s*)?}}");
 
@@ -186,6 +191,58 @@ public final class Markup {
             }
             return map.grid("true".equals(n.attr("grid")));
         });
+        tag("input", (n, c) -> {
+            TextField f = new TextField(c.stringSignal(n, "bind"))
+                    .placeholder(n.attr("placeholder"))
+                    .password("password".equals(n.attr("type")));
+            fieldAttrs(n, c, f);
+            if (n.attr("maxlength") != null) {
+                f.maxLength((int) n.floatAttr("maxlength", Integer.MAX_VALUE));
+            }
+            if (n.attr("default") != null) {
+                f.defaultValue(n.attr("default"));
+            }
+            return f;
+        });
+        tag("number", (n, c) -> {
+            float min = n.attr("min") != null ? n.floatAttr("min", 0f) : Float.NEGATIVE_INFINITY;
+            float max = n.attr("max") != null ? n.floatAttr("max", 0f) : Float.POSITIVE_INFINITY;
+            NumberField f = new NumberField(c.floatSignal(n, "bind", Math.max(min, Math.min(max, 0f))), min, max);
+            if (n.attr("step") != null) {
+                f.step(n.floatAttr("step", 1f));
+            }
+            if (n.attr("decimals") != null) {
+                f.decimals((int) n.floatAttr("decimals", 2f));
+            }
+            if (n.attr("default") != null) {
+                f.defaultValue(n.floatAttr("default", 0f));
+            }
+            return fieldAttrs(n, c, f);
+        });
+        tag("color-field", (n, c) -> {
+            Signal<Integer> v = c.signal(n, "bind", 0xFF5B8CFF);
+            if (n.attr("value") != null) {
+                v.set(CssValues.color(n.attr("value")));
+            }
+            return fieldAttrs(n, c, new ColorField(v).alpha(!"false".equals(n.attr("alpha"))));
+        });
+    }
+
+    /** Общие атрибуты полей ввода: {@code variant prefix suffix readonly on-submit}. */
+    private static <F extends FieldBase<F>> F fieldAttrs(Node n, Context c, F f) {
+        f.variant(n.attr("variant"));
+        if (n.attr("prefix") != null) {
+            f.prefix(n.attr("prefix"));
+        }
+        if (n.attr("suffix") != null) {
+            f.suffix(n.attr("suffix"));
+        }
+        f.readOnly(n.attr("readonly") != null);
+        String submit = n.attr("on-submit");
+        if (submit != null) {
+            f.onSubmit(text -> c.bindings.run(submit, f));
+        }
+        return f;
     }
 
     private Markup() {
@@ -695,6 +752,23 @@ public final class Markup {
             @SuppressWarnings("unchecked")
             Signal<Float> f = (Signal<Float>) (Signal<?>) s;
             return f;
+        }
+
+        /** Для полей ввода: сигнал со строкой (числа и прочее из {@code <state>} приводятся к тексту). */
+        Signal<String> stringSignal(Node n, String attr) {
+            String initial = n.attr("value") != null ? n.attr("value") : "";
+            String name = n.attr(attr);
+            if (name == null) {
+                return Signal.of(initial);
+            }
+            Signal<Object> s = bindings.writable(name);
+            Object v = s.peek();
+            if (!(v instanceof String)) {
+                s.set(v == null ? initial : String.valueOf(v));
+            }
+            @SuppressWarnings("unchecked")
+            Signal<String> str = (Signal<String>) (Signal<?>) s;
+            return str;
         }
 
         /** {@code value="0.4"}, {@code value="{{p}}"} или {@code bind="p"} (с {@code max} для нормировки). */

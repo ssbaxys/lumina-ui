@@ -83,7 +83,7 @@ class WindowChartTest {
         root.tick(0f);
         assertEquals(160, b.width(), 0.5f);
         assertEquals(100, b.height(), 0.5f);
-        assertEquals(100 - Window.HEADER, b.body().height(), 0.5f);
+        assertEquals(100 - Window.HEADER - b.padding().vertical(), b.body().height(), 0.5f);
     }
 
     @Test

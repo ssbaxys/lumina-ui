@@ -95,6 +95,75 @@ public interface Canvas {
     }
 
     /**
+     * Часть текстуры (u0..u1, v0..v1) в прямоугольнике со скруглёнными углами. По умолчанию фигура
+     * режется на горизонтальные полосы-трапеции, поэтому работает на любом бэкенде без трафарета.
+     */
+    default void drawTextureRounded(TextureRef texture, float x, float y, float w, float h,
+                                    float u0, float v0, float u1, float v1, Radii radii, int tint) {
+        if (w <= 0f || h <= 0f) {
+            return;
+        }
+        float max = Math.min(w, h) / 2f;
+        float tl = radii == null ? 0f : Math.min(radii.topLeft(), max);
+        float tr = radii == null ? 0f : Math.min(radii.topRight(), max);
+        float br = radii == null ? 0f : Math.min(radii.bottomRight(), max);
+        float bl = radii == null ? 0f : Math.min(radii.bottomLeft(), max);
+        if (tl <= 0f && tr <= 0f && br <= 0f && bl <= 0f) {
+            drawTexture(texture, x, y, w, h, u0, v0, u1, v1, tint);
+            return;
+        }
+        float top = Math.max(tl, tr);
+        float bottom = Math.max(bl, br);
+        int topSteps = Math.max(2, Math.min(10, (int) Math.ceil(top / 1.5f)));
+        int bottomSteps = Math.max(2, Math.min(10, (int) Math.ceil(bottom / 1.5f)));
+        float prev = 0f;
+        for (int i = 1; i <= topSteps; i++) {
+            float yy = top * i / topSteps;
+            roundedStrip(texture, x, y, w, h, u0, v0, u1, v1, tl, tr, br, bl, prev, yy, tint);
+            prev = yy;
+        }
+        if (h - bottom > prev) {
+            roundedStrip(texture, x, y, w, h, u0, v0, u1, v1, tl, tr, br, bl, prev, h - bottom, tint);
+            prev = h - bottom;
+        }
+        for (int i = 1; i <= bottomSteps; i++) {
+            float yy = h - bottom + bottom * i / bottomSteps;
+            if (yy > prev) {
+                roundedStrip(texture, x, y, w, h, u0, v0, u1, v1, tl, tr, br, bl, prev, yy, tint);
+                prev = yy;
+            }
+        }
+    }
+
+    private void roundedStrip(TextureRef texture, float x, float y, float w, float h,
+                              float u0, float v0, float u1, float v1,
+                              float tl, float tr, float br, float bl, float ya, float yb, int tint) {
+        float la = roundedInset(ya, h, tl, bl);
+        float lb = roundedInset(yb, h, tl, bl);
+        float ra = w - roundedInset(ya, h, tr, br);
+        float rb = w - roundedInset(yb, h, tr, br);
+        float du = (u1 - u0) / w;
+        float dv = (v1 - v0) / h;
+        drawTextureQuad(texture,
+                x + la, y + ya, x + lb, y + yb, x + rb, y + yb, x + ra, y + ya,
+                u0 + la * du, v0 + ya * dv, u0 + lb * du, v0 + yb * dv,
+                u0 + rb * du, v0 + yb * dv, u0 + ra * du, v0 + ya * dv, tint);
+    }
+
+    /** Отступ края скруглённого прямоугольника от его стороны на высоте {@code yy}. */
+    private static float roundedInset(float yy, float h, float rTop, float rBottom) {
+        if (rTop > 0f && yy < rTop) {
+            float d = rTop - yy;
+            return rTop - (float) Math.sqrt(Math.max(0f, rTop * rTop - d * d));
+        }
+        if (rBottom > 0f && yy > h - rBottom) {
+            float d = yy - (h - rBottom);
+            return rBottom - (float) Math.sqrt(Math.max(0f, rBottom * rBottom - d * d));
+        }
+        return 0f;
+    }
+
+    /**
      * Текстура на произвольном выпуклом четырёхугольнике (вершины по порядку обхода, UV для каждой):
      * изометрические кубики, наклонённые и повёрнутые спрайты.
      */

@@ -1,6 +1,7 @@
 package io.github.ssbaxys.lumina.platform;
 
 import io.github.ssbaxys.lumina.render.TextMetrics;
+import io.github.ssbaxys.lumina.render.TextureRef;
 
 /** Всё, что ядру нужно от игры и загрузчика. Реализуется в каждом модуле загрузчика. */
 public interface Platform {
@@ -40,6 +41,15 @@ public interface Platform {
         } catch (java.io.IOException e) {
             return null;
         }
+    }
+
+    /**
+     * Загрузить картинку в видеопамять как текстуру игры: {@code argb} — пиксели построчно, слева направо,
+     * сверху вниз. Повторный вызов с тем же {@code key} заменяет текстуру. По умолчанию {@code null}:
+     * платформа не умеет, и ядро обходится без картинки ({@code Images} вернёт {@code null}).
+     */
+    default TextureRef createTexture(String key, int width, int height, int[] argb) {
+        return null;
     }
 
     default long nanoTime() {

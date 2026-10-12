@@ -636,7 +636,7 @@ public final class VanillaFx {
         p.floor(y + h, null);
         p.emitter((ps, r, dt) -> {
             if (r.nextFloat() < dt * w * 0.03f) {
-                ps.emit(x + r.nextFloat() * w, y - 4f, 6f + r.nextFloat() * 8f, 12f + r.nextFloat() * 10f, h / 12f + 2f, 5f);
+                ps.emit(x + r.nextFloat() * w, y - 4f, 6f + r.nextFloat() * 8f, 16f + r.nextFloat() * 10f, (h + 4f) / 16f + 1f, 5f);
             }
         }, Float.POSITIVE_INFINITY);
         return p;

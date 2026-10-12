@@ -7,28 +7,114 @@ import io.github.ssbaxys.lumina.render.Color;
 import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
- * Тема: стили по имени класса виджета ("button", "panel"...). Элемент берёт стиль из темы и
- * накладывает поверх свой inline-стиль. Смена темы на лету перестраивает стили всего дерева.
+ * Тема: стили по имени класса виджета ("button", "panel"...) и значения токенов ({@link ThemeVar}).
+ *
+ * <ul>
+ *   <li>Элемент берёт стиль своего класса и накладывает поверх inline-стиль. Классов может быть
+ *       несколько через пробел ({@code "button danger"}) — они накладываются по порядку.</li>
+ *   <li>Стили ссылаются на токены ({@link Style.Builder#bind}); {@link #set(ThemeVar, Object)} меняет
+ *       токен на лету, и все элементы плавно перетекают в новые значения.</li>
+ *   <li>Смена темы целиком — {@code UiRoot.setTheme}; {@link #copy()} даёт независимую копию для правок.</li>
+ * </ul>
  */
 public final class Theme {
     private static int globalRevision;
 
-    private final Map<String, Style> styles = new HashMap<>();
+    private final Map<String, Style> styles;
+    private Object[] vars;
+    private final Map<String, Style> resolved = new HashMap<>();
     private int revision = ++globalRevision;
 
+    public Theme() {
+        this(new HashMap<>(), new Object[0]);
+    }
+
+    private Theme(Map<String, Style> styles, Object[] vars) {
+        this.styles = styles;
+        this.vars = vars;
+    }
+
+    /** Готовый (с подставленными токенами) стиль для одного или нескольких классов через пробел. */
     public Style style(String styleClass) {
-        Style s = styleClass == null ? null : styles.get(styleClass);
-        return s == null ? Style.EMPTY : s;
+        if (styleClass == null || styleClass.isEmpty()) {
+            return Style.EMPTY;
+        }
+        Style cached = resolved.get(styleClass);
+        if (cached != null) {
+            return cached;
+        }
+        Style merged;
+        if (styleClass.indexOf(' ') < 0) {
+            merged = styles.getOrDefault(styleClass, Style.EMPTY);
+        } else {
+            merged = Style.EMPTY;
+            for (String cls : styleClass.trim().split("\\s+")) {
+                merged = merged.merge(styles.getOrDefault(cls, Style.EMPTY));
+            }
+        }
+        Style result = resolve(merged);
+        resolved.put(styleClass, result);
+        return result;
+    }
+
+    /** Стиль класса как он задан (со ссылками на токены), или {@code null}. */
+    public Style rawStyle(String styleClass) {
+        return styles.get(styleClass);
     }
 
     public Theme put(String styleClass, Style style) {
         styles.put(styleClass, style);
-        revision = ++globalRevision;
+        changed();
         return this;
+    }
+
+    /** Дополнить стиль класса: {@code theme.edit("button", b -> b.set(Styles.RADIUS, Radii.all(2)))}. */
+    public Theme edit(String styleClass, Consumer<Style.Builder> edit) {
+        Style.Builder b = styles.getOrDefault(styleClass, Style.EMPTY).toBuilder();
+        edit.accept(b);
+        return put(styleClass, b.build());
+    }
+
+    /** Изменить токен. Элементы подхватят новое значение в следующем кадре с переходом из их стиля. */
+    public <T> Theme set(ThemeVar<T> var, T value) {
+        int id = var.id();
+        if (id >= vars.length) {
+            vars = Arrays.copyOf(vars, Math.max(id + 1, ThemeVar.count()));
+        }
+        if (!java.util.Objects.equals(vars[id], value)) {
+            vars[id] = value;
+            changed();
+        }
+        return this;
+    }
+
+    public <T> T get(ThemeVar<T> var) {
+        int id = var.id();
+        Object v = id < vars.length ? vars[id] : null;
+        return v != null ? var.cast(v) : var.defaultValue();
+    }
+
+    /** Подставить токены в стиль и применить множитель длительности {@link Tokens#MOTION}. */
+    public Style resolve(Style style) {
+        float motion = get(Tokens.MOTION);
+        if (!style.isThemed() && motion == 1f) {
+            return style;
+        }
+        return style.mapValues(v -> {
+            Object out = v instanceof Style.ThemeRef ref ? ref.compute().apply(this) : v;
+            return motion != 1f && out instanceof Transition t ? t.scaled(motion) : out;
+        });
+    }
+
+    /** Независимая копия: стили и токены можно менять, не трогая оригинал. */
+    public Theme copy() {
+        return new Theme(new HashMap<>(styles), vars.clone());
     }
 
     /** Меняется при любом изменении темы; элементы по нему сбрасывают кэш стиля. */
@@ -36,60 +122,75 @@ public final class Theme {
         return revision;
     }
 
+    private void changed() {
+        resolved.clear();
+        revision = ++globalRevision;
+    }
+
+    // ================================================================ встроенные темы
+
     /** Тёмная «стеклянная» тема по умолчанию. */
     public static Theme dark() {
-        return build(new Palette(
-                0xF0202430, 0xF0151820, 0x24FFFFFF, 0x90000000, 0xFFE6E9F2,
-                0xFF5B8CFF, 0xFF3F6FE8, 0xFF7AA2FF, 0xFF2F57C0, 0x30000000));
+        return base()
+                .set(Tokens.ACCENT, 0xFF5B8CFF)
+                .set(Tokens.TEXT, 0xFFE6E9F2)
+                .set(Tokens.SURFACE, 0xF0202430)
+                .set(Tokens.SURFACE_ALT, 0xF0151820)
+                .set(Tokens.BORDER, 0x24FFFFFF)
+                .set(Tokens.SHADOW, 0x90000000)
+                .set(Tokens.WELL, 0x30000000);
     }
 
     /** Светлая тема. */
     public static Theme light() {
-        return build(new Palette(
-                0xF8FFFFFF, 0xF8EEF1F7, 0x22000000, 0x40000000, 0xFF1D2330,
-                0xFF3D6DF2, 0xFF2F5BDA, 0xFF5C86F7, 0xFF2448B0, 0x14000000));
+        return base()
+                .set(Tokens.ACCENT, 0xFF3D6DF2)
+                .set(Tokens.TEXT, 0xFF1D2330)
+                .set(Tokens.SURFACE, 0xF8FFFFFF)
+                .set(Tokens.SURFACE_ALT, 0xF8EEF1F7)
+                .set(Tokens.BORDER, 0x22000000)
+                .set(Tokens.SHADOW, 0x40000000)
+                .set(Tokens.WELL, 0x14000000);
     }
 
-    private record Palette(int panelTop, int panelBottom, int panelBorder, int panelShadow, int text,
-                           int accent, int accentDark, int accentLight, int accentPressed, int well) {
-    }
-
-    private static Theme build(Palette p) {
+    /** Стили виджетов, целиком построенные на токенах: тема = набор значений токенов. */
+    private static Theme base() {
         Transition smooth = new Transition(0.16f, Easing.OUT_CUBIC);
         return new Theme()
                 .put("panel", Style.builder()
-                        .set(Styles.BACKGROUND, Brush.vertical(p.panelTop, p.panelBottom))
-                        .set(Styles.RADIUS, Radii.all(10))
+                        .fromTheme(Styles.BACKGROUND, t -> Brush.vertical(t.get(Tokens.SURFACE), t.get(Tokens.SURFACE_ALT)))
+                        .bind(Styles.RADIUS, Tokens.CORNER, Radii::all)
                         .set(Styles.BORDER_WIDTH, 1f)
-                        .set(Styles.BORDER_COLOR, p.panelBorder)
-                        .set(Styles.SHADOW, new Shadow(0, 8, 24, 0, p.panelShadow))
+                        .bind(Styles.BORDER_COLOR, Tokens.BORDER)
+                        .bind(Styles.SHADOW, Tokens.SHADOW, c -> new Shadow(0, 8, 24, 0, c))
                         .set(Styles.PADDING, Insets.all(12))
-                        .set(Styles.TEXT_COLOR, p.text)
-                        .set(Styles.ACCENT_COLOR, p.accent)
+                        .bind(Styles.TEXT_COLOR, Tokens.TEXT)
+                        .bind(Styles.ACCENT_COLOR, Tokens.ACCENT)
                         .set(Styles.TRANSITION, new Transition(0.3f, Easing.OUT_CUBIC))
                         .build())
                 .put("label", Style.builder().build())
                 .put("button", Style.builder()
-                        .set(Styles.BACKGROUND, Brush.vertical(p.accent, p.accentDark))
-                        .set(Styles.RADIUS, Radii.all(6))
+                        .bind(Styles.BACKGROUND, Tokens.ACCENT, a -> Brush.vertical(a, Color.darken(a, 0.07f)))
+                        .bind(Styles.RADIUS, Tokens.CORNER, c -> Radii.all(c * 0.6f))
                         .set(Styles.PADDING, Insets.of(6, 14))
-                        .set(Styles.TEXT_COLOR, Color.WHITE)
+                        .bind(Styles.TEXT_COLOR, Tokens.ACCENT, a -> Color.luminance(a) > 0.5f ? 0xFF1D2330 : Color.WHITE)
                         .set(Styles.SHADOW, new Shadow(0, 2, 6, 0, 0x60000000))
                         .set(Styles.TRANSITION, smooth)
                         .hovered(h -> h
-                                .set(Styles.BACKGROUND, Brush.vertical(p.accentLight, p.accent))
-                                .set(Styles.SHADOW, new Shadow(0, 4, 14, 0, Color.withAlpha(p.accent, 0x80))))
+                                .bind(Styles.BACKGROUND, Tokens.ACCENT, a -> Brush.vertical(Color.lighten(a, 0.06f), a))
+                                .bind(Styles.SHADOW, Tokens.ACCENT, a -> new Shadow(0, 4, 14, 0, Color.withAlpha(a, 0x80))))
                         .pressed(pr -> pr
                                 .set(Styles.SCALE, 0.96f)
-                                .set(Styles.BACKGROUND, Brush.vertical(p.accentDark, p.accentPressed)))
+                                .bind(Styles.BACKGROUND, Tokens.ACCENT,
+                                        a -> Brush.vertical(Color.darken(a, 0.07f), Color.darken(a, 0.15f))))
                         .focused(f -> f
                                 .set(Styles.BORDER_WIDTH, 1.5f)
                                 .set(Styles.BORDER_COLOR, 0xCCFFFFFF))
                         .disabled(d -> d.set(Styles.OPACITY, 0.45f))
                         .build())
                 .put("scroll", Style.builder()
-                        .set(Styles.RADIUS, Radii.all(6))
-                        .set(Styles.BACKGROUND, Brush.solid(p.well))
+                        .bind(Styles.RADIUS, Tokens.CORNER, c -> Radii.all(c * 0.6f))
+                        .bind(Styles.BACKGROUND, Tokens.WELL, Brush::solid)
                         .set(Styles.TRANSITION, smooth)
                         .build())
                 .put("toggle", Style.builder()
@@ -104,7 +205,11 @@ public final class Theme {
                         .build())
                 .put("progress", Style.builder()
                         .set(Styles.RADIUS, Radii.all(3))
-                        .set(Styles.BACKGROUND, Brush.solid(p.well))
+                        .bind(Styles.BACKGROUND, Tokens.WELL, Brush::solid)
+                        .build())
+                .put("color-picker", Style.builder()
+                        .set(Styles.TRANSITION, smooth)
+                        .disabled(d -> d.set(Styles.OPACITY, 0.45f))
                         .build());
     }
 }

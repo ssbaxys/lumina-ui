@@ -208,6 +208,7 @@ public final class Theme {
                         .bind(Styles.BACKGROUND, Tokens.WELL, Brush::solid)
                         .build())
                 .put("color-picker", Style.builder()
+                        .bind(Styles.RADIUS, Tokens.CORNER, c -> Radii.all(c * 0.5f))
                         .set(Styles.TRANSITION, smooth)
                         .disabled(d -> d.set(Styles.OPACITY, 0.45f))
                         .build());

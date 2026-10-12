@@ -526,3 +526,135 @@ SyntaxHighlighter.highlight("java", code);             // куски строк 
 ```
 
 Пример всего раздела — страница витрины `DataToolsPage`.
+
+## Темы в файлах, автосмена, доступность, звуки и адаптивность
+
+### Тема в CSS (`markup.ThemeCss`)
+
+`ThemeCss.export(theme, "dark")` пишет тему как CSS относительно базовой темы: в `:root` — все токены
+(`--accent`, `--surface`, `--motion`...) и `--lumina-base: dark`, дальше — правила классов. У классов, которые есть
+в базе, пишутся только значения, заданные числами и отличающиеся от базы; привязки к токенам (`bind`) остаются
+в базе и после загрузки снова следуют за токенами. Классы, которых в базе нет, сохраняются целиком
+(привязки — уже вычисленными значениями). Состояния — `:hover`, `:active`, `:focus`, `:disabled`, `:checked`,
+модификаторы — `button.primary`. Чего CSS выразить не может (свои биты состояний, нестандартные значения),
+попадает в файл комментарием.
+
+```java
+String css = ThemeCss.export(theme, "dark");
+Theme back = ThemeCss.load(css);          // база по --lumina-base, затем правила
+ThemeCss.save("my-theme", theme, "dark"); // <dataDirectory>/themes/my-theme.css
+Theme mine = ThemeCss.loadFile("my-theme");
+List<String> all = ThemeCss.savedThemes();
+```
+
+Базы: `dark`, `light`, `modern-dark`, `modern-light`, `high-contrast-dark`, `high-contrast-light`; свои —
+`ThemeCss.registerBase(name, factory)`. `export(theme)` без имени базы сравнивает с тёмной темой и базу не пишет.
+Ограничение: порядок вариантов внутри одного класса при загрузке берётся из CSS, поэтому редкие сочетания
+состояний (hover+focus у вариантов, перекрывающих друг друга) могут разрешиться не так, как в исходной теме.
+Файлы читаются и пишутся через `Platform.readFile/writeFile` внутри `Platform.dataDirectory()`
+(по умолчанию `config/luminaui`); абсолютные пути и `..` отклоняются. Имена файлов лучше давать латиницей.
+
+### Редактор темы (`widget.ThemeEditor`)
+
+Цвета акцента, текста и поверхности, скругление и скорость анимаций; меняет тему своего корня сразу.
+Кнопки «Экспорт» (файл `fileName(...)` + буфер обмена), «Импорт», «Из буфера», «Сброс».
+
+```java
+new ThemeEditor().fileName("my-theme.css").baseName("dark").onLoad(t -> ...);
+```
+
+### Плавная смена темы и автосмена (`theme.ThemeTransition`, `theme.ThemeSchedule`)
+
+`ThemeTransition.to(root, target, 0.8f)` ставит корню рабочую копию и плавно переводит токены к целевой теме
+(цвета смешиваются в OKLAB). При «меньше движения» смена мгновенная.
+
+`ThemeSchedule` выбирает тему по времени суток (тики 0–24000) или по биому и переключает её плавно:
+
+```java
+ThemeSchedule.byWorldTime()
+        .at(0f, Theme.light())
+        .at(12500f, Theme.dark())
+        .blend(1000f)              // смешивание перед каждой сменой
+        .build()
+        .transition(1.2f)
+        .attach(root);             // Subscription; close() останавливает
+
+ThemeSchedule.byWorldBiome()
+        .when("minecraft:desert", desertTheme)
+        .when(ThemeSchedule.contains("snow"), snowTheme)
+        .otherwise(Theme.dark())
+        .build()
+        .decorate(t -> SoundTheme.SOFT.applyTo(t))  // поверх каждой выбранной темы
+        .attach(root);
+```
+
+Время и биом даёт `platform.WorldInfo`: `timeOfDay()` берёт `Platform.dayTime()` (в игре — время мира),
+а без мира — системные часы; `biome()` — `Platform.biomeId()`. Для тестов и примеров можно передать свои
+источники: `ThemeSchedule.byTime(() -> slider.value().peek())`.
+
+### Доступность (`a11y`)
+
+Настройки у каждого корня: `root.accessibility()`.
+
+```java
+root.accessibility()
+        .colorVision(ColorVision.DEUTERANOPIA)                          // коррекция (daltonize)
+        .colorVision(ColorVision.PROTANOPIA, Accessibility.ColorMode.SIMULATE) // как видит человек
+        .textScale(1.25f)          // все размеры шрифта × 1.25 (0.5–3)
+        .reducedMotion(true)       // переходы стилей и тем — мгновенно
+        .focusAlwaysVisible(true)  // заметная рамка фокуса поверх всего
+        .narration(true);          // фокус озвучивается через Platform.narrate
+```
+
+Фильтр цвета накладывается на весь кадр на уровне `Canvas` (`setColorFilter`): заливки, градиенты, рамки,
+тени и текст; текстуры и предметы не фильтруются. Свой фильтр — `extraFilter(ColorFilter)`,
+например `ColorFilter.grayscale()`. Текст для озвучки — `UiElement.accessibleLabel()`; у кнопок, флажков
+и надписей он берётся из текста, задать свой — `setAccessibleLabel(...)`.
+
+Темы высокого контраста: `AccessibleThemes.highContrastDark()`, `highContrastLight()` или
+`AccessibleThemes.highContrast(theme)` — чёрный/белый фон, текст не ниже 7:1, акцент не ниже 4.5:1,
+рамки толщиной 2 и видимый контур фокуса. Ещё есть `filterColors(theme, filter)` и `reducedMotion(theme)`.
+
+### Звуки интерфейса (`sound`)
+
+Ключи стиля `HOVER_SOUND` и `CLICK_SOUND` (в CSS `hover-sound`, `click-sound`) со значением `UiSound`:
+
+```css
+.button { hover-sound: minecraft:block.note_block.hat 0.12 1.6; click-sound: minecraft:ui.button.click 0.25 1; }
+.toggle { click-sound: none; }
+```
+
+Звук наведения играет только при входе указателя на включённый элемент и не чаще раза в 70 мс
+(`root.setHoverSoundInterval(секунды)`). Без `click-sound` кнопки щёлкают как в игре.
+Готовые наборы: `SoundTheme.VANILLA`, `SOFT`, `RETRO`, `NONE`; `SoundTheme.custom(name, hover, click)`,
+`scaled(громкость)`. `SoundTheme.RETRO.applyTo(theme, "nav")` назначает звуки кнопкам, переключателям,
+флажкам, пунктам меню и перечисленным классам.
+
+### Адаптивность и масштаб (`layout`)
+
+`UiRoot` сообщает класс ширины: `root.breakpoint()` (сигнал), `root.currentBreakpoint()` —
+`COMPACT` (< 400), `MEDIUM` (< 640), `WIDE`; границы — `root.setBreakpoints(new Breakpoints(400, 640))`.
+
+```java
+ResponsivePanel.rowFrom(Breakpoint.MEDIUM, 8).add(a, b, c);   // столбец на узких, строка с MEDIUM
+ResponsivePanel.columns(1, 2, 3, 8).add(cards);               // сетка 1/2/3 колонки
+ResponsivePanel.columns(1, 2, 2, 6).byContainerWidth(true);   // по своей ширине, а не по ширине корня
+new Panel("grid", new GridLayout(3, 8, 6));                   // просто равные колонки
+```
+
+`root.setScale(1.5f)` увеличивает весь интерфейс (0.25–4): раскладка считается в логических пикселях
+(`root.width()` = физическая ширина / масштаб), координаты мыши делятся на масштаб, класс ширины тоже
+пересчитывается.
+
+### Хуки платформы
+
+| Метод `Platform` | По умолчанию | Назначение |
+|---|---|---|
+| `dataDirectory()` | `config/luminaui` | папка для файлов тем |
+| `readFile/writeFile/listFiles` | через `java.nio` | файлы внутри `dataDirectory()` |
+| `dayTime()` | `-1` (нет мира) | время мира в тиках 0–24000 |
+| `biomeId()` | `null` | id биома под игроком |
+| `narrate(text)` | ничего | озвучка для экранного диктора |
+| `playSound(id, volume, pitch)` | ничего | звуки интерфейса (уже был) |
+
+Пример всего вместе — страница `ThemesPage` в тестовом моде.

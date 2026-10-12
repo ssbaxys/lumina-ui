@@ -112,6 +112,11 @@ public final class CssProperties {
         return TOKENS.get(cssVar);
     }
 
+    /** Переменные CSS, связанные с токенами темы: имя → токен (копия, в порядке имён). */
+    static synchronized Map<String, ThemeVar<?>> tokens() {
+        return new java.util.TreeMap<>(TOKENS);
+    }
+
     static boolean isKnown(String name) {
         return HANDLERS.containsKey(name) || StyleKey.byName(name) != null;
     }
@@ -153,6 +158,8 @@ public final class CssProperties {
             value = CssValues.blend(v);
         } else if (t == Transition.class) {
             value = transition(v);
+        } else if (t == io.github.ssbaxys.lumina.sound.UiSound.class) {
+            value = io.github.ssbaxys.lumina.sound.UiSound.parse(v);
         } else {
             return;
         }

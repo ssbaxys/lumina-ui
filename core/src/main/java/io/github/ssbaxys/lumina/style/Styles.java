@@ -9,6 +9,7 @@ import io.github.ssbaxys.lumina.render.NineSlice;
 import io.github.ssbaxys.lumina.render.Outline;
 import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
+import io.github.ssbaxys.lumina.sound.UiSound;
 
 /**
  * Встроенные свойства стиля. Все визуальные свойства анимируются переходами ({@link Transition})
@@ -73,6 +74,13 @@ public final class Styles {
     /** Поле ввода с линией снизу вместо рамки; при фокусе акцентная линия растёт от центра. */
     public static final StyleKey<Boolean> UNDERLINE = StyleKey.builder("field-underline", Boolean.class)
             .defaultValue(Boolean.FALSE).register();
+    /**
+     * Звук при наведении мыши: играет, когда мышь входит в элемент (не повторяется при движении внутри),
+     * не чаще раза в {@code UiRoot.hoverSoundInterval}. Не наследуется; {@link UiSound#NONE} — тишина.
+     */
+    public static final StyleKey<UiSound> HOVER_SOUND = StyleKey.builder("hover-sound", UiSound.class).register();
+    /** Звук нажатия (кнопки, переключатели, пункты меню); не задан — стандартный щелчок игры у кнопок. */
+    public static final StyleKey<UiSound> CLICK_SOUND = StyleKey.builder("click-sound", UiSound.class).register();
 
     private Styles() {
     }

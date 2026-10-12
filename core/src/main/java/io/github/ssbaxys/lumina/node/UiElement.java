@@ -82,6 +82,7 @@ public abstract class UiElement {
     private EventListener<?>[][] captureListeners;
 
     private String id;
+    private String accessibleLabel;
 
     protected UiElement(String styleClass) {
         this.styleClass = styleClass;
@@ -199,6 +200,23 @@ public abstract class UiElement {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    /**
+     * Подпись для диктора и вспомогательных технологий: заданная {@link #setAccessibleLabel}, иначе
+     * подпись по умолчанию у виджета (текст кнопки, флажка, метки) или {@code null}.
+     */
+    public String accessibleLabel() {
+        return accessibleLabel != null ? accessibleLabel : defaultAccessibleLabel();
+    }
+
+    public void setAccessibleLabel(String label) {
+        this.accessibleLabel = label;
+    }
+
+    /** Подпись, если её не задали явно. Виджеты с текстом возвращают свой текст. */
+    protected String defaultAccessibleLabel() {
+        return null;
     }
 
     /** Поиск потомка по id (обход в глубину). */
@@ -343,11 +361,21 @@ public abstract class UiElement {
         }
         Theme theme = r.theme();
         if (effectiveStyle == null || effectiveTheme != theme || effectiveRevision != theme.revision()) {
-            effectiveStyle = theme.style(styleClass).merge(theme.resolve(inlineStyle));
+            Style s = theme.style(styleClass).merge(theme.resolve(inlineStyle));
+            float textScale = r.accessibility().textScale();
+            if (textScale != 1f) {
+                // Крупный текст: все явные размеры шрифта × множитель, а корню — сам множитель (его наследуют все).
+                s = s.mapKey(Styles.FONT_SCALE, v -> v * textScale);
+                if (parent == null) {
+                    s = Style.builder().set(Styles.FONT_SCALE, textScale).build().merge(s);
+                }
+            }
+            effectiveStyle = s;
             effectiveTheme = theme;
             effectiveRevision = theme.revision();
         }
-        style.update(effectiveStyle, state, animate ? r.animator() : null);
+        boolean transitions = animate && !r.accessibility().reducedMotion();
+        style.update(effectiveStyle, state, transitions ? r.animator() : null);
     }
 
     final void refreshStyleTree(boolean animate) {
@@ -454,6 +482,14 @@ public abstract class UiElement {
     public void invalidateLayout() {
         for (UiElement e = this; e != null; e = e.parent) {
             e.flags |= F_NEEDS_MEASURE | F_NEEDS_ARRANGE;
+        }
+    }
+
+    /** Сбросить кэш раскладки всего поддерева: после смены наследуемых свойств (размер шрифта) у корня. */
+    final void invalidateLayoutTree() {
+        flags |= F_NEEDS_MEASURE | F_NEEDS_ARRANGE;
+        for (int i = 0; i < children.size(); i++) {
+            children.get(i).invalidateLayoutTree();
         }
     }
 

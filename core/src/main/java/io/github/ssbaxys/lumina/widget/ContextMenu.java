@@ -18,6 +18,7 @@ import io.github.ssbaxys.lumina.render.Color;
 import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.style.State;
 import io.github.ssbaxys.lumina.style.Styles;
+import io.github.ssbaxys.lumina.sound.UiSounds;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -162,10 +163,14 @@ public class ContextMenu extends Widget<ContextMenu> {
         if (!item.isEnabled()) {
             return;
         }
-        close();
-        if (Lumina.isInitialized()) {
-            Lumina.platform().playClickSound();
+        UiElement source = this;
+        for (Row r : rows) {
+            if (r.item == item) {
+                source = r;
+            }
         }
+        close();
+        UiSounds.click(source, true);
         item.run();
     }
 

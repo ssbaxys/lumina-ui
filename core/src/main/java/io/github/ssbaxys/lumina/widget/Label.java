@@ -22,6 +22,11 @@ public class Label extends Widget<Label> {
         setHitTestable(false);
     }
 
+    @Override
+    protected String defaultAccessibleLabel() {
+        return text.isEmpty() ? null : text;
+    }
+
     public static Label bound(ReadableSignal<String> signal) {
         return new Label(signal.get()).bind(signal);
     }

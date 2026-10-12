@@ -109,6 +109,11 @@ public final class Transition {
         return new Transition(duration * factor, easing, delay * factor, keys, d, dl, easings);
     }
 
+    /** Id ключей стиля, для которых заданы свои длительность, задержка и плавность. */
+    public int[] keyIds() {
+        return keys.clone();
+    }
+
     public float durationOf(int keyId) {
         int i = indexOf(keyId);
         return i < 0 ? duration : durations[i];

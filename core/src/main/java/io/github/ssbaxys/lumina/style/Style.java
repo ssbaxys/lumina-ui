@@ -81,6 +81,110 @@ public final class Style {
         return new Builder();
     }
 
+    /** Обход значений, заданных как есть (без ссылок на тему). */
+    @FunctionalInterface
+    public interface LiteralVisitor {
+        /**
+         * @param stateMask 0 — базовые значения, иначе маска варианта ({@link State})
+         */
+        void visit(int stateMask, StyleKey<?> key, Object value);
+    }
+
+    /**
+     * Пройти по всем значениям, заданным как есть: сначала базовые, затем варианты в порядке объявления.
+     * Значения, вычисляемые из темы ({@link Builder#bind}), пропускаются — так тему можно сохранить
+     * в файл: токены пишутся отдельно, а привязки остаются в базовой теме.
+     */
+    public void forEachLiteral(LiteralVisitor visitor) {
+        visitLiterals(0, values, visitor);
+        for (int i = 0; i < variantMasks.length; i++) {
+            visitLiterals(variantMasks[i], variantValues[i], visitor);
+        }
+    }
+
+    private static void visitLiterals(int mask, Object[] a, LiteralVisitor visitor) {
+        for (int i = 0; i < a.length; i++) {
+            if (a[i] != null && !(a[i] instanceof ThemeRef)) {
+                visitor.visit(mask, StyleKey.byId(i), a[i]);
+            }
+        }
+    }
+
+    /** Обход всех значений: заданных как есть и вычисленных из темы. */
+    @FunctionalInterface
+    public interface ValueVisitor {
+        /**
+         * @param fromTheme значение вычислено из темы ({@link Builder#bind}), а не задано числом
+         */
+        void visit(int stateMask, StyleKey<?> key, Object value, boolean fromTheme);
+    }
+
+    /**
+     * Пройти по всем значениям (база, затем варианты); ссылки на тему вычисляются по {@code theme}
+     * (без множителя {@link Tokens#MOTION}).
+     */
+    public void forEachValue(Theme theme, ValueVisitor visitor) {
+        visitValues(0, values, theme, visitor);
+        for (int i = 0; i < variantMasks.length; i++) {
+            visitValues(variantMasks[i], variantValues[i], theme, visitor);
+        }
+    }
+
+    private static void visitValues(int mask, Object[] a, Theme theme, ValueVisitor visitor) {
+        for (int i = 0; i < a.length; i++) {
+            Object v = a[i];
+            if (v instanceof ThemeRef ref) {
+                Object computed = ref.compute().apply(theme);
+                if (computed != null) {
+                    visitor.visit(mask, StyleKey.byId(i), computed, true);
+                }
+            } else if (v != null) {
+                visitor.visit(mask, StyleKey.byId(i), v, false);
+            }
+        }
+    }
+
+    /** Задано ли у стиля значение ключа (в базе или в каком-нибудь варианте). */
+    public boolean defines(StyleKey<?> key) {
+        int id = key.id();
+        if (id < values.length && values[id] != null) {
+            return true;
+        }
+        for (Object[] v : variantValues) {
+            if (id < v.length && v[id] != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Копия, где значения одного ключа (в базе и во всех вариантах) пропущены через {@code f}.
+     * Ссылки на тему не трогаются — сначала стиль нужно разрешить ({@link Theme#resolve}).
+     * Без этого ключа возвращает сам стиль.
+     */
+    public <T> Style mapKey(StyleKey<T> key, UnaryOperator<T> f) {
+        if (!defines(key)) {
+            return this;
+        }
+        int id = key.id();
+        Object[] v = mapOne(values, id, key, f);
+        Object[][] vv = new Object[variantValues.length][];
+        for (int i = 0; i < vv.length; i++) {
+            vv[i] = mapOne(variantValues[i], id, key, f);
+        }
+        return new Style(v, variantMasks, vv);
+    }
+
+    private static <T> Object[] mapOne(Object[] a, int id, StyleKey<T> key, UnaryOperator<T> f) {
+        if (id >= a.length || a[id] == null || a[id] instanceof ThemeRef) {
+            return a;
+        }
+        Object[] out = a.clone();
+        out[id] = f.apply(key.cast(a[id]));
+        return out;
+    }
+
     public <T> T get(StyleKey<T> key) {
         int id = key.id();
         return id < values.length ? key.cast(values[id]) : null;

@@ -73,6 +73,19 @@ public final class Theme {
         return result;
     }
 
+    /** Имена всех классов с заданным стилем (в том числе модификаторы вида "button.danger"). */
+    public java.util.Set<String> styleClasses() {
+        return java.util.Collections.unmodifiableSet(styles.keySet());
+    }
+
+    /**
+     * Те же ли стили классов, что у {@code other} (например, у копии, где поменяли только токены).
+     * Так расписание тем понимает, можно ли перетечь в новую тему одними токенами.
+     */
+    public boolean hasSameStyles(Theme other) {
+        return other != null && (other.styles == styles || other.styles.equals(styles));
+    }
+
     /** Стиль класса как он задан (со ссылками на токены), или {@code null}. */
     public Style rawStyle(String styleClass) {
         return styles.get(styleClass);

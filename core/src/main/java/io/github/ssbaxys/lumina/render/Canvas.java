@@ -28,6 +28,18 @@ public interface Canvas {
 
     BlendMode blendMode();
 
+    /**
+     * Фильтр цвета для всего, что рисуется дальше ({@code null} — без фильтра): режимы для дальтоников и т. п.
+     * Не входит в {@link #save()}/{@link #restore()} — его ставит и снимает корень интерфейса на кадр.
+     * По умолчанию бэкенд фильтры не поддерживает и вызов ничего не делает.
+     */
+    default void setColorFilter(ColorFilter filter) {
+    }
+
+    default ColorFilter colorFilter() {
+        return null;
+    }
+
     /** Попадает ли прямоугольник в видимую область. Для отсечения невидимых поддеревьев. */
     boolean isVisible(float x, float y, float w, float h);
 

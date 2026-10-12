@@ -34,6 +34,11 @@ public final class ThemeVar<T> {
         }
     }
 
+    /** Все объявленные токены (встроенные и модов) в порядке регистрации. */
+    public static synchronized List<ThemeVar<?>> all() {
+        return List.copyOf(BY_ID);
+    }
+
     static synchronized int count() {
         return BY_ID.size();
     }

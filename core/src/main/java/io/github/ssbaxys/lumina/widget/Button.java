@@ -11,6 +11,7 @@ import io.github.ssbaxys.lumina.render.Canvas;
 import io.github.ssbaxys.lumina.render.Color;
 import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.render.TextureRef;
+import io.github.ssbaxys.lumina.sound.UiSounds;
 import io.github.ssbaxys.lumina.style.Styles;
 
 /**
@@ -71,9 +72,15 @@ public class Button extends Widget<Button> {
         return this;
     }
 
+    /** Звук нажатия: {@code Styles.CLICK_SOUND} из стиля, без него — стандартный щелчок; {@code false} — тишина. */
     public Button clickSound(boolean enabled) {
         this.clickSound = enabled;
         return this;
+    }
+
+    @Override
+    protected String defaultAccessibleLabel() {
+        return text.isEmpty() ? null : text;
     }
 
     // ---------------------------------------------------------------- иконка
@@ -191,8 +198,8 @@ public class Button extends Widget<Button> {
         if (!isEnabled() || loading) {
             return;
         }
-        if (clickSound && Lumina.isInitialized()) {
-            Lumina.platform().playClickSound();
+        if (clickSound) {
+            UiSounds.click(this, true);
         }
         if (onPress != null) {
             onPress.run();

@@ -1,6 +1,7 @@
 package io.github.ssbaxys.lumina.node;
 
 import io.github.ssbaxys.lumina.Lumina;
+import io.github.ssbaxys.lumina.a11y.Accessibility;
 import io.github.ssbaxys.lumina.anim.Animator;
 import io.github.ssbaxys.lumina.event.CharEvent;
 import io.github.ssbaxys.lumina.event.EventType;
@@ -10,9 +11,19 @@ import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.event.ScrollEvent;
 import io.github.ssbaxys.lumina.event.UiEvent;
 import io.github.ssbaxys.lumina.input.Keys;
+import io.github.ssbaxys.lumina.layout.Breakpoint;
+import io.github.ssbaxys.lumina.layout.Breakpoints;
+import io.github.ssbaxys.lumina.reactive.ReadableSignal;
+import io.github.ssbaxys.lumina.reactive.Signal;
 import io.github.ssbaxys.lumina.render.Canvas;
+import io.github.ssbaxys.lumina.render.Color;
+import io.github.ssbaxys.lumina.render.ColorFilter;
+import io.github.ssbaxys.lumina.render.Radii;
+import io.github.ssbaxys.lumina.sound.UiSound;
 import io.github.ssbaxys.lumina.style.State;
+import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.style.Theme;
+import io.github.ssbaxys.lumina.style.Tokens;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +35,10 @@ import java.util.List;
  *
  * <p>Поверх содержимого — слой всплывающих окон ({@link #showPopup}): контекстные меню, подсказки,
  * выпадающие списки. Они рисуются после содержимого и первыми получают мышь и клавиатуру.</p>
+ *
+ * <p>Корень также отвечает за то, что действует на весь интерфейс сразу: масштаб ({@link #setScale}),
+ * класс ширины для адаптивной раскладки ({@link #breakpoint()}), настройки доступности
+ * ({@link #accessibility()}) и звуки наведения ({@code Styles.HOVER_SOUND}).</p>
  */
 public final class UiRoot {
     /** Всплывающее окно: элемент, запрошенная точка и закрывается ли оно кликом мимо. */
@@ -38,7 +53,15 @@ public final class UiRoot {
 
     private float width;
     private float height;
+    private float physicalWidth;
+    private float physicalHeight;
+    private float scale = 1f;
+    private Breakpoints breakpoints = Breakpoints.DEFAULT;
+    private final Signal<Breakpoint> breakpoint = Signal.of(Breakpoints.DEFAULT.of(0f));
+    private final Accessibility accessibility = new Accessibility();
     private long lastFrameNanos = -1L;
+    private long hoverSoundInterval = 70_000_000L;
+    private long lastHoverSound = Long.MIN_VALUE;
 
     private float mouseX = -1f;
     private float mouseY = -1f;
@@ -55,6 +78,7 @@ public final class UiRoot {
         this.content = content;
         this.theme = theme;
         this.themeRevision = theme.revision();
+        accessibility.onChange(this::onAccessibilityChanged);
         content.attach(this);
     }
 
@@ -82,12 +106,76 @@ public final class UiRoot {
         }
     }
 
+    /** Ширина интерфейса в его единицах (размер экрана, делённый на {@link #scale()}). */
     public float width() {
         return width;
     }
 
     public float height() {
         return height;
+    }
+
+    // ================================================================ масштаб и адаптивность
+
+    public float scale() {
+        return scale;
+    }
+
+    /**
+     * Масштаб всего интерфейса (0.25–4): раскладка идёт в уменьшенных единицах ({@link #width()} = экран /
+     * масштаб), отрисовка увеличивается, координаты мыши пересчитываются обратно. Например, 0.75 вмещает больше
+     * на маленьком экране, 1.5 — крупнее для плохо видящих.
+     */
+    public void setScale(float scale) {
+        float s = Math.max(0.25f, Math.min(4f, scale));
+        if (s != this.scale) {
+            this.scale = s;
+            applySize();
+        }
+    }
+
+    /** Класс ширины интерфейса; меняется при изменении размера или масштаба. */
+    public ReadableSignal<Breakpoint> breakpoint() {
+        return breakpoint;
+    }
+
+    /** Текущий класс ширины (без подписки). */
+    public Breakpoint currentBreakpoint() {
+        return breakpoint.peek();
+    }
+
+    public Breakpoints breakpoints() {
+        return breakpoints;
+    }
+
+    public void setBreakpoints(Breakpoints breakpoints) {
+        this.breakpoints = breakpoints == null ? Breakpoints.DEFAULT : breakpoints;
+        breakpoint.set(this.breakpoints.of(width));
+    }
+
+    // ================================================================ доступность и звук
+
+    /** Настройки доступности этого корня: фильтр цвета, размер текста, без анимаций, рамка фокуса, диктор. */
+    public Accessibility accessibility() {
+        return accessibility;
+    }
+
+    private void onAccessibilityChanged() {
+        content.refreshStyleTree(false);
+        content.invalidateLayoutTree();
+        for (Popup p : popups) {
+            p.element.refreshStyleTree(false);
+            p.element.invalidateLayoutTree();
+        }
+    }
+
+    /** Минимальный промежуток между звуками наведения, в секундах (чтобы проведение мышью по списку не трещало). */
+    public void setHoverSoundInterval(float seconds) {
+        hoverSoundInterval = (long) (Math.max(0f, seconds) * 1_000_000_000L);
+    }
+
+    public float hoverSoundInterval() {
+        return hoverSoundInterval / 1_000_000_000f;
     }
 
     /** Положение мыши в координатах корня ({@code -1}, пока мышь не заходила). */
@@ -99,12 +187,22 @@ public final class UiRoot {
         return mouseY;
     }
 
+    /** Размер экрана (в GUI-координатах загрузчика); интерфейс получает его с учётом {@link #scale()}. */
     public void resize(float width, float height) {
-        if (width != this.width || height != this.height) {
-            this.width = width;
-            this.height = height;
+        physicalWidth = width;
+        physicalHeight = height;
+        applySize();
+    }
+
+    private void applySize() {
+        float w = physicalWidth / scale;
+        float h = physicalHeight / scale;
+        if (w != this.width || h != this.height) {
+            this.width = w;
+            this.height = h;
             content.invalidateLayout();
         }
+        breakpoint.set(breakpoints.of(w));
     }
 
     public void dispose() {
@@ -124,8 +222,55 @@ public final class UiRoot {
         float dt = lastFrameNanos < 0L ? 0f : Math.min((now - lastFrameNanos) / 1_000_000_000f, 0.1f);
         lastFrameNanos = now;
         tick(dt);
-        content.render(canvas, partialTick);
-        renderPopups(canvas, partialTick);
+        ColorFilter filter = accessibility.colorFilter();
+        ColorFilter previous = canvas.colorFilter();
+        if (filter != null) {
+            canvas.setColorFilter(filter);
+        }
+        try {
+            boolean scaled = scale != 1f;
+            if (scaled) {
+                canvas.save();
+                canvas.scale(scale, scale);
+            }
+            content.render(canvas, partialTick);
+            renderPopups(canvas, partialTick);
+            renderFocusRing(canvas);
+            if (scaled) {
+                canvas.restore();
+            }
+        } finally {
+            if (filter != null) {
+                canvas.setColorFilter(previous);
+            }
+        }
+    }
+
+    /** Рамка вокруг элемента в фокусе (при {@link Accessibility#focusAlwaysVisible()}): акцент с контрастной каймой. */
+    private void renderFocusRing(Canvas canvas) {
+        UiElement f = focused;
+        if (!accessibility.focusAlwaysVisible() || f == null || f.root() != this || !shownChain(f)) {
+            return;
+        }
+        int accent = Color.withAlpha(theme.get(Tokens.ACCENT), 255);
+        int halo = Color.readableOn(accent);
+        Radii radii = f.computedStyle().get(Styles.RADIUS);
+        float x = f.screenX();
+        float y = f.screenY();
+        float w = f.width();
+        float h = f.height();
+        float d = 3f;
+        canvas.strokeRoundRect(x - d - 1f, y - d - 1f, w + 2f * (d + 1f), h + 2f * (d + 1f), radii.expand(d + 1f), 4f, halo);
+        canvas.strokeRoundRect(x - d, y - d, w + 2f * d, h + 2f * d, radii.expand(d), 2f, accent);
+    }
+
+    private static boolean shownChain(UiElement e) {
+        for (UiElement p = e; p != null; p = p.parent()) {
+            if (!p.isVisible()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Нарисовать только слой всплывающих окон (если содержимое рисуется отдельно). */
@@ -312,6 +457,8 @@ public final class UiRoot {
     // ================================================================ мышь
 
     public boolean pointerMove(float x, float y) {
+        x /= scale;
+        y /= scale;
         mouseX = x;
         mouseY = y;
         updateHover();
@@ -326,6 +473,8 @@ public final class UiRoot {
     }
 
     public boolean pointerDown(float x, float y, int button) {
+        x /= scale;
+        y /= scale;
         mouseX = x;
         mouseY = y;
         layoutIfNeeded();
@@ -356,6 +505,8 @@ public final class UiRoot {
     }
 
     public boolean pointerUp(float x, float y, int button) {
+        x /= scale;
+        y /= scale;
         mouseX = x;
         mouseY = y;
         updateHover();
@@ -374,6 +525,8 @@ public final class UiRoot {
     }
 
     public boolean scroll(float x, float y, float deltaX, float deltaY) {
+        x /= scale;
+        y /= scale;
         mouseX = x;
         mouseY = y;
         updateHover();
@@ -401,6 +554,30 @@ public final class UiRoot {
             if (old == null || !e.isAncestorOrSelfOf(old)) {
                 e.setState(State.HOVERED, true);
                 dispatch(e, new PointerEvent(PointerEvent.ENTER, mouseX, mouseY, -1));
+            }
+        }
+        playHoverSound(hit, old);
+    }
+
+    /**
+     * Звук наведения: у ближайшего к цели элемента со своим {@code Styles.HOVER_SOUND}, только если мышь в него
+     * именно вошла (переход между его детьми звука не даёт) и прошло не меньше {@link #hoverSoundInterval()}.
+     */
+    private void playHoverSound(UiElement hit, UiElement old) {
+        for (UiElement e = hit; e != null; e = e.parent()) {
+            if (old != null && e.isAncestorOrSelfOf(old)) {
+                return;
+            }
+            UiSound sound = e.computedStyle().get(Styles.HOVER_SOUND);
+            if (sound != null) {
+                if (!sound.isNone() && e.isEnabled() && Lumina.isInitialized()) {
+                    long now = Lumina.platform().nanoTime();
+                    if (lastHoverSound == Long.MIN_VALUE || now - lastHoverSound >= hoverSoundInterval) {
+                        lastHoverSound = now;
+                        sound.play();
+                    }
+                }
+                return;
             }
         }
     }
@@ -462,6 +639,12 @@ public final class UiRoot {
         if (element != null) {
             element.setState(State.FOCUSED, true);
             dispatch(element, new FocusEvent(FocusEvent.GAINED));
+            if (accessibility.narration() && Lumina.isInitialized()) {
+                String label = element.accessibleLabel();
+                if (label != null && !label.isBlank()) {
+                    Lumina.platform().narrate(label);
+                }
+            }
         }
     }
 

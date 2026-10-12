@@ -24,10 +24,16 @@ import java.util.List;
  *
  * <p>Поверх содержимого — слой всплывающих окон ({@link #showPopup}): контекстные меню, подсказки,
  * выпадающие списки. Они рисуются после содержимого и первыми получают мышь и клавиатуру.</p>
+ *
+ * <p>Ещё выше — пассивные оверлеи ({@link #showOverlay}): всплывающие подсказки и подобное. Они только
+ * рисуются: мышь проходит сквозь них, клавиши им не достаются, клик мимо их не закрывает.</p>
  */
 public final class UiRoot {
-    /** Всплывающее окно: элемент, запрошенная точка и закрывается ли оно кликом мимо. */
-    private record Popup(UiElement element, float x, float y, boolean dismissable) {
+    /**
+     * Всплывающее окно: элемент, запрошенная точка, закрывается ли оно кликом мимо и пассивное ли оно
+     * (оверлей: только рисуется, ввод не получает).
+     */
+    private record Popup(UiElement element, float x, float y, boolean dismissable, boolean passive) {
     }
 
     private final UiElement content;
@@ -128,10 +134,19 @@ public final class UiRoot {
         renderPopups(canvas, partialTick);
     }
 
-    /** Нарисовать только слой всплывающих окон (если содержимое рисуется отдельно). */
+    /** Нарисовать только слой всплывающих окон (если содержимое рисуется отдельно). Оверлеи — поверх окон. */
     public void renderPopups(Canvas canvas, float partialTick) {
         for (int i = 0; i < popups.size(); i++) {
-            popups.get(i).element.render(canvas, partialTick);
+            Popup p = popups.get(i);
+            if (!p.passive) {
+                p.element.render(canvas, partialTick);
+            }
+        }
+        for (int i = 0; i < popups.size(); i++) {
+            Popup p = popups.get(i);
+            if (p.passive) {
+                p.element.render(canvas, partialTick);
+            }
         }
     }
 
@@ -191,15 +206,45 @@ public final class UiRoot {
      * за экран. {@code dismissable = false} — клик мимо его не закрывает (только Escape или код).
      */
     public void showPopup(UiElement popup, float x, float y, boolean dismissable) {
-        if (popup.parent() != null) {
-            throw new IllegalArgumentException("Popup must not have a parent: " + popup);
+        addPopup(new Popup(popup, x, y, dismissable, false));
+    }
+
+    /**
+     * Показать пассивный оверлей (всплывающую подсказку): рисуется поверх всех окон, но мышь проходит
+     * сквозь него, клавиши ему не достаются, а клик мимо его не закрывает — закрывает только код
+     * ({@link #closePopup}). Положение не выходит за экран, как у {@link #showPopup}.
+     */
+    public void showOverlay(UiElement overlay, float x, float y) {
+        addPopup(new Popup(overlay, x, y, false, true));
+    }
+
+    private void addPopup(Popup p) {
+        if (p.element.parent() != null) {
+            throw new IllegalArgumentException("Popup must not have a parent: " + p.element);
         }
-        closePopup(popup);
-        Popup p = new Popup(popup, x, y, dismissable);
+        closePopup(p.element);
         popups.add(p);
-        popup.attach(this);
+        p.element.attach(this);
         layoutPopup(p);
         updateHover();
+    }
+
+    /** Передвинуть открытое окно или оверлей в новую точку (подсказка за мышью, перестановка над полем). */
+    public void movePopup(UiElement popup, float x, float y) {
+        int i = indexOfPopup(popup);
+        if (i < 0) {
+            return;
+        }
+        Popup p = popups.get(i);
+        if (p.x == x && p.y == y) {
+            return;
+        }
+        Popup moved = new Popup(popup, x, y, p.dismissable, p.passive);
+        popups.set(i, moved);
+        layoutPopup(moved);
+        if (!moved.passive) {
+            updateHover();
+        }
     }
 
     /** Закрыть окно; {@code false}, если оно не было открыто. */
@@ -227,13 +272,34 @@ public final class UiRoot {
         return indexOfPopup(popup) >= 0;
     }
 
-    /** Открытые окна снизу вверх. */
+    /** Открытые окна снизу вверх (без пассивных оверлеев). */
     public List<UiElement> popups() {
+        return layer(false);
+    }
+
+    /** Открытые пассивные оверлеи ({@link #showOverlay}) снизу вверх. */
+    public List<UiElement> overlays() {
+        return layer(true);
+    }
+
+    private List<UiElement> layer(boolean passive) {
         List<UiElement> out = new ArrayList<>(popups.size());
         for (Popup p : popups) {
-            out.add(p.element);
+            if (p.passive == passive) {
+                out.add(p.element);
+            }
         }
         return Collections.unmodifiableList(out);
+    }
+
+    /** Верхнее окно, которое получает ввод (не оверлей), или {@code null}. */
+    private UiElement topPopup() {
+        for (int i = popups.size() - 1; i >= 0; i--) {
+            if (!popups.get(i).passive) {
+                return popups.get(i).element;
+            }
+        }
+        return null;
     }
 
     private int indexOfPopup(UiElement popup) {
@@ -248,7 +314,7 @@ public final class UiRoot {
     /** Лежит ли элемент внутри какого-нибудь окна. */
     private boolean inPopup(UiElement e) {
         for (Popup p : popups) {
-            if (p.element.isAncestorOrSelfOf(e)) {
+            if (!p.passive && p.element.isAncestorOrSelfOf(e)) {
                 return true;
             }
         }
@@ -277,6 +343,9 @@ public final class UiRoot {
     /** Попадание мыши: сначала окна сверху вниз, затем содержимое. Окно заслоняет то, что под ним. */
     private UiElement hitTest(float x, float y) {
         for (int i = popups.size() - 1; i >= 0; i--) {
+            if (popups.get(i).passive) {
+                continue;
+            }
             UiElement p = popups.get(i).element;
             UiElement hit = p.hitTest(x, y);
             if (hit != null) {
@@ -295,7 +364,7 @@ public final class UiRoot {
             return false;
         }
         for (Popup p : popups) {
-            if (contains(p.element, x, y)) {
+            if (!p.passive && contains(p.element, x, y)) {
                 return false;
             }
         }
@@ -414,9 +483,9 @@ public final class UiRoot {
     // ================================================================ клавиатура и фокус
 
     public boolean keyDown(int key, int scanCode, int modifiers) {
-        if (!popups.isEmpty()) {
+        UiElement top = topPopup();
+        if (top != null) {
             // Верхнее окно первым получает клавиши (стрелки в меню), Escape его закрывает.
-            UiElement top = popups.get(popups.size() - 1).element;
             UiElement target = focused != null && top.isAncestorOrSelfOf(focused) ? focused : top;
             if (dispatch(target, new KeyEvent(KeyEvent.PRESS, key, scanCode, modifiers))) {
                 return true;
@@ -438,6 +507,13 @@ public final class UiRoot {
     }
 
     public boolean keyUp(int key, int scanCode, int modifiers) {
+        UiElement top = topPopup();
+        if (top != null && (focused == null || !top.isAncestorOrSelfOf(focused))) {
+            // Отпускание клавиши тоже сначала окну: радиальное меню выбирает пункт, когда клавишу отпустили.
+            if (dispatch(top, new KeyEvent(KeyEvent.RELEASE, key, scanCode, modifiers))) {
+                return true;
+            }
+        }
         return dispatch(focused != null ? focused : content, new KeyEvent(KeyEvent.RELEASE, key, scanCode, modifiers));
     }
 

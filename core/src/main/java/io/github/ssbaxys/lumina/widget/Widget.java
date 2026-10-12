@@ -143,6 +143,24 @@ public abstract class Widget<S extends Widget<S>> extends UiElement {
         return on(PointerEvent.CLICK, listener);
     }
 
+    /** Всплывающая подсказка при наведении (строки через {@code \n}); настройка — {@link Tooltips#of}. */
+    public S tooltip(String text) {
+        Tooltips.attach(this, text);
+        return self();
+    }
+
+    /** Подсказка своего вида: {@code .tooltip(Tooltip.Kind.MODERN, "Текст")}. */
+    public S tooltip(Tooltip.Kind kind, String text) {
+        Tooltips.attach(this, text).kind(kind);
+        return self();
+    }
+
+    /** Подсказка с Markdown: {@code .tooltipMarkdown("**Алмаз**\n\nРедкая руда")}. */
+    public S tooltipMarkdown(String markdown) {
+        Tooltips.attachMarkdown(this, markdown);
+        return self();
+    }
+
     /** Произвольная настройка без разрыва цепочки. */
     public S with(Consumer<? super S> configurer) {
         configurer.accept(self());

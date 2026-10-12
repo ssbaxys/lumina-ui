@@ -28,12 +28,15 @@ import io.github.ssbaxys.lumina.style.Style;
 import io.github.ssbaxys.lumina.style.StyleKey;
 import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.widget.Button;
+import io.github.ssbaxys.lumina.widget.CalendarView;
 import io.github.ssbaxys.lumina.widget.Checkbox;
 import io.github.ssbaxys.lumina.widget.ColorField;
 import io.github.ssbaxys.lumina.widget.ColorPicker;
+import io.github.ssbaxys.lumina.widget.DatePicker;
 import io.github.ssbaxys.lumina.widget.FieldBase;
 import io.github.ssbaxys.lumina.widget.Icon;
 import io.github.ssbaxys.lumina.widget.Image;
+import io.github.ssbaxys.lumina.widget.KeyBindField;
 import io.github.ssbaxys.lumina.widget.Label;
 import io.github.ssbaxys.lumina.widget.NumberField;
 import io.github.ssbaxys.lumina.widget.Panel;
@@ -41,10 +44,15 @@ import io.github.ssbaxys.lumina.widget.ProgressBar;
 import io.github.ssbaxys.lumina.widget.RadioGroup;
 import io.github.ssbaxys.lumina.widget.RingProgress;
 import io.github.ssbaxys.lumina.widget.ScrollPanel;
+import io.github.ssbaxys.lumina.widget.Select;
 import io.github.ssbaxys.lumina.widget.Slider;
 import io.github.ssbaxys.lumina.widget.TextField;
 import io.github.ssbaxys.lumina.widget.Toggle;
+import io.github.ssbaxys.lumina.widget.Tooltip;
+import io.github.ssbaxys.lumina.widget.Tooltips;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -74,9 +82,9 @@ import java.util.regex.Pattern;
  *
  * Теги: {@code div column row stack scroll panel label span h1 h2 h3 p markdown button toggle slider
  * progress ring color-picker input number color-field item img fx blocks structure checkbox radio-group image
- * spacer hr state style link}. Свои теги — {@link #tag}.
+ * select keybind date-picker calendar spacer hr state style link}. Свои теги — {@link #tag}.
  * Атрибуты: {@code id class style width height grow gap align justify padding margin if enabled bind
- * on-click} и атрибуты конкретного тега. Логика — через {@link Bindings}.
+ * on-click tooltip} и атрибуты конкретного тега. Логика — через {@link Bindings}.
  */
 public final class Markup {
     /** Создаёт элемент для тега. Дети (если элемент — контейнер) добавляет {@link Context#children}. */
@@ -93,7 +101,8 @@ public final class Markup {
 
     private static final Map<String, TagFactory> TAGS = new HashMap<>();
     private static final Set<String> VOID = Set.of("img", "item", "br", "hr", "state", "link", "spacer", "toggle",
-            "slider", "progress", "ring", "color-picker", "fx", "input", "number", "color-field", "meta");
+            "slider", "progress", "ring", "color-picker", "fx", "input", "number", "color-field", "meta",
+            "keybind", "date-picker", "calendar");
     private static final Set<String> RAW = Set.of("style", "markdown", "script", "blocks", "structure");
     private static final Pattern TEMPLATE = Pattern.compile("\\{\\{\\s*([\\w.-]+)\\s*(?:\\|\\s*(\\w+)\\s*)?}}");
 
@@ -255,23 +264,7 @@ public final class Markup {
                     options.add(o.strip());
                 }
             }
-            String first = options.isEmpty() ? "" : options.get(0);
-            Signal<Object> raw = n.attr("bind") != null ? c.bindings.writable(n.attr("bind"))
-                    : Signal.of(n.attr("value") != null ? n.attr("value") : first);
-            if (raw.peek() == null) {
-                raw.set(n.attr("value") != null ? n.attr("value") : first);
-            }
-            // Варианты — строки; значение в состоянии может быть числом ("1"), поэтому сравниваем как текст.
-            Signal<String> local = Signal.of(String.valueOf(raw.peek()));
-            Subscription in = raw.subscribe(v -> local.set(String.valueOf(v)));
-            Subscription out = local.subscribe(v -> {
-                Object prev = raw.peek();
-                if (!v.equals(String.valueOf(prev))) {
-                    raw.set(prev instanceof String || prev == null ? v : Bindings.guess(v));
-                }
-            });
-            c.disposers.add(in::close);
-            c.disposers.add(out::close);
+            Signal<String> local = choiceSignal(n, c, options.isEmpty() ? "" : options.get(0));
             RadioGroup<String> group = new RadioGroup<>(local, options);
             if (n.attr("labels") != null) {
                 String[] labels = n.attr("labels").split(",");
@@ -355,6 +348,142 @@ public final class Markup {
             }
             return fieldAttrs(n, c, new ColorField(v).alpha(!"false".equals(n.attr("alpha"))));
         });
+        // <select bind="x" options="a,b,c" labels="А,Б,В" icons="minecraft:a,..." search placeholder="...">
+        // или варианты дочерними <option value="a" item="minecraft:apple">Подпись</option>.
+        tag("select", (n, c) -> {
+            List<String> options = new ArrayList<>();
+            Map<String, String> labels = new HashMap<>();
+            Map<String, String> icons = new HashMap<>();
+            String[] labelList = n.attr("labels") == null ? new String[0] : n.attr("labels").split(",");
+            String[] iconList = n.attr("icons") == null ? new String[0] : n.attr("icons").split(",");
+            for (String o : (n.attr("options") == null ? "" : n.attr("options")).split(",")) {
+                if (!o.isBlank()) {
+                    int i = options.size();
+                    options.add(o.strip());
+                    if (i < labelList.length) {
+                        labels.put(o.strip(), labelList[i].strip());
+                    }
+                    if (i < iconList.length && !iconList[i].isBlank()) {
+                        icons.put(o.strip(), iconList[i].strip());
+                    }
+                }
+            }
+            for (Node o : n.children) {
+                if (!o.tag.equals("option")) {
+                    continue;
+                }
+                String text = Context.textOf(o).strip();
+                String v = o.attr("value") != null ? o.attr("value") : text;
+                options.add(v);
+                labels.put(v, text.isEmpty() ? v : text);
+                String item = o.attr("item") != null ? o.attr("item") : o.attr("icon");
+                if (item != null && !item.isBlank()) {
+                    icons.put(v, item.strip());
+                }
+            }
+            String first = n.attr("placeholder") != null ? null : options.isEmpty() ? "" : options.get(0);
+            Signal<String> local = choiceSignal(n, c, first);
+            Select<String> select = new Select<>(local, options).labels(o -> labels.getOrDefault(o, o));
+            if (!icons.isEmpty()) {
+                select.icons(icons::get);
+            }
+            String search = n.attr("search");
+            if (search != null && !search.equals("false")) {
+                select.searchable(true);
+            }
+            if (n.attr("placeholder") != null) {
+                select.placeholder(n.attr("placeholder"));
+            }
+            if (n.attr("rows") != null) {
+                select.maxRows((int) n.floatAttr("rows", 8f));
+            }
+            return select;
+        });
+        tag("keybind", (n, c) -> {
+            KeyBindField f = new KeyBindField(keySignal(n, c));
+            if (n.attr("default") != null) {
+                f.defaultKey(KeyBindField.parseKey(n.attr("default")));
+            }
+            return f;
+        });
+        tag("date-picker", (n, c) -> {
+            DatePicker p = new DatePicker(dateSignal(n, c)).range(date(n.attr("min")), date(n.attr("max")));
+            if (n.attr("placeholder") != null) {
+                p.placeholder(n.attr("placeholder"));
+            }
+            return p;
+        });
+        tag("calendar", (n, c) -> new CalendarView(dateSignal(n, c)).range(date(n.attr("min")), date(n.attr("max"))));
+    }
+
+    /**
+     * Сигнал выбора из строковых вариантов для {@code bind}: значение в состоянии может быть числом
+     * ("1"), поэтому сравнивается как текст, а записывается в исходном типе.
+     */
+    private static Signal<String> choiceSignal(Node n, Context c, String first) {
+        String initial = n.attr("value") != null ? n.attr("value") : first;
+        Signal<Object> raw = n.attr("bind") != null ? c.bindings.writable(n.attr("bind")) : Signal.of(initial);
+        if (raw.peek() == null && initial != null) {
+            raw.set(initial);
+        }
+        Signal<String> local = Signal.of(raw.peek() == null ? null : String.valueOf(raw.peek()));
+        Subscription in = raw.subscribe(v -> local.set(v == null ? null : String.valueOf(v)));
+        Subscription out = local.subscribe(v -> {
+            Object prev = raw.peek();
+            if (v != null && !v.equals(String.valueOf(prev))) {
+                raw.set(prev instanceof String || prev == null ? v : Bindings.guess(v));
+            }
+        });
+        c.disposers.add(in::close);
+        c.disposers.add(out::close);
+        return local;
+    }
+
+    /** Сигнал с кодом клавиши: в состоянии может лежать число или название ("R", "space"). */
+    @SuppressWarnings("unchecked")
+    private static Signal<Integer> keySignal(Node n, Context c) {
+        int initial = KeyBindField.parseKey(n.attr("value"));
+        if (n.attr("bind") == null) {
+            return Signal.of(initial);
+        }
+        Signal<Object> s = c.bindings.writable(n.attr("bind"));
+        Object v = s.peek();
+        if (!(v instanceof Integer)) {
+            s.set(v == null || String.valueOf(v).isBlank() ? initial : KeyBindField.parseKey(String.valueOf(v)));
+        }
+        return (Signal<Integer>) (Signal<?>) s;
+    }
+
+    /** Сигнал с датой: в состоянии может лежать дата или строка "2026-10-12". */
+    @SuppressWarnings("unchecked")
+    private static Signal<LocalDate> dateSignal(Node n, Context c) {
+        LocalDate initial = date(n.attr("value"));
+        if (n.attr("bind") == null) {
+            return Signal.of(initial);
+        }
+        Signal<Object> s = c.bindings.writable(n.attr("bind"));
+        Object v = s.peek();
+        if (!(v instanceof LocalDate)) {
+            LocalDate parsed = v == null ? null : date(String.valueOf(v));
+            s.set(parsed != null ? parsed : initial);
+        }
+        return (Signal<LocalDate>) (Signal<?>) s;
+    }
+
+    /** "2026-10-12" или "today" → дата; пусто или ошибка — {@code null}. */
+    private static LocalDate date(String v) {
+        if (v == null || v.isBlank()) {
+            return null;
+        }
+        if (v.strip().equalsIgnoreCase("today")) {
+            return LocalDate.now();
+        }
+        try {
+            return LocalDate.parse(v.strip());
+        } catch (DateTimeParseException e) {
+            System.err.println("[Lumina markup] bad date: " + v);
+            return null;
+        }
     }
 
     /** "check", "heart", "switch-dot"... → вид флажка (неизвестное — CHECK). */
@@ -872,7 +1001,7 @@ public final class Markup {
             return !Character.isWhitespace(before) && ".,!?:;)".indexOf(after) < 0;
         }
 
-        private static String textOf(Node n) {
+        static String textOf(Node n) {
             if (!n.text.isEmpty() || n.children.isEmpty()) {
                 return n.text;
             }
@@ -1102,6 +1231,42 @@ public final class Markup {
             }
             condition(n.attr("if"), e::setVisible);
             condition(n.attr("enabled"), e::setEnabled);
+            tooltip(n, e);
+        }
+
+        /**
+         * {@code tooltip="текст\nвторая строка"} (с шаблонами {@code {{…}}}), {@code tooltip-markdown},
+         * {@code tooltip-kind="modern|vanilla"}, {@code tooltip-delay="300ms"}, {@code tooltip-follow="false"}.
+         */
+        private void tooltip(Node n, UiElement e) {
+            String text = n.attr("tooltip");
+            String md = n.attr("tooltip-markdown");
+            if (text == null && md == null) {
+                return;
+            }
+            Tooltip tip;
+            if (md != null) {
+                tip = Tooltips.attachMarkdown(e, "");
+                bindText(n, tip::markdown, md.replace("\\n", "\n"));
+            } else {
+                tip = Tooltips.attach(e, "");
+                bindText(n, tip::text, text.replace("\\n", "\n"));
+            }
+            String kind = n.attr("tooltip-kind");
+            if (kind != null) {
+                tip.kind(kind.strip().equalsIgnoreCase("modern") ? Tooltip.Kind.MODERN : Tooltip.Kind.VANILLA);
+            }
+            String delay = n.attr("tooltip-delay");
+            if (delay != null) {
+                try {
+                    tip.delay(CssValues.isTime(delay) ? CssValues.time(delay) : Float.parseFloat(delay.strip()));
+                } catch (RuntimeException ex) {
+                    System.err.println("[Lumina markup] tooltip-delay: " + delay);
+                }
+            }
+            if ("false".equals(n.attr("tooltip-follow"))) {
+                tip.follow(false);
+            }
         }
 
         /** {@code if="flag"}, {@code if="!flag"}, {@code if="tab==2"}, {@code if="mode!=easy"}. */

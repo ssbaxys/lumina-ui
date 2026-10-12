@@ -77,6 +77,15 @@ public final class UiRoot {
         return height;
     }
 
+    /** Положение мыши в координатах корня ({@code -1}, пока мышь не заходила). */
+    public float mouseX() {
+        return mouseX;
+    }
+
+    public float mouseY() {
+        return mouseY;
+    }
+
     public void resize(float width, float height) {
         if (width != this.width || height != this.height) {
             this.width = width;

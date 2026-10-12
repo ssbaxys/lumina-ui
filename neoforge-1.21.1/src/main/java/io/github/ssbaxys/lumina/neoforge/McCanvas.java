@@ -19,7 +19,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Бэкенд Canvas для 1.21.1. Простые прямоугольники и произвольные четырёхугольники копятся в один
@@ -32,6 +38,8 @@ final class McCanvas extends AbstractCanvas {
     private BlendMode blendMode = BlendMode.NORMAL;
     private final Matrix4f gradColorsA = new Matrix4f();
     private final Matrix4f gradColorsB = new Matrix4f();
+    private final Map<String, ResourceLocation> locations = new HashMap<>();
+    private final Map<String, ItemStack> items = new HashMap<>();
 
     void begin(GuiGraphics graphics, int width, int height) {
         this.graphics = graphics;
@@ -201,22 +209,51 @@ final class McCanvas extends AbstractCanvas {
     }
 
     @Override
-    protected void drawTextureImpl(TextureRef texture, float x0, float y0, float x1, float y1,
-                                   float u0, float v0, float u1, float v1, int tint) {
-        if (!(texture instanceof McTexture tex)) {
+    protected void drawTextureQuadImpl(TextureRef texture, float x0, float y0, float x1, float y1,
+                                       float x2, float y2, float x3, float y3,
+                                       float u0, float v0, float u1, float v1,
+                                       float u2, float v2, float u3, float v3, int tint) {
+        ResourceLocation location = location(texture);
+        if (location == null) {
             return;
         }
         flushQuads();
-        RenderSystem.setShaderTexture(0, tex.location());
+        RenderSystem.setShaderTexture(0, location);
         setupBlend();
         RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
         Matrix4f m = pose();
         BufferBuilder bb = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         bb.addVertex(m, x0, y0, 0f).setUv(u0, v0).setColor(tint);
-        bb.addVertex(m, x0, y1, 0f).setUv(u0, v1).setColor(tint);
         bb.addVertex(m, x1, y1, 0f).setUv(u1, v1).setColor(tint);
-        bb.addVertex(m, x1, y0, 0f).setUv(u1, v0).setColor(tint);
+        bb.addVertex(m, x2, y2, 0f).setUv(u2, v2).setColor(tint);
+        bb.addVertex(m, x3, y3, 0f).setUv(u3, v3).setColor(tint);
         draw(bb);
+    }
+
+    private ResourceLocation location(TextureRef texture) {
+        if (texture instanceof McTexture tex) {
+            return tex.location();
+        }
+        return locations.computeIfAbsent(texture.id(), ResourceLocation::tryParse);
+    }
+
+    @Override
+    protected void drawItemImpl(String itemId, float x, float y, float size) {
+        ItemStack stack = items.computeIfAbsent(itemId, id -> {
+            ResourceLocation rl = ResourceLocation.tryParse(id);
+            return rl == null ? ItemStack.EMPTY : new ItemStack(BuiltInRegistries.ITEM.get(rl));
+        });
+        if (stack.isEmpty()) {
+            return;
+        }
+        flushQuads();
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.translate(x, y, 0f);
+        pose.scale(size / 16f, size / 16f, 1f);
+        graphics.renderItem(stack, 0, 0);
+        pose.popPose();
+        graphics.flush();
     }
 
     // ---------------------------------------------------------------- клип

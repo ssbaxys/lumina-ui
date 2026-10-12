@@ -13,6 +13,10 @@ public interface Platform {
     /** Стандартный звук нажатия кнопки интерфейса. */
     void playClickSound();
 
+    /** Звук игры по идентификатору ("minecraft:entity.generic.explode"). По умолчанию — тишина. */
+    default void playSound(String soundId, float volume, float pitch) {
+    }
+
     default long nanoTime() {
         return System.nanoTime();
     }

@@ -89,5 +89,24 @@ public interface Canvas {
     void drawTexture(TextureRef texture, float x, float y, float w, float h,
                      float u0, float v0, float u1, float v1, int tint);
 
+    /** Текстура целиком в прямоугольнике. */
+    default void drawTexture(TextureRef texture, float x, float y, float w, float h, int tint) {
+        drawTexture(texture, x, y, w, h, 0f, 0f, 1f, 1f, tint);
+    }
+
+    /**
+     * Текстура на произвольном выпуклом четырёхугольнике (вершины по порядку обхода, UV для каждой):
+     * изометрические кубики, наклонённые и повёрнутые спрайты.
+     */
+    void drawTextureQuad(TextureRef texture,
+                         float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                         float u0, float v0, float u1, float v1, float u2, float v2, float u3, float v3, int tint);
+
+    /**
+     * Предмет игры (как в инвентаре, в том числе 3D-блоки): {@code drawItem("minecraft:tnt", x, y, 32)}.
+     * Прозрачность и режим смешивания на предметы не действуют.
+     */
+    void drawItem(String itemId, float x, float y, float size);
+
     TextMetrics textMetrics();
 }

@@ -10,7 +10,7 @@
 - Ванильные эффекты в интерфейсе: огонь, взрывы, падающий TNT, лава, дым, тряска
 - Виджет Markdown (таблицы, списки, задачи, ссылки, иконки предметов), выбор цвета, круговой прогресс
 
-Архитектура: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Оформление, анимации, эффекты и Markdown: [docs/STYLING.md](docs/STYLING.md).
+Архитектура: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Оформление, анимации, эффекты и Markdown: [docs/STYLING.md](docs/STYLING.md). Интерфейс на HTML и CSS с логикой: [docs/MARKUP.md](docs/MARKUP.md).
 
 ## Сборка
 

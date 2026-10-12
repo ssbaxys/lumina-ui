@@ -6,8 +6,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 final class McPlatform implements Platform {
     private final TextMetrics metrics = new TextMetrics() {
@@ -48,6 +54,24 @@ final class McPlatform implements Platform {
         SoundEvent sound = id == null ? null : BuiltInRegistries.SOUND_EVENT.get(id);
         if (sound != null) {
             Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(sound, pitch, volume));
+        }
+    }
+
+    /** Через менеджер ресурсов игры: учитываются ресурспаки и их перезагрузка (F3+T). */
+    @Override
+    public String readResource(String resourceId) {
+        ResourceLocation id = ResourceLocation.tryParse(resourceId);
+        if (id == null) {
+            return null;
+        }
+        Optional<Resource> resource = Minecraft.getInstance().getResourceManager().getResource(id);
+        if (resource.isEmpty()) {
+            return Platform.super.readResource(resourceId);
+        }
+        try (InputStream in = resource.get().open()) {
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return null;
         }
     }
 }

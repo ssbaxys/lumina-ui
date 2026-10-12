@@ -1,0 +1,82 @@
+<!-- Демо-страница целиком на разметке. Логика: <state> + встроенные действия + обработчики из Java
+     (shake, applyAccent). Подробнее — docs/MARKUP.md. -->
+<link rel="stylesheet" href="luminatest:ui/markup_demo.css">
+
+<state name="tab" value="1"/>
+<state name="coins" value="120"/>
+<state name="owned" value="0"/>
+<state name="music" value="true"/>
+<state name="volume" value="60"/>
+
+<column class="page">
+  <stack class="hero">
+    <column class="hero-text">
+      <h2>Lumina Market</h2>
+      <label class="sub">Этот экран написан на HTML и CSS</label>
+    </column>
+    <fx effect="minecraft:snow"></fx>
+  </stack>
+
+  <row class="tabs">
+    <button class="tab" on-click="set:tab=1" sound="false">Магазин</button>
+    <button class="tab" on-click="set:tab=2" sound="false">Настройки</button>
+    <button class="tab" on-click="set:tab=3" sound="false">О разметке</button>
+    <spacer/>
+    <row class="coins"><item item="minecraft:gold_ingot" size="12"/><label>{{coins}}</label></row>
+  </row>
+
+  <!-- Вкладка 1: магазин -->
+  <column if="tab==1" gap="8">
+    <row class="shop">
+      <column class="card">
+        <item item="minecraft:diamond_sword" size="28"/>
+        <label>Меч</label>
+        <label class="price">40</label>
+        <button class="buy" on-click="dec:coins=40; inc:owned; sound:minecraft:entity.experience_orb.pickup">Купить</button>
+      </column>
+      <column class="card">
+        <item item="minecraft:totem_of_undying" size="28"/>
+        <row gap="4"><label>Тотем</label><label class="badge">NEW</label></row>
+        <label class="price">75</label>
+        <button class="buy" on-click="dec:coins=75; inc:owned; sound:minecraft:item.totem.use">Купить</button>
+      </column>
+      <column class="card">
+        <item item="minecraft:tnt" size="28"/>
+        <label>Динамит</label>
+        <label class="price">15</label>
+        <button class="buy" on-click="dec:coins=15; inc:owned; shake">Купить</button>
+      </column>
+      <column class="card">
+        <item item="minecraft:enchanted_golden_apple" size="28"/>
+        <label>Яблоко</label>
+        <label class="price">90</label>
+        <button class="buy" on-click="dec:coins=90; inc:owned">Купить</button>
+      </column>
+    </row>
+    <row gap="8">
+      <label>Куплено: {{owned}}</label>
+      <button on-click="inc:coins=100; sound:minecraft:entity.player.levelup">+100 монет</button>
+      <label class="note" if="coins==0">Монеты закончились!</label>
+    </row>
+  </column>
+
+  <!-- Вкладка 2: настройки с двусторонней привязкой -->
+  <column if="tab==2" gap="8">
+    <row class="setting"><label>Музыка</label><toggle bind="music"/><label class="note">{{music}}</label></row>
+    <row class="setting" enabled="music">
+      <label>Громкость</label><slider bind="volume" min="0" max="100" step="1"/><label>{{volume|int}}%</label>
+    </row>
+    <row class="setting"><label>Громкость</label><progress bind="volume" max="100" width="150"/></row>
+    <row class="setting"><label>Акцент</label><color-picker bind="accent" on-change="applyAccent" width="150" height="80" alpha="false"/></row>
+    <row class="setting"><label></label><button class="danger" on-click="set:volume=60; set:music=true">Сбросить</button></row>
+  </column>
+
+  <!-- Вкладка 3: текст с форматированием -->
+  <column if="tab==3" gap="6">
+    <p>Разметка превращается в <b>обычные виджеты</b> при загрузке, поэтому в кадре она <i>ничего не стоит</i>.
+      Стили — это <code>CSS</code> с селекторами, состояниями <code>:hover</code>, переменными и <mark>@keyframes</mark>.</p>
+    <p>Логика: <code>{{имя}}</code> в тексте, <code>bind</code> у полей, <code>on-click</code> у кнопок,
+      <code>if</code> для показа. Без Java: <code>&lt;state&gt;</code> и действия <code>inc dec set toggle sound</code>.</p>
+    <p>Файлы лежат в <code>assets/luminatest/ui/</code> — переопределите их ресурспаком и нажмите <b>F3+T</b>.</p>
+  </column>
+</column>

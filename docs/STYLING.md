@@ -215,6 +215,106 @@ BlockModel.drawBlockIcon(canvas, "minecraft:tnt", x, y, 16, time);  // один 
 
 В разметке — тег `<structure>` (см. [MARKUP.md](MARKUP.md)).
 
+## Слоты инвентаря, сущности и предметы в 3D
+
+### Стопки и инвентарь (`inventory.Stack`, `inventory.Inventory`)
+
+`Stack` — неизменяемая стопка для интерфейса, не зависящая от версии игры: id предмета, количество, своё
+название, строки описания, перелив зачарования и прочность. `Inventory` — модель ячеек: слоты только показывают её
+и меняют через неё, поэтому мод синхронизирует данные одной подпиской `onChange`, а правила проверяются без экрана.
+
+```java
+Stack sword = Stack.of("minecraft:diamond_sword").withName("Экскалибур")
+        .withLore("Выкован в Незере").withGlint(true).withDurability(400, 1561);   // предел стопки — 1
+Stack coal = Stack.parse("coal*48");                                           // "minecraft:coal", 48
+Inventory chest = new Inventory(27);
+chest.set(0, sword);
+Stack rest = chest.insert(Stack.of("minecraft:stone", 200));   // в такие же стопки, потом в пустые; вернёт остаток
+chest.filter((index, s) -> index != 26 || s.itemId().endsWith("_ingot")).limit(64);
+chest.onChange((inv, index, before, after) -> sync(index, after));
+```
+
+Стопки складываются (`canStackWith`), если совпадает всё, кроме количества. Предел — 64, у предметов с
+прочностью 1, свой — `withMaxStackSize(16)`; инвентарь может урезать его `limit(n)`.
+
+### Слоты и сетки (`Slot`, `SlotGrid`, `InventoryPanel`)
+
+`Slot` показывает одну ячейку: предмет, количество в правом нижнем углу (тысячи — `1.5k`), полоску прочности
+цветом от зелёного к красному и перелив. Вид — `Slot.Look.VANILLA` (серая ячейка 18×18 с объёмной кромкой и белой
+подсветкой) или `MODERN` (скруглённая ячейка темы из токенов `well`, `border`, `accent`; фон, радиус и рамку можно
+задать стилем). У непустого слота — подсказка как в игре (`ItemTooltip`: название, бирюзовое у зачарованных,
+описание, прочность у повреждённых), вид подсказки — `tooltipKind`.
+
+```java
+Slot single = new Slot(Stack.of("minecraft:diamond", 12));       // свой инвентарь на одну ячейку
+Slot helmet = new Slot(armor, 0).placeholder("minecraft:iron_helmet");   // бледный силуэт в пустом слоте
+Slot result = new Slot(craft, 0).dropTarget(false);               // только брать
+SlotGrid hotbar = new SlotGrid(player, 0, 9, 9).look(Slot.Look.MODERN).slotSize(22).gap(3);
+InventoryPanel chestUi = InventoryPanel.chest("Сундук", chest, player, Slot.Look.VANILLA);
+InventoryPanel mine = new InventoryPanel(Slot.Look.MODERN).title("Печь").add(row).add(hotbar, 4);
+Slot.paintStack(canvas, stack, x, y, 16);                         // стопка в своём виджете
+```
+
+`InventoryPanel.chest` строит окно сундука: сетка 9 в ряд, «Инвентарь», рюкзак (ячейки игрока 9..35) и хотбар
+(0..8), Shift+клик ходит между сундуком и игроком. Инвентарь игрока в ядре — обычная модель на 36 ячеек: связать
+её с настоящим инвентарём (и сервером) — дело мода.
+
+### Перетаскивание (`SlotGroup`)
+
+- ЛКМ-перетаскивание (от 3 px) берёт стопку целиком, ПКМ — половину с округлением вверх; под курсором летит
+  «призрак» (пассивный оверлей корня), источник показывает остаток. Модель не меняется до сброса, так что отмена
+  ничего не откатывает, а мод видит по одному изменению на ячейку.
+- Сброс на пустой слот или такую же стопку докладывает, сколько влезет; остаток остаётся в источнике. Вся стопка
+  на другой предмет — обмен местами (если обе ячейки примут чужое). Слот под курсором подсвечивается: обычной
+  подсветкой, если положить можно, красной — если нельзя.
+- Мимо слотов — `onDropOutside` (вернуть `true`, если стопку забрали), иначе отмена.
+- Shift+клик — `quickMove`: свой `onQuickMove` или перенос в инвентари из `Slot.quickMoveTo` (диапазоны ячеек
+  тоже можно). Shift ядро узнаёт через `Platform.isShiftDown()`.
+
+```java
+SlotGroup group = new SlotGroup()
+        .validator((from, to, stack) -> to.inventory() != shop)          // проверка сброса поверх фильтров
+        .onTransfer((from, to, moved) -> playSound())                   // to == null — Shift+клик или выброс
+        .onDropOutside((from, stack) -> { throwItem(stack); return true; })
+        .onQuickMove((slot, stack) -> false);                           // false — перенос по умолчанию
+chestGrid.group(group);
+group.beginDrag(slot, false); group.dropOn(otherSlot);                  // то же из кода (тесты, клавиатура)
+```
+
+Без своей группы слоты в общей `SlotGroup.shared()`: перетаскивать можно между любыми слотами.
+
+### Сущности и предметы в 3D (`preview.EntityView`, `preview.ItemView`)
+
+`EntityView` рисует моба или самого игрока так же, как игра в окне инвентаря: модель вписана в виджет ногами вниз,
+крутится мышью с инерцией, может вращаться сама, приближается колесом (`zoomable(false)` — не мешать прокрутке
+страницы), а с `followMouse(true)` смотрит на курсор. Сущность создаётся на клиенте по одной на тип и внешний вид,
+поэтому её видно только в мире (в главном меню — пусто). `ItemView` — крупный предмет в 3D: блоки объёмные,
+остальное — как выброшенное на землю; бэкенд без поворота рисует плоскую иконку.
+
+```java
+new EntityView("minecraft:zombie").equip("mainhand", "minecraft:iron_sword").baby(true).autoRotate(true).size(64, 80);
+EntityView.player().followMouse(true).size(110, 150);          // вы в своей броне
+new EntityView("minecraft:creeper").camera(-25, 10).zoom(1.5f); // yaw > 0 — лицом влево, pitch > 0 — сверху
+new ItemView(Stack.of("minecraft:diamond_sword").withGlint(true)).autoRotate(40f).size(72, 72);
+```
+
+Общая основа — `SpinView`: `yaw/pitch/camera`, `pitchRange`, `autoRotate`, `zoom`, `interactive`, `zoomable`.
+Для своих виджетов — методы `Canvas`:
+
+| Метод | Что рисует |
+|---|---|
+| `drawItem(id, x, y, size, glint)` | предмет с переливом зачарования |
+| `drawItem3d(id, x, y, size, yaw, pitch, glint)` | предмет в 3D, повёрнутый вокруг центра |
+| `drawEntity(type, x, y, size, yaw, pitch, options)` | сущность, вписанная в квадрат; `Canvas.PLAYER` — игрок |
+| `drawPlayer(x, y, size, yaw, pitch, options)` | то же, что `drawEntity(Canvas.PLAYER, …)` |
+
+`EntityOptions` — поза головы (`look(yaw, pitch)`), детёныш (`baby`) и снаряжение (`equip("head", id)`; места —
+`mainhand offhand head chest legs feet`). По умолчанию у `Canvas` эти методы ничего не рисуют (или рисуют плоскую
+иконку), так что свой бэкенд может их не поддерживать.
+
+В разметке — теги `<slot>`, `<entity>`, `<player>`, `<item-view>` (см. [MARKUP.md](MARKUP.md)). Пример всего вместе —
+страница `ItemsPage` в тестовом моде.
+
 ## Компоненты
 
 **Текст с эффектами** (`FancyText`) рисует строку посимвольно обычным шрифтом игры:
@@ -655,6 +755,7 @@ new Panel("grid", new GridLayout(3, 8, 6));                   // просто р
 | `dayTime()` | `-1` (нет мира) | время мира в тиках 0–24000 |
 | `biomeId()` | `null` | id биома под игроком |
 | `narrate(text)` | ничего | озвучка для экранного диктора |
+| `isShiftDown()` | `false` | Shift+клик по слоту (быстрый перенос) |
 | `playSound(id, volume, pitch)` | ничего | звуки интерфейса (уже был) |
 
 Пример всего вместе — страница `ThemesPage` в тестовом моде.

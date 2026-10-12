@@ -45,6 +45,11 @@ public class Label extends Widget<Label> {
         return this;
     }
 
+    /** Свой масштаб × наследуемый {@link Styles#FONT_SCALE}. */
+    private float effectiveScale() {
+        return textScale * style.get(Styles.FONT_SCALE);
+    }
+
     public Label bind(ReadableSignal<String> signal) {
         unbind();
         this.binding = signal;
@@ -81,17 +86,19 @@ public class Label extends Widget<Label> {
     @Override
     protected void measureContent(float maxWidth, float maxHeight) {
         TextMetrics m = Lumina.platform().textMetrics();
-        setContentSize(m.width(text) * textScale, m.lineHeight() * textScale);
+        float k = effectiveScale();
+        setContentSize(m.width(text) * k, m.lineHeight() * k);
     }
 
     @Override
     protected void paintContent(Canvas canvas, float partialTick) {
-        float lh = canvas.textMetrics().lineHeight() * textScale;
+        float k = effectiveScale();
+        float lh = canvas.textMetrics().lineHeight() * k;
         float top = padding().top() + (height() - padding().vertical() - lh) / 2f;
-        if (textScale != 1f) {
+        if (k != 1f) {
             canvas.save();
             canvas.translate(padding().left(), top);
-            canvas.scale(textScale, textScale);
+            canvas.scale(k, k);
             canvas.drawText(text, 0, 0, style.get(Styles.TEXT_COLOR), style.get(Styles.TEXT_SHADOW));
             canvas.restore();
         } else {

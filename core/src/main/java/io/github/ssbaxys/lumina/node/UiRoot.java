@@ -25,6 +25,7 @@ public final class UiRoot {
     private final UiElement content;
     private final Animator animator = new Animator();
     private Theme theme;
+    private int themeRevision;
 
     private float width;
     private float height;
@@ -44,6 +45,7 @@ public final class UiRoot {
     public UiRoot(UiElement content, Theme theme) {
         this.content = content;
         this.theme = theme;
+        this.themeRevision = theme.revision();
         content.attach(this);
     }
 
@@ -62,6 +64,7 @@ public final class UiRoot {
     /** Сменить тему. Свойства с TRANSITION в новой теме плавно перетекают в новые значения. */
     public void setTheme(Theme theme) {
         this.theme = theme;
+        this.themeRevision = theme.revision();
         content.refreshStyleTree(true);
         content.invalidateLayout();
     }
@@ -103,6 +106,11 @@ public final class UiRoot {
 
     /** Анимации + раскладка. Отдельно от render, чтобы можно было тестировать без Canvas. */
     public void tick(float dt) {
+        if (theme.revision() != themeRevision) {
+            // Тему поменяли на месте (токен, стиль класса): перетекаем в новые значения.
+            themeRevision = theme.revision();
+            content.refreshStyleTree(true);
+        }
         if (!animator.isIdle()) {
             animator.tick(dt);
         }

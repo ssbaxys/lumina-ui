@@ -1,19 +1,24 @@
 package io.github.ssbaxys.lumina.node;
 
+import io.github.ssbaxys.lumina.anim.Motion;
+import io.github.ssbaxys.lumina.anim.Playback;
 import io.github.ssbaxys.lumina.event.EventListener;
 import io.github.ssbaxys.lumina.event.EventType;
 import io.github.ssbaxys.lumina.event.UiEvent;
 import io.github.ssbaxys.lumina.geom.Insets;
 import io.github.ssbaxys.lumina.layout.Layout;
 import io.github.ssbaxys.lumina.layout.LayoutParams;
+import io.github.ssbaxys.lumina.render.BlendMode;
 import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Canvas;
 import io.github.ssbaxys.lumina.render.Color;
+import io.github.ssbaxys.lumina.render.Outline;
 import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
 import io.github.ssbaxys.lumina.style.ComputedStyle;
 import io.github.ssbaxys.lumina.style.State;
 import io.github.ssbaxys.lumina.style.Style;
+import io.github.ssbaxys.lumina.style.StyleKey;
 import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.style.Theme;
 
@@ -68,6 +73,9 @@ public abstract class UiElement {
     private Theme effectiveTheme;
     private int effectiveRevision;
     protected final ComputedStyle style = new ComputedStyle(this::onStyleChanged);
+
+    private Playback[] playbacks;
+    private int playbackCount;
 
     private EventListener<?>[][] bubbleListeners;
     private EventListener<?>[][] captureListeners;
@@ -144,6 +152,7 @@ public abstract class UiElement {
     final void attach(UiRoot root) {
         this.root = root;
         refreshStyle(false);
+        startPendingAnimations();
         onAttach();
         for (int i = 0; i < children.size(); i++) {
             children.get(i).attach(root);
@@ -154,6 +163,7 @@ public abstract class UiElement {
         for (int i = 0; i < children.size(); i++) {
             children.get(i).detach();
         }
+        stopAnimations();
         onDetach();
         UiRoot r = root;
         root = null;
@@ -291,6 +301,7 @@ public abstract class UiElement {
         return styleClass;
     }
 
+    /** Класс стиля темы; несколько классов — через пробел ({@code "button danger"}). */
     public void setStyleClass(String styleClass) {
         this.styleClass = styleClass;
         effectiveStyle = null;
@@ -319,7 +330,7 @@ public abstract class UiElement {
         }
         Theme theme = r.theme();
         if (effectiveStyle == null || effectiveTheme != theme || effectiveRevision != theme.revision()) {
-            effectiveStyle = theme.style(styleClass).merge(inlineStyle);
+            effectiveStyle = theme.style(styleClass).merge(theme.resolve(inlineStyle));
             effectiveTheme = theme;
             effectiveRevision = theme.revision();
         }
@@ -338,6 +349,77 @@ public abstract class UiElement {
         if (layoutChanged) {
             invalidateLayout();
         }
+    }
+
+    // ================================================================ анимации
+
+    /**
+     * Анимировать свойство стиля: {@code button.animate(Styles.SCALE).to(1.2f).duration(0.3f).play()}.
+     * Значения пишутся в слой поверх стиля и не мешают переходам hover/pressed под ним.
+     */
+    public <T> StyleAnimation<T> animate(StyleKey<T> key) {
+        return new StyleAnimation<>(this, key);
+    }
+
+    /** Проиграть движение, привязанное к элементу: остановится само, когда элемент уйдёт из дерева. */
+    public Playback play(Motion motion) {
+        return play(new Playback(motion));
+    }
+
+    public Playback play(Playback playback) {
+        if (playbacks == null) {
+            playbacks = new Playback[4];
+        } else if (playbackCount == playbacks.length) {
+            playbacks = Arrays.copyOf(playbacks, playbackCount * 2);
+        }
+        compactPlaybacks();
+        playbacks[playbackCount++] = playback;
+        if (root != null) {
+            playback.start(root.animator());
+        }
+        return playback;
+    }
+
+    /** Остановить все анимации элемента (значения остаются как есть). */
+    public void stopAnimations() {
+        for (int i = 0; i < playbackCount; i++) {
+            playbacks[i].stop();
+            playbacks[i] = null;
+        }
+        playbackCount = 0;
+    }
+
+    /** Значение свойства из слоя анимаций (поверх стиля); {@code null} — убрать. */
+    public <T> void setAnimatedStyle(StyleKey<T> key, T value) {
+        style.setOverride(key, value);
+    }
+
+    public void clearAnimatedStyle(StyleKey<?> key) {
+        style.clearOverride(key);
+    }
+
+    private void startPendingAnimations() {
+        for (int i = 0; i < playbackCount; i++) {
+            if (!playbacks[i].isRunning()) {
+                playbacks[i].start(root.animator());
+            }
+        }
+    }
+
+    private void compactPlaybacks() {
+        if (root == null) {
+            return;
+        }
+        int w = 0;
+        for (int i = 0; i < playbackCount; i++) {
+            if (playbacks[i].isRunning()) {
+                playbacks[w++] = playbacks[i];
+            }
+        }
+        for (int i = w; i < playbackCount; i++) {
+            playbacks[i] = null;
+        }
+        playbackCount = w;
     }
 
     // ================================================================ раскладка
@@ -491,20 +573,28 @@ public abstract class UiElement {
             return;
         }
         canvas.save();
-        canvas.translate(x, y);
+        canvas.translate(x + style.get(Styles.TRANSLATE_X), y + style.get(Styles.TRANSLATE_Y));
         float scale = style.get(Styles.SCALE);
-        if (scale != 1f) {
+        float scaleX = scale * style.get(Styles.SCALE_X);
+        float scaleY = scale * style.get(Styles.SCALE_Y);
+        if (scaleX != 1f || scaleY != 1f) {
             canvas.translate(width / 2f, height / 2f);
-            canvas.scale(scale, scale);
+            canvas.scale(scaleX, scaleY);
             canvas.translate(-width / 2f, -height / 2f);
         }
         if (opacity < 1f) {
             canvas.multiplyOpacity(opacity);
         }
+        BlendMode blend = style.get(Styles.BLEND);
+        if (blend != BlendMode.NORMAL) {
+            canvas.setBlendMode(blend);
+        }
         boolean clip = clipsChildren();
-        Shadow shadow = style.get(Styles.SHADOW);
-        float m = shadow.isNone() ? 0f
-                : shadow.blur() + shadow.spread() + Math.max(Math.abs(shadow.offsetX()), Math.abs(shadow.offsetY()));
+        float m = Math.max(extent(style.get(Styles.SHADOW)), extent(style.get(Styles.GLOW)));
+        Outline outline = style.get(Styles.OUTLINE);
+        if (!outline.isNone()) {
+            m = Math.max(m, outline.offset() + outline.width());
+        }
         if (flag(F_OVERFLOW) || canvas.isVisible(-m, -m, width + 2f * m, height + 2f * m)) {
             paintBackground(canvas);
             paintContent(canvas, partialTick);
@@ -520,14 +610,23 @@ public abstract class UiElement {
                     canvas.restore();
                 }
             }
+            paintForeground(canvas);
             paintOverlay(canvas, partialTick);
         }
         canvas.restore();
     }
 
-    /** Тень, фон и рамка из стиля. */
+    private static float extent(Shadow s) {
+        return s.isNone() ? 0f : s.blur() + s.spread() + Math.max(Math.abs(s.offsetX()), Math.abs(s.offsetY()));
+    }
+
+    /** Свечение, тень, фон, рамка и внешняя обводка из стиля. */
     protected void paintBackground(Canvas canvas) {
         Radii radii = style.get(Styles.RADIUS);
+        Shadow glow = style.get(Styles.GLOW);
+        if (!glow.isNone()) {
+            canvas.drawGlow(0, 0, width, height, radii, glow);
+        }
         Shadow shadow = style.get(Styles.SHADOW);
         if (!shadow.isNone()) {
             canvas.drawShadow(0, 0, width, height, radii, shadow);
@@ -537,9 +636,29 @@ public abstract class UiElement {
             canvas.fillRoundRect(0, 0, width, height, radii, bg);
         }
         float bw = style.get(Styles.BORDER_WIDTH);
-        int bc = style.get(Styles.BORDER_COLOR);
-        if (bw > 0f && Color.alpha(bc) != 0) {
-            canvas.strokeRoundRect(0, 0, width, height, radii, bw, bc);
+        if (bw > 0f) {
+            Brush borderBrush = style.get(Styles.BORDER_BRUSH);
+            if (borderBrush != null) {
+                canvas.strokeRoundRect(0, 0, width, height, radii, bw, borderBrush);
+            } else {
+                int bc = style.get(Styles.BORDER_COLOR);
+                if (Color.alpha(bc) != 0) {
+                    canvas.strokeRoundRect(0, 0, width, height, radii, bw, bc);
+                }
+            }
+        }
+        Outline outline = style.get(Styles.OUTLINE);
+        if (!outline.isNone()) {
+            float d = outline.offset() + outline.width();
+            canvas.strokeRoundRect(-d, -d, width + 2f * d, height + 2f * d, radii.expand(d), outline.width(), outline.color());
+        }
+    }
+
+    /** Заливка {@link Styles#FOREGROUND} поверх детей. */
+    protected void paintForeground(Canvas canvas) {
+        Brush fg = style.get(Styles.FOREGROUND);
+        if (fg != null) {
+            canvas.fillRoundRect(0, 0, width, height, style.get(Styles.RADIUS), fg);
         }
     }
 
@@ -558,12 +677,16 @@ public abstract class UiElement {
         if (!isVisible()) {
             return null;
         }
-        float lx = px - x;
-        float ly = py - y;
+        float lx = px - x - style.get(Styles.TRANSLATE_X);
+        float ly = py - y - style.get(Styles.TRANSLATE_Y);
         float scale = style.get(Styles.SCALE);
-        if (scale != 1f && scale != 0f) {
-            lx = (lx - width / 2f) / scale + width / 2f;
-            ly = (ly - height / 2f) / scale + height / 2f;
+        float scaleX = scale * style.get(Styles.SCALE_X);
+        float scaleY = scale * style.get(Styles.SCALE_Y);
+        if (scaleX != 1f && scaleX != 0f) {
+            lx = (lx - width / 2f) / scaleX + width / 2f;
+        }
+        if (scaleY != 1f && scaleY != 0f) {
+            ly = (ly - height / 2f) / scaleY + height / 2f;
         }
         boolean inside = lx >= 0f && ly >= 0f && lx < width && ly < height;
         if (clipsChildren() && !inside) {

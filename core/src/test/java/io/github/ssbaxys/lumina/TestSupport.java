@@ -2,6 +2,8 @@ package io.github.ssbaxys.lumina;
 
 import io.github.ssbaxys.lumina.platform.Platform;
 import io.github.ssbaxys.lumina.render.AbstractCanvas;
+import io.github.ssbaxys.lumina.render.BlendMode;
+import io.github.ssbaxys.lumina.render.ShapePaint;
 import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.render.TextureRef;
 
@@ -65,9 +67,21 @@ public final class TestSupport {
         }
 
         @Override
+        protected void drawFreeQuad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                                    int c0, int c1, int c2, int c3) {
+            ops.add("freequad " + x0 + "," + y0 + " " + x1 + "," + y1 + " " + x2 + "," + y2 + " " + x3 + "," + y3);
+        }
+
+        @Override
         protected void drawShape(float x0, float y0, float x1, float y1, float rTL, float rTR, float rBR, float rBL,
-                                 int tl, int tr, int br, int bl, float stroke, float softness) {
-            ops.add("shape " + x0 + "," + y0 + "," + x1 + "," + y1 + " s=" + stroke + " soft=" + softness);
+                                 int tl, int tr, int br, int bl, float stroke, float softness, ShapePaint paint) {
+            ops.add("shape " + x0 + "," + y0 + "," + x1 + "," + y1 + " s=" + stroke + " soft=" + softness
+                    + (paint != null ? " grad=" + paint.kind() + "x" + paint.stopCount() : ""));
+        }
+
+        @Override
+        protected void applyBlendMode(BlendMode mode) {
+            ops.add("blend " + mode);
         }
 
         @Override

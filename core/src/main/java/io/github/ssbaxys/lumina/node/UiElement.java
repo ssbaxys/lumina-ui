@@ -12,6 +12,7 @@ import io.github.ssbaxys.lumina.render.BlendMode;
 import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Canvas;
 import io.github.ssbaxys.lumina.render.Color;
+import io.github.ssbaxys.lumina.render.NineSlice;
 import io.github.ssbaxys.lumina.render.Outline;
 import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
@@ -137,6 +138,18 @@ public abstract class UiElement {
     public void clearChildren() {
         for (int i = children.size() - 1; i >= 0; i--) {
             removeChild(children.get(i));
+        }
+    }
+
+    /**
+     * Поднять над соседями: рисуется последним и первым получает мышь. Элемент не отсоединяется
+     * от дерева, поэтому нажатие и перетаскивание, начатые на нём, продолжаются.
+     */
+    public void bringToFront() {
+        if (parent != null && parent.children.get(parent.children.size() - 1) != this) {
+            parent.children.remove(this);
+            parent.children.add(this);
+            parent.invalidateLayout();
         }
     }
 
@@ -634,6 +647,10 @@ public abstract class UiElement {
         Brush bg = style.get(Styles.BACKGROUND);
         if (bg != null) {
             canvas.fillRoundRect(0, 0, width, height, radii, bg);
+        }
+        NineSlice frame = style.get(Styles.NINE_SLICE);
+        if (frame != null) {
+            frame.draw(canvas, 0, 0, width, height);
         }
         float bw = style.get(Styles.BORDER_WIDTH);
         if (bw > 0f) {

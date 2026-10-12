@@ -24,14 +24,16 @@ testmod-common/          витрина: страницы тестового м�
 
 | Пакет | Что делает |
 |---|---|
-| `render` | `Canvas` (интерфейс рисования для виджетов), `AbstractCanvas` (стек трансформаций, клип, прозрачность, отсечение невидимого), `Brush`, `Radii`, `Shadow`, `Color` |
+| `render` | `Canvas` (интерфейс рисования для виджетов), `AbstractCanvas` (стек трансформаций, клип, прозрачность, отсечение невидимого), `Brush` (сплошная и градиенты), `ColorStops`, `ColorSpace`, `Gradients`, `BlendMode`, `Radii`, `Shadow`, `Outline`, `Color` |
 | `layout` | Двухпроходная раскладка measure/arrange: `FlexLayout` (flexbox: gap, grow/shrink, justify, align), `StackLayout` (слои), абсолютное позиционирование, `Dim` (auto / px / % / fill) |
 | `node` | `UiElement` (узел дерева), `UiRoot` (корень: hover, нажатия, фокус, Tab-навигация, диспетчер событий, кадр) |
-| `style` | `StyleKey` (типизированные свойства с плотными id), `Style` (значения + варианты для hover/pressed/focused/disabled/checked), `ComputedStyle` (текущие значения и плавные переходы), `Theme` |
-| `anim` | `Animator` (держит только активные анимации), `AnimatedFloat` (твин или пружина), `Easing` (включая cubic-bezier), `Interpolator` |
+| `style` | `StyleKey` (типизированные свойства с плотными id), `Style` (значения + варианты для hover/pressed/focused/disabled/checked), `ComputedStyle` (текущие значения, переходы по свойствам, слой анимаций), `Theme` (стили классов и токены `ThemeVar`/`Tokens`), `Transition` |
+| `anim` | `Animator` (держит только активные анимации), `AnimatedFloat` (твин или пружина), `Easing` (23 кривые, cubic-bezier, steps, spring), `Interpolator`, `Motion` (таймлайн: sequence/parallel/delay/call), `Keyframes`, `Tween`, `Playback` (циклы, yoyo, скорость) |
 | `event` | Типизированные события с фазами захвата и всплытия: мышь, колесо, клавиатура, символы, фокус |
 | `reactive` | `Signal`, `Computed` (автоматическое отслеживание зависимостей) для привязки данных к виджетам |
-| `widget` | `Widget<S>` (типобезопасный fluent-API), `Panel`, `Label`, `Button`, `ScrollPanel`, `Toggle`, `Slider`, `ProgressBar` |
+| `widget` | `Widget<S>` (типобезопасный fluent-API), `Panel`, `Label`, `Button`, `ScrollPanel`, `Toggle`, `Slider`, `ProgressBar`, `RingProgress`, `ColorPicker` |
+| `fx` | `FxLayer` (слой эффектов), `Particles` (частицы в плоских массивах), `SpriteSheet`, `VanillaFx` (огонь, взрыв, TNT, лава, дым, тряска на ванильных текстурах) |
+| `markdown` | `MarkdownParser` → дерево `Md` → `MarkdownLayout` (плоские операции рисования) → виджет `Markdown` |
 | `platform` | `Platform`: всё, что ядру нужно от игры (метрики шрифта, буфер обмена, звук, время) |
 
 ## Как это решает требования
@@ -58,7 +60,7 @@ testmod-common/          витрина: страницы тестового м�
 при любом GUI scale. Градиенты, прозрачность и масштаб наследуются по дереву. Переходы между
 состояниями (hover, нажатие, фокус) анимируются из стиля темы.
 
-**Гибкость.** Тема задаёт стили по классу виджета, inline-стиль накладывается поверх. Любую
+**Гибкость.** Тема задаёт стили по классу виджета (можно несколько классов), inline-стиль накладывается поверх. Стили ссылаются на токены темы — смена одного токена плавно перекрашивает весь интерфейс. Подробно: [STYLING.md](STYLING.md). Любую
 раскладку и любой виджет можно заменить своим. Сигналы связывают данные с интерфейсом.
 
 ## Пример
@@ -83,6 +85,6 @@ Minecraft.getInstance().setScreen(new LuminaScreen(Component.literal("Приме
 
 - Батчинг SDF-фигур: свой формат вершин с радиусами в атрибутах, чтобы рисовать все фигуры одним вызовом.
 - Виджеты: поле ввода, выпадающий список, тултипы, модальные окна, сетка.
-- Перенос текста и многострочные метки, иконки и nine-slice текстуры.
+- Nine-slice текстуры.
 - Загрузка тем из JSON (ресурс-паки), горячая перезагрузка.
 - Встраивание в чужие экраны (оверлей поверх `AbstractContainerScreen`) и HUD.

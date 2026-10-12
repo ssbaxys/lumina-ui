@@ -55,4 +55,109 @@ public interface Platform {
     default long nanoTime() {
         return System.nanoTime();
     }
+
+    // ================================================================ файлы
+
+    /**
+     * Каталог для файлов библиотеки (сохранённые темы, настройки). По умолчанию {@code config/luminaui}
+     * относительно рабочего каталога — в игре это папка экземпляра Minecraft.
+     */
+    default java.nio.file.Path dataDirectory() {
+        return java.nio.file.Path.of("config", io.github.ssbaxys.lumina.Lumina.MOD_ID);
+    }
+
+    /**
+     * Текст файла внутри {@link #dataDirectory()} или {@code null}, если файла нет или путь недопустим
+     * (абсолютный, с {@code ..}).
+     */
+    default String readFile(String relativePath) {
+        java.nio.file.Path p = DataPaths.resolve(dataDirectory(), relativePath);
+        if (p == null || !java.nio.file.Files.isRegularFile(p)) {
+            return null;
+        }
+        try {
+            return java.nio.file.Files.readString(p, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            return null;
+        }
+    }
+
+    /** Записать текст в файл внутри {@link #dataDirectory()} (каталоги создаются); {@code false} — не вышло. */
+    default boolean writeFile(String relativePath, String text) {
+        java.nio.file.Path p = DataPaths.resolve(dataDirectory(), relativePath);
+        if (p == null) {
+            return false;
+        }
+        try {
+            if (p.getParent() != null) {
+                java.nio.file.Files.createDirectories(p.getParent());
+            }
+            java.nio.file.Files.writeString(p, text == null ? "" : text, java.nio.charset.StandardCharsets.UTF_8);
+            return true;
+        } catch (java.io.IOException e) {
+            return false;
+        }
+    }
+
+    /** Имена файлов в подкаталоге {@link #dataDirectory()} (без вложенных), по алфавиту; нет каталога — пусто. */
+    default java.util.List<String> listFiles(String relativeDir) {
+        java.nio.file.Path dir = DataPaths.resolve(dataDirectory(), relativeDir == null || relativeDir.isEmpty() ? "." : relativeDir);
+        if (dir == null || !java.nio.file.Files.isDirectory(dir)) {
+            return java.util.List.of();
+        }
+        try (java.util.stream.Stream<java.nio.file.Path> s = java.nio.file.Files.list(dir)) {
+            return s.filter(java.nio.file.Files::isRegularFile).map(f -> f.getFileName().toString()).sorted().toList();
+        } catch (java.io.IOException e) {
+            return java.util.List.of();
+        }
+    }
+
+    // ================================================================ мир (для расписания тем)
+
+    /**
+     * Время суток текущего мира в тиках, {@code 0..24000} (0 — восход, 6000 — полдень, 13000 — ночь),
+     * или отрицательное число, если мира нет. Ядро тогда берёт системные часы ({@code WorldInfo}).
+     */
+    default float dayTime() {
+        return -1f;
+    }
+
+    /** Идентификатор биома под игроком ({@code "minecraft:desert"}) или {@code null}, если мира нет. */
+    default String biomeId() {
+        return null;
+    }
+
+    // ================================================================ доступность
+
+    /**
+     * Озвучить текст экранным диктором игры (подпись элемента в фокусе). По умолчанию ничего не делает;
+     * загрузчик может передать текст встроенному диктору Minecraft.
+     */
+    default void narrate(String text) {
+    }
+
+    /** Безопасное разрешение относительных путей внутри каталога данных. */
+    final class DataPaths {
+        private DataPaths() {
+        }
+
+        /** Путь внутри {@code base} или {@code null}, если он выходит за его пределы. */
+        public static java.nio.file.Path resolve(java.nio.file.Path base, String relative) {
+            if (relative == null || relative.isEmpty()) {
+                return null;
+            }
+            java.nio.file.Path root = base.toAbsolutePath().normalize();
+            java.nio.file.Path rel;
+            try {
+                rel = java.nio.file.Path.of(relative);
+            } catch (RuntimeException e) {
+                return null;
+            }
+            if (rel.isAbsolute()) {
+                return null;
+            }
+            java.nio.file.Path p = root.resolve(rel).normalize();
+            return p.startsWith(root) ? p : null;
+        }
+    }
 }

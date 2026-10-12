@@ -17,6 +17,7 @@ import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.style.State;
 import io.github.ssbaxys.lumina.style.Styles;
+import io.github.ssbaxys.lumina.sound.UiSounds;
 
 /**
  * Флажок, привязанный к {@link Signal}, с подписью справа (клик по подписи тоже переключает).
@@ -144,6 +145,12 @@ public class Checkbox extends Widget<Checkbox> {
         return this;
     }
 
+    @Override
+    protected String defaultAccessibleLabel() {
+        String l = label();
+        return l == null || l.isEmpty() ? null : l;
+    }
+
     /** Переключить, как будто нажали: снимает неопределённость, иначе меняет значение. */
     public void toggle() {
         if (!isEnabled()) {
@@ -165,6 +172,7 @@ public class Checkbox extends Widget<Checkbox> {
         if (!isEnabled()) {
             return;
         }
+        UiSounds.click(this, false);
         if (action != null) {
             action.run();
         } else {

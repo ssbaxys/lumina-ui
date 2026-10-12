@@ -16,6 +16,7 @@ import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
 import io.github.ssbaxys.lumina.style.State;
 import io.github.ssbaxys.lumina.style.Styles;
+import io.github.ssbaxys.lumina.sound.UiSounds;
 
 /** Переключатель вкл/выкл, привязанный к {@link Signal}. Ползунок двигается пружиной; выставляет состояние CHECKED. */
 public class Toggle extends Widget<Toggle> {
@@ -75,11 +76,13 @@ public class Toggle extends Widget<Toggle> {
             return;
         }
         if (event.type() == PointerEvent.CLICK && ((PointerEvent) event).button() == Keys.MOUSE_LEFT) {
+            UiSounds.click(this, false);
             toggle();
             event.consume();
         } else if (event.type() == KeyEvent.PRESS) {
             int key = ((KeyEvent) event).key();
             if (key == Keys.SPACE || key == Keys.ENTER || key == Keys.KP_ENTER) {
+                UiSounds.click(this, false);
                 toggle();
                 event.consume();
             }

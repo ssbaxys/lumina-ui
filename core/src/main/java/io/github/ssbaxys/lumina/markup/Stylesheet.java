@@ -408,7 +408,8 @@ public final class Stylesheet {
     /**
      * Применить к теме: правила с простыми селекторами ({@code button}, {@code .card:hover}) дополняют
      * стили одноимённых классов, переменные-токены из {@code :root} меняют токены темы. Так из CSS-файла
-     * можно оформить и обычные виджеты, созданные кодом.
+     * можно оформить и обычные виджеты, созданные кодом. Селектор «тег.класс» ({@code button.danger})
+     * задаёт модификатор темы {@code "button.danger"} — он действует в {@code styleClass("button danger")}.
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Theme applyTo(Theme theme) {
@@ -434,7 +435,8 @@ public final class Stylesheet {
             }
             Compound c = r.selector().subject();
             String cls = c.classes().size() == 1 && c.tag() == null ? c.classes().get(0)
-                    : c.classes().isEmpty() && c.tag() != null ? c.tag() : null;
+                    : c.classes().isEmpty() && c.tag() != null ? c.tag()
+                    : c.classes().size() == 1 ? c.tag() + "." + c.classes().get(0) : null;
             if (cls == null || c.id() != null) {
                 continue;
             }

@@ -2,7 +2,6 @@ package io.github.ssbaxys.lumina.style;
 
 import io.github.ssbaxys.lumina.anim.Animation;
 import io.github.ssbaxys.lumina.anim.Animator;
-import io.github.ssbaxys.lumina.anim.Easing;
 import io.github.ssbaxys.lumina.anim.Interpolator;
 
 /**
@@ -10,6 +9,9 @@ import io.github.ssbaxys.lumina.anim.Interpolator;
  *
  * <p>Наследуемые свойства не копируются вниз по дереву: {@link #get} лениво спрашивает родителя.
  * Поэтому анимация цвета текста у кнопки автоматически видна во всех её потомках.</p>
+ *
+ * <p>Поверх стиля лежит слой анимаций ({@link #setOverride}): анимации элемента пишут туда значения
+ * напрямую, не пересобирая {@link Style}. Пока значение в слое есть, оно главнее стиля.</p>
  */
 public final class ComputedStyle implements Animation {
     /** Обратный вызов при изменении значений. */
@@ -26,9 +28,10 @@ public final class ComputedStyle implements Animation {
     private Object[] from = NONE;
     private Object[] target = NONE;
     private Object[] blend;
+    private Object[] overrides;
     private float elapsed;
     private float duration;
-    private Easing easing = Easing.LINEAR;
+    private Transition transition = Transition.NONE;
     private boolean animating;
     private boolean scheduled;
     private boolean animatesLayout;
@@ -43,6 +46,10 @@ public final class ComputedStyle implements Animation {
 
     public <T> T get(StyleKey<T> key) {
         int id = key.id();
+        Object[] o = overrides;
+        if (o != null && id < o.length && o[id] != null) {
+            return key.cast(o[id]);
+        }
         Object[] c = current;
         Object v = id < c.length ? c[id] : null;
         if (v != null) {
@@ -52,6 +59,47 @@ public final class ComputedStyle implements Animation {
             return parent.get(key);
         }
         return key.defaultValue();
+    }
+
+    /** Значение из стиля (с переходом), без слоя анимаций. */
+    public <T> T getBase(StyleKey<T> key) {
+        int id = key.id();
+        Object v = id < current.length ? current[id] : null;
+        if (v != null) {
+            return key.cast(v);
+        }
+        if (key.inherited() && parent != null) {
+            return parent.get(key);
+        }
+        return key.defaultValue();
+    }
+
+    /** Значение из анимации поверх стиля; {@code null} убирает его. */
+    public <T> void setOverride(StyleKey<T> key, T value) {
+        int id = key.id();
+        if (overrides == null) {
+            if (value == null) {
+                return;
+            }
+            overrides = new Object[Math.max(StyleKey.count(), id + 1)];
+        } else if (id >= overrides.length) {
+            overrides = java.util.Arrays.copyOf(overrides, Math.max(StyleKey.count(), id + 1));
+        }
+        Object old = overrides[id];
+        if (old == value || (old != null && old.equals(value))) {
+            return;
+        }
+        overrides[id] = value;
+        listener.onStyleChanged(key.affectsLayout());
+    }
+
+    public void clearOverride(StyleKey<?> key) {
+        setOverride(key, null);
+    }
+
+    public boolean hasOverride(StyleKey<?> key) {
+        int id = key.id();
+        return overrides != null && id < overrides.length && overrides[id] != null;
     }
 
     /**
@@ -66,7 +114,7 @@ public final class ComputedStyle implements Animation {
         }
         Transition tr = valueOf(next, Styles.TRANSITION);
         boolean layout = layoutDiffers(current, next);
-        if (animator == null || tr.duration() <= 0f || current == NONE) {
+        if (animator == null || tr.isNone() || current == NONE) {
             target = next;
             current = next;
             animating = false;
@@ -76,8 +124,8 @@ public final class ComputedStyle implements Animation {
         from = animating ? snapshot() : current;
         target = next;
         elapsed = 0f;
-        duration = tr.duration();
-        easing = tr.easing();
+        duration = tr.totalDuration();
+        transition = tr;
         animatesLayout = layout;
         animating = true;
         if (!scheduled) {
@@ -101,13 +149,22 @@ public final class ComputedStyle implements Animation {
             listener.onStyleChanged(animatesLayout);
             return false;
         }
-        float t = easing.apply(p);
         int len = Math.max(from.length, target.length);
         if (blend == null || blend.length < len) {
             blend = new Object[len];
         }
+        Transition tr = transition;
         for (int i = 0; i < len; i++) {
-            blend[i] = mix(i, at(from, i), at(target, i), t);
+            Object a = at(from, i);
+            Object b = at(target, i);
+            if (a == b) {
+                blend[i] = b;
+                continue;
+            }
+            float d = tr.durationOf(i);
+            float local = elapsed - tr.delayOf(i);
+            float t = local <= 0f ? 0f : d <= 0f || local >= d ? 1f : tr.easingOf(i).apply(local / d);
+            blend[i] = mix(i, a, b, t);
         }
         current = blend;
         listener.onStyleChanged(animatesLayout);

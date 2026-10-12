@@ -165,7 +165,7 @@ public final class VanillaFx {
             this.smoke = new Particles(BIG_SMOKE).gravity(-25f * scale).drag(0.8f).growth(1.8f).tint(0xE0FFFFFF, 0x30FFFFFF);
             this.sparks = new Particles(SPARK).gravity(260f * scale).drag(0.9f).blend(BlendMode.ADD)
                     .tint(0xFFFFF2B0, 0xFFFF6A00).animateByLife(true);
-            sound(SOUND_EXPLODE, 4f, 0.9f + (float) Math.random() * 0.2f);
+            sound(SOUND_EXPLODE, 1f, 0.9f + (float) Math.random() * 0.2f);
         }
 
         @Override

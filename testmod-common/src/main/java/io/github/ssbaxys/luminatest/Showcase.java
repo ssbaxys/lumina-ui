@@ -13,6 +13,7 @@ import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.widget.Button;
 import io.github.ssbaxys.lumina.widget.Label;
 import io.github.ssbaxys.lumina.widget.Panel;
+import io.github.ssbaxys.lumina.widget.ScrollPanel;
 import io.github.ssbaxys.lumina.widget.Toggle;
 
 import java.util.List;
@@ -36,7 +37,11 @@ public final class Showcase {
                 new PageDef("Обзор", OverviewPage::create),
                 new PageDef("Раскладка", LayoutPage::create),
                 new PageDef("Стили и темы", () -> StylePage.create(light)),
+                new PageDef("Цвета", ColorsPage::create),
+                new PageDef("Градиенты", GradientsPage::create),
                 new PageDef("Анимации", AnimationPage::create),
+                new PageDef("Эффекты", EffectsPage::create),
+                new PageDef("Markdown", MarkdownPage::create),
                 new PageDef("Ввод и события", InputPage::create),
                 new PageDef("Данные", DataPage::create),
                 new PageDef("Производительность", PerformancePage::create));
@@ -47,6 +52,12 @@ public final class Showcase {
         Panel nav = Panel.box(FlexLayout.column().gap(3)).width(Dim.px(124));
         nav.add(new Label("Lumina UI").scale(1.4f), Ui.muted("витрина возможностей"), Ui.column(0).size(1, 6));
 
+        // Разделов много: на маленьком экране список прокручивается, а кнопки внизу остаются на месте.
+        Panel links = Panel.box(FlexLayout.column().gap(3).align(Align.STRETCH));
+        ScrollPanel linkScroll = new ScrollPanel(links).width(Dim.FILL).height(Dim.FILL);
+        linkScroll.setStyleClass(null);
+        nav.add(linkScroll);
+
         Button[] buttons = new Button[pages.size()];
         for (int i = 0; i < pages.size(); i++) {
             int index = i;
@@ -55,9 +66,9 @@ public final class Showcase {
                     .width(Dim.FILL)
                     .clickSound(false)
                     .onPress(() -> select(index, pages, buttons, content));
-            nav.add(buttons[i]);
+            links.add(buttons[i]);
         }
-        nav.add(Ui.spacer(),
+        nav.add(Ui.column(0).size(1, 2),
                 Ui.row(6, new Toggle(light), new Label("Светлая тема")),
                 Ui.column(0).size(1, 4),
                 new Button("Закрыть", onClose).width(Dim.FILL));
@@ -73,7 +84,8 @@ public final class Showcase {
                 .add(window);
 
         UiRoot root = new UiRoot(screen, ShowcaseTheme.dark());
-        light.subscribe(on -> root.setTheme(on ? ShowcaseTheme.light() : ShowcaseTheme.dark()));
+        light.subscribe(on -> root.setTheme(ShowcaseTheme.carryTokens(
+                on ? ShowcaseTheme.light() : ShowcaseTheme.dark(), root.theme())));
         select(0, pages, buttons, content);
         return root;
     }

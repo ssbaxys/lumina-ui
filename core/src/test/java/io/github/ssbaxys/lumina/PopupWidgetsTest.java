@@ -222,6 +222,7 @@ class PopupWidgetsTest {
         assertSame(select, root.focused(), "focus comes back to the field");
 
         click(root, select);
+        root.tick(1f);
         root.charTyped('я', 0);
         root.charTyped('я', 0);
         assertTrue(select.visibleOptions().isEmpty());

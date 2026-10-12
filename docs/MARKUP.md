@@ -61,13 +61,37 @@ button.primary:hover { transform: scale(1.06); glow: 6px var(--accent); transiti
 | `fx` | эффект из реестра FX | `effect="minecraft:snow"` |
 | `blocks` | 2D-карта из блоков, ряды — текстом внутри тега, `.` — пусто | `tile`, `key="G=minecraft:grass_block; S=minecraft:stone"`, `brush` (редактор), `grid="true"` |
 | `structure` | 3D-постройка, слои — текстом через строки `---` (нижний первым), `.` — воздух | `key`, `tile`, `yaw`, `pitch`, `auto-rotate` (без значения или °/с), `zoom`, `shadow="false"`, `interactive="false"` |
+| `select` | выпадающий список; варианты в `options` или дочерними `<option value="…" item="…">Подпись</option>` | `bind`, `options="a,b,c"`, `labels="А,Б,В"`, `icons="minecraft:a,,minecraft:c"`, `search`, `placeholder`, `rows` |
+| `keybind` | поле назначения клавиши | `bind` (код GLFW или название: `R`, `space`, `F5`, `left-shift`), `value`, `default` |
+| `date-picker` | поле даты с календарём во всплывающем окне | `bind`, `value="2026-10-12"`, `min`, `max` (`today` — сегодня), `placeholder` |
+| `calendar` | встроенный календарь на месяц | `bind`, `value`, `min`, `max` |
 | `spacer` `hr` `br` | распорка, линия, отступ | |
 | `state` | переменная состояния | `name`, `value` |
 | `style`, `link rel="stylesheet"` | CSS внутри файла и из ресурса | `href` |
 
 Общие атрибуты: `id`, `class`, `style="…"` (inline-CSS), `width`, `height`, `grow`, `gap`, `margin`, `padding`,
-`align`, `justify`, `direction`, `if`, `enabled`, `bind`, `on-click`, `on-hover`, `on-change`.
+`align`, `justify`, `direction`, `if`, `enabled`, `bind`, `on-click`, `on-hover`, `on-change`, `tooltip`.
 Классы добавляются к классу виджета, так что тема по-прежнему оформляет `button`, а CSS добавляет `button.primary`.
+
+**Подсказки** — у любого тега: `tooltip="Сохранить мир\nCtrl+S"` (строки через `\n`, шаблоны `{{…}}` обновляются),
+`tooltip-markdown="**Алмаз**"` вместо текста, `tooltip-kind="modern"` (по умолчанию `vanilla` — как в игре),
+`tooltip-delay="300ms"`, `tooltip-follow="false"` (под элементом, а не у курсора).
+
+```html
+<state name="mode" value="normal"/>
+<select bind="mode" options="peaceful,easy,normal,hard" labels="Мирный,Лёгкий,Нормальный,Сложный"
+        tooltip="Сложность мира"/>
+<select bind="ore" search placeholder="Руда">
+  <option value="diamond" item="minecraft:diamond">Алмаз</option>
+  <option value="emerald" item="minecraft:emerald">Изумруд</option>
+</select>
+<keybind bind="drop" default="Q"/>
+<date-picker bind="day" min="today"/>
+```
+
+Теги `keybind`, `date-picker` и `calendar` пустые (как `input`), `select` — нет: пишите `<select …/>` или с `</select>`.
+`bind` у `select` хранит значение варианта (число из `<state>` останется числом), у `keybind` — код клавиши,
+у `date-picker` — `LocalDate` (в шаблоне выводится как `2026-10-12`).
 
 ## CSS
 
@@ -113,7 +137,8 @@ button.primary:hover { transform: scale(1.06); glow: 6px var(--accent); transiti
 **Состояние без Java.** `<state name="coins" value="120"/>` создаёт сигнал. Тип угадывается по значению (число, `true`/`false`, строка).
 Состояние хранится в `Bindings` и переживает горячую перезагрузку.
 
-**Привязка.** `bind="volume"` у `toggle`, `slider`, `progress`, `ring`, `color-picker` связывает поле с сигналом в обе стороны.
+**Привязка.** `bind="volume"` у `toggle`, `slider`, `progress`, `ring`, `color-picker`, `select`, `keybind`, `date-picker`
+связывает поле с сигналом в обе стороны.
 `on-change="save"` вызывается при каждом изменении.
 
 **Действия** в `on-click`, `on-hover`, `on-change` перечисляются через `;`:

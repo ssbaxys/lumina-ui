@@ -42,6 +42,14 @@ public class CalendarView extends Widget<CalendarView> {
     private static final float ARROW_HIT = 18f;
     private static final int PREV = -2;
     private static final int NEXT = -3;
+    private static final Radii CELL_RADII = Radii.all(5f);
+    private static final String[] DAY_LABELS = new String[32];
+
+    static {
+        for (int i = 0; i < DAY_LABELS.length; i++) {
+            DAY_LABELS[i] = String.valueOf(i);
+        }
+    }
 
     private final Signal<LocalDate> value;
     private YearMonth month;
@@ -55,6 +63,19 @@ public class CalendarView extends Widget<CalendarView> {
     private boolean keyboard;
     private AnimatedFloat slide;
     private Subscription subscription;
+
+    private final int[] gridDay = new int[42];
+    private final boolean[] gridInMonth = new boolean[42];
+    private final boolean[] gridAllowed = new boolean[42];
+    private int selectedCell = -1;
+    private int todayCell = -1;
+    private YearMonth gridMonth;
+    private LocalDate gridSelected;
+    private LocalDate gridToday;
+    private LocalDate gridMin;
+    private LocalDate gridMax;
+    private long gridStartEpoch;
+    private String gridTitle = "";
 
     public CalendarView(Signal<LocalDate> value) {
         super("calendar");
@@ -282,6 +303,7 @@ public class CalendarView extends Widget<CalendarView> {
         int accent = style.get(Styles.ACCENT_COLOR);
         int onAccent = Color.luminance(accent) > 0.5f ? 0xFF1D2330 : Color.WHITE;
         float s = slide != null ? slide.get() : 0f;
+        refreshGrid();
         float left = padding().left();
         float right = width() - padding().right();
         float top = padding().top();
@@ -291,7 +313,7 @@ public class CalendarView extends Widget<CalendarView> {
         float hy = top + HEADER / 2f;
         chevron(canvas, left + ARROW_HIT / 2f, hy, -1f, hover == PREV ? text : Color.mulAlpha(text, 0.6f));
         chevron(canvas, right - ARROW_HIT / 2f, hy, 1f, hover == NEXT ? text : Color.mulAlpha(text, 0.6f));
-        String title = MONTHS[month.getMonthValue() - 1] + " " + month.getYear();
+        String title = gridTitle;
         float fade = 1f - Math.abs(s);
         canvas.drawText(title, (left + right - m.width(title)) / 2f + s * 10f, hy - lh / 2f + 0.5f,
                 Color.mulAlpha(text, 0.4f + 0.6f * fade), false);
@@ -307,30 +329,27 @@ public class CalendarView extends Widget<CalendarView> {
         // Сетка дней со сдвигом при смене месяца.
         float gt = gridTop();
         float shift = s * 14f;
-        LocalDate start = gridStart();
-        LocalDate selected = value.peek();
+        int cursorCell = keyboard ? cursorCell() : -1;
+        Brush selectedFill = Brush.solid(accent);
+        Brush hotFill = Brush.solid(Color.withAlpha(text, 0x22));
         canvas.save();
         canvas.multiplyOpacity(0.25f + 0.75f * fade);
         for (int cell = 0; cell < 42; cell++) {
-            LocalDate d = start.plusDays(cell);
             float x = gl + (cell % 7) * CELL_W + shift;
             float y = gt + (cell / 7) * CELL_H;
-            boolean inMonth = d.getMonthValue() == month.getMonthValue();
-            boolean allowed = isAllowed(d);
-            boolean isSelected = d.equals(selected);
-            boolean hot = cell == hover || (keyboard && d.equals(cursor));
-            Radii r = Radii.all(5f);
+            boolean allowed = gridAllowed[cell];
+            boolean isSelected = cell == selectedCell;
             if (isSelected) {
-                canvas.fillRoundRect(x + 1f, y + 1f, CELL_W - 2f, CELL_H - 2f, r, Brush.solid(accent));
-            } else if (hot && allowed) {
-                canvas.fillRoundRect(x + 1f, y + 1f, CELL_W - 2f, CELL_H - 2f, r, Brush.solid(Color.withAlpha(text, 0x22)));
+                canvas.fillRoundRect(x + 1f, y + 1f, CELL_W - 2f, CELL_H - 2f, CELL_RADII, selectedFill);
+            } else if ((cell == hover || cell == cursorCell) && allowed) {
+                canvas.fillRoundRect(x + 1f, y + 1f, CELL_W - 2f, CELL_H - 2f, CELL_RADII, hotFill);
             }
-            if (d.equals(today) && !isSelected) {
-                canvas.strokeRoundRect(x + 1f, y + 1f, CELL_W - 2f, CELL_H - 2f, r, 1f, accent);
+            if (cell == todayCell && !isSelected) {
+                canvas.strokeRoundRect(x + 1f, y + 1f, CELL_W - 2f, CELL_H - 2f, CELL_RADII, 1f, accent);
             }
-            String label = String.valueOf(d.getDayOfMonth());
+            String label = DAY_LABELS[gridDay[cell]];
             int c = isSelected ? onAccent : text;
-            if (!inMonth) {
+            if (!gridInMonth[cell]) {
                 c = Color.mulAlpha(c, 0.35f);
             }
             if (!allowed) {
@@ -339,6 +358,47 @@ public class CalendarView extends Widget<CalendarView> {
             canvas.drawText(label, x + (CELL_W - m.width(label)) / 2f, y + (CELL_H - lh) / 2f + 0.5f, c, false);
         }
         canvas.restore();
+    }
+
+    /**
+     * Числа, принадлежность месяцу и доступность ячеек пересчитываются только при смене месяца,
+     * выбранной даты, «сегодня» или границ — в кадре сетка не создаёт объектов.
+     */
+    private void refreshGrid() {
+        LocalDate selected = value.peek();
+        if (month.equals(gridMonth) && java.util.Objects.equals(selected, gridSelected)
+                && today.equals(gridToday) && min == gridMin && max == gridMax) {
+            return;
+        }
+        gridMonth = month;
+        gridSelected = selected;
+        gridToday = today;
+        gridMin = min;
+        gridMax = max;
+        gridTitle = MONTHS[month.getMonthValue() - 1] + " " + month.getYear();
+        LocalDate start = gridStart();
+        gridStartEpoch = start.toEpochDay();
+        selectedCell = -1;
+        todayCell = -1;
+        LocalDate d = start;
+        for (int cell = 0; cell < 42; cell++) {
+            gridDay[cell] = d.getDayOfMonth();
+            gridInMonth[cell] = d.getMonthValue() == month.getMonthValue();
+            gridAllowed[cell] = isAllowed(d);
+            if (d.equals(selected)) {
+                selectedCell = cell;
+            }
+            if (d.equals(today)) {
+                todayCell = cell;
+            }
+            d = d.plusDays(1);
+        }
+    }
+
+    /** Ячейка клавиатурного курсора или -1, если он не в показанной сетке. */
+    private int cursorCell() {
+        long days = cursor.toEpochDay() - gridStartEpoch;
+        return days >= 0 && days < 42 ? (int) days : -1;
     }
 
     /** Стрелка ‹ или › из двух отрезков. */

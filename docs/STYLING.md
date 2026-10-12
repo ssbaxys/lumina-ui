@@ -275,3 +275,105 @@ new Pages(tab).effect(Pages.Effect.SLIDE).page(this::screen).page(this::view);
 ```
 
 Готовый пример экрана настроек в современном стиле — раздел «Современный стиль» витрины (`ModernPage`).
+
+## Всплывающие виджеты
+
+Выпадающие списки, подсказки, радиальное меню и календарь живут во **всплывающем слое** `UiRoot`: рисуются поверх
+содержимого и первыми получают мышь и клавиши. Escape закрывает верхнее окно, клик мимо — тоже.
+
+- `root.showPopup(element, x, y)` / `closePopup` / `popups()` — окна (меню, списки);
+- `root.showOverlay(element, x, y)` / `overlays()` — **пассивные оверлеи** (подсказки): рисуются поверх всех окон,
+  но мышь проходит сквозь них, клавиши им не достаются, а клик мимо их не закрывает;
+- `root.movePopup(element, x, y)` — передвинуть открытое окно или оверлей (подсказка за мышью);
+- отпускание клавиши (`keyUp`) тоже сначала уходит верхнему окну — так радиальное меню выбирает пункт.
+
+**Выпадающий список** (`Select<T>`): поле с текущим значением и стрелкой, список открывается под полем (если внизу нет
+места — над ним) с раскрытием по вертикали. Длинный список прокручивается колесом (рисуются только видимые строки),
+строка поиска отбирает варианты по подстроке без учёта регистра, у пунктов бывают иконки предметов. Клавиатура:
+закрытый — Enter, пробел или Alt+↓ открывают, ↑/↓ меняют значение на месте, буква прыгает к варианту;
+открытый — ↑/↓, PageUp/PageDown, Home/End, Enter выбирает, Escape закрывает.
+
+```java
+Signal<String> ore = Signal.of("minecraft:diamond");
+new Select<>(ore, List.of("minecraft:diamond", "minecraft:emerald", "minecraft:gold_ingot"))
+        .labels(id -> names.get(id))   // подпись варианта
+        .icons(id -> id)               // иконка — id предмета (или null)
+        .searchable(true)              // строка поиска
+        .maxRows(7)                    // видимых строк, дальше — прокрутка
+        .placeholder("Выберите руду")  // пока значение null
+        .onChange(id -> log(id));
+Select.of(difficulty, Difficulty.values()).labels(Difficulty::title);
+```
+
+Стили: `"select"` — поле (как `"field"`; открытый список — состояние `Select.OPEN`), `"dropdown"` — карточка списка
+(фон, рамка, тень; подсвеченная строка — `ACCENT_COLOR`, текст — `TEXT_COLOR`).
+
+**Подсказки** (`Tooltip`, `Tooltips`): появляются после задержки наведения (0.5 с), следуют за мышью и переворачиваются
+у краёв экрана. Нажатие мыши прячет подсказку до следующего движения; видна одна подсказка — самого глубокого
+наведённого элемента. Подсказка элемента пропадает, если элемент убрали из дерева.
+
+```java
+button.tooltip("Сохранить мир\nCtrl+S");                          // текст, строки через \n
+button.tooltip(Tooltip.Kind.MODERN, "Карточка темы");             // свой вид
+icon.tooltipMarkdown("**Алмаз** ![](item:minecraft:diamond)");    // Markdown
+Tooltips.attach(slot, () -> buildCard(slot))                      // любой элемент, создаётся при показе
+        .kind(Tooltip.Kind.MODERN).follow(false).delay(0.2f).maxWidth(220);
+Tooltips.attach(label, "у любого UiElement");                     // подпись тоже станет «наводимой»
+Tooltips.of(button).text("Новый текст");                          // открытая подсказка обновится сразу
+Tooltips.detach(button);
+Tooltips.setDefaultKind(Tooltip.Kind.MODERN);                     // вид и задержка по умолчанию
+Tooltips.setDefaultDelay(0.3f);
+```
+
+Виды: `VANILLA` — как в игре: почти чёрный фон `0xF0100010`, фиолетовая кайма градиентом `0x505000FF → 0x5028007F`,
+срезанные углы, белый текст с тенью, после первой строки (названия) лишние 2 пикселя (стиль `"tooltip-vanilla"`:
+`BACKGROUND`, `BORDER_BRUSH`, `TEXT_COLOR`, `PADDING`); `MODERN` — карточка темы со скруглением, рамкой, тенью и
+мягким появлением (стиль `"tooltip"` на токенах `SURFACE`, `BORDER`, `SHADOW`, `TEXT`, `CORNER`).
+`follow(false)` ставит подсказку под элементом по центру (над ним, если внизу нет места). `show()` / `hide()` —
+показать и спрятать из кода.
+
+**Радиальное меню** (`RadialMenu`): секторы вокруг точки открытия. Сектор выбирается направлением мыши от центра
+(и за пределами кольца), наведённый выдвигается и перекрашивается в акцент, в центре — его подпись. Пункт может
+открывать вложенное меню (маленький треугольник у края сектора); правая кнопка, клик в центре, Backspace или Escape —
+назад. Стрелки перебирают секторы, Enter выбирает, цифры 1–9 — пункт по номеру.
+
+```java
+RadialMenu wheel = new RadialMenu()
+        .title("Действия")
+        .item("Меч", "minecraft:diamond_sword", this::sword)
+        .item("Факел", this::torch)                                  // без иконки — подпись в секторе
+        .submenu("Еда", "minecraft:apple",
+                RadialMenu.Item.of("Хлеб", this::bread).icon("minecraft:bread"),
+                RadialMenu.Item.of("Торт", this::cake).enabled(false))
+        .radius(30, 88);
+wheel.show(root, mouseX, mouseY);                       // выбор кликом
+wheel.showHeld(root, mouseX, mouseY, Keys.R);           // пока зажата R: отпускание выбирает
+RadialMenu.bindKey(screenContent, Keys.R, this::wheel); // нажатие R над элементом (или его потомком в фокусе)
+RadialMenu.bindRightClick(area, this::wheel);           // правая кнопка над элементом
+```
+
+Меню занимает весь экран (фон стиля — затемнение). Стиль `"radial-menu"`: `BACKGROUND` — затемнение,
+`PopupStyles.WEDGE_COLOR` (`radial-wedge-color`) — секторы и центр, `ACCENT_COLOR` — наведённый сектор, `TEXT_COLOR` — подписи.
+`bindKey` срабатывает, когда клавиша доходит до элемента: без фокуса клавиши получает `root.content()`.
+
+**Назначение клавиш** (`KeyBindField`): клик или Enter — поле ждёт клавишу («> Нажмите клавишу <» с пульсацией),
+следующая клавиша (любая, даже Tab) становится значением, Escape и потеря фокуса отменяют ожидание, правый клик
+или Delete возвращают `defaultKey`. Значение — код GLFW в `Signal<Integer>`, `KeyBindField.NONE` — не задано.
+`KeyBindField.keyName(code)` даёт название («Пробел», «Левый Shift», «F5», «Num 7»), `parseKey("space")` — обратно.
+Стиль `"field keybind"`, ожидание — состояние `KeyBindField.LISTENING`.
+
+**Даты** (`DatePicker`, `CalendarView`): поле `12.10.2026` открывает календарь на месяц во всплывающем окне.
+Неделя с понедельника, выбранный день — заливка акцентом, сегодня — обводка, дни соседних месяцев приглушены,
+дни вне `range(min, max)` недоступны. Месяц листается стрелками заголовка, колесом и PageUp/PageDown (сетка
+коротко сдвигается), дни — стрелками, Enter выбирает. `CalendarView` можно поставить и прямо в интерфейс.
+
+```java
+Signal<LocalDate> date = Signal.of(LocalDate.now());
+new DatePicker(date).range(LocalDate.now(), null).format(DateTimeFormatter.ofPattern("d.M.yy"));
+new CalendarView(date).onPick(d -> log(d));
+```
+
+Стили: поле — `"select"`, всплывающий календарь — `"dropdown calendar"`, встроенный — `"calendar"`.
+Все новые классы есть в `Theme.dark()`, `Theme.light()` и `ModernTheme` и построены на токенах.
+В разметке — теги `<select>`, `<keybind>`, `<date-picker>`, `<calendar>` и атрибут `tooltip` (см. [MARKUP.md](MARKUP.md)).
+Пример всего вместе — страница витрины `PopupsPage`.

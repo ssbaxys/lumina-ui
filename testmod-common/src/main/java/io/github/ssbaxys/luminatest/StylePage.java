@@ -1,5 +1,11 @@
 package io.github.ssbaxys.luminatest;
 
+import io.github.ssbaxys.lumina.anim.Easing;
+import io.github.ssbaxys.lumina.render.BlendMode;
+import io.github.ssbaxys.lumina.render.Color;
+import io.github.ssbaxys.lumina.render.Gradients;
+import io.github.ssbaxys.lumina.style.Tokens;
+import io.github.ssbaxys.lumina.widget.Button;
 import io.github.ssbaxys.lumina.layout.Dim;
 import io.github.ssbaxys.lumina.layout.FlexLayout;
 import io.github.ssbaxys.lumina.node.UiElement;
@@ -77,8 +83,14 @@ final class StylePage {
                 Ui.section("Состояния и переходы", "Варианты стиля для hover/pressed с плавным переходом", states),
                 Ui.section("Тема", "Переключение темы на лету: стили перетекают плавно",
                         Ui.row(8, new Toggle(light), new Label("Светлая тема"))),
-                Ui.section("Наследуемый акцент", "ACCENT_COLOR задаётся на корне и наследуется всеми виджетами",
-                        accents, accentDemo));
+                Ui.section("Токен акцента", "theme.set(Tokens.ACCENT, цвет) — всё, что на нём построено, перекрашивается",
+                        accents, accentDemo),
+                Ui.section("Токены темы", "Стили ссылаются на токены, а не на числа", tokens()),
+                Ui.section("Несколько классов", "styleClass(\"button danger pill\") — классы накладываются по порядку",
+                        classes()),
+                Ui.section("Переходы по свойствам", "Transition.key(свойство, длительность, кривая, задержка)",
+                        perProperty()),
+                Ui.section("Трансформации и шрифт", "TRANSLATE, SCALE_X/Y, FONT_SCALE, BLEND", transforms()));
     }
 
     private static Panel swatch(String caption, Consumer<Style.Builder> edit) {
@@ -90,16 +102,86 @@ final class StylePage {
         return Ui.labeled(p, caption);
     }
 
-    /** Задать акцент на окне (самом внешнем элементе класса "panel"): его унаследуют все виджеты внутри. */
+    /** Акцент — токен темы: меняется одно значение, и все стили, ссылающиеся на него, плавно перекрашиваются. */
     private static void setAccent(UiElement from, int color) {
-        UiElement window = null;
-        for (UiElement e = from; e != null; e = e.parent()) {
-            if ("panel".equals(e.styleClass())) {
-                window = e;
+        if (from.root() != null) {
+            from.root().theme().set(Tokens.ACCENT, color);
+        }
+    }
+
+    private static Panel tokens() {
+        Signal<Float> corner = Signal.of(10f);
+        Signal<Float> motion = Signal.of(1f);
+        Panel col = Ui.column(6).width(Dim.FILL);
+        Slider cornerSlider = new Slider(corner, 0f, 16f).step(1f);
+        Slider motionSlider = new Slider(motion, 0f, 4f).step(0.25f);
+        corner.subscribe(v -> {
+            if (cornerSlider.root() != null) {
+                cornerSlider.root().theme().set(Tokens.CORNER, v);
             }
-        }
-        if (window != null) {
-            window.setStyle(window.inlineStyle().toBuilder().set(Styles.ACCENT_COLOR, color).build());
-        }
+        });
+        motion.subscribe(v -> {
+            if (motionSlider.root() != null) {
+                motionSlider.root().theme().set(Tokens.MOTION, v);
+            }
+        });
+        col.add(Ui.row(8, new Label("CORNER").width(Dim.px(60)), cornerSlider,
+                Label.bound(corner.map(v -> Math.round(v) + " px")), Ui.muted("скругление всех панелей и кнопок")));
+        col.add(Ui.row(8, new Label("MOTION").width(Dim.px(60)), motionSlider,
+                Label.bound(motion.map(v -> "×" + v)), Ui.muted("множитель всех переходов, 0 — без анимаций")));
+        col.add(Ui.row(6, new Button("Кнопка"), new Button("Ещё одна"), new Toggle(Signal.of(true)),
+                new ProgressBar().progress(0.6f).width(Dim.px(80))));
+        return col;
+    }
+
+    private static Panel classes() {
+        return Ui.row(6,
+                new Button("button"),
+                new Button("button danger").styleClass("button danger"),
+                new Button("button success").styleClass("button success"),
+                new Button("button ghost").styleClass("button ghost"),
+                new Button("button pill").styleClass("button pill"),
+                new Button("danger pill").styleClass("button danger pill"));
+    }
+
+    /** Каждое свойство со своей длительностью, кривой и задержкой. */
+    private static Panel perProperty() {
+        Panel p = Ui.centered(new Label("наведи")).size(90, 34);
+        p.style(b -> b
+                .set(Styles.BACKGROUND, Brush.solid(BASE))
+                .set(Styles.RADIUS, Radii.all(6))
+                .set(Styles.TRANSITION, Transition.of(0.2f)
+                        .key(Styles.SCALE, 0.5f, Easing.OUT_ELASTIC)
+                        .key(Styles.BACKGROUND, 1.2f, Easing.IN_OUT_SINE)
+                        .key(Styles.RADIUS, 0.3f, Easing.OUT_CUBIC, 0.4f)
+                        .instant(Styles.BORDER_WIDTH))
+                .hovered(h -> h
+                        .set(Styles.SCALE, 1.15f)
+                        .set(Styles.BACKGROUND, Gradients.SUNSET)
+                        .set(Styles.RADIUS, Radii.all(17))
+                        .set(Styles.BORDER_WIDTH, 2f)
+                        .set(Styles.BORDER_COLOR, Color.WHITE)));
+        return Ui.row(14, p, Ui.column(2,
+                Ui.muted("масштаб: 0.5 с, OUT_ELASTIC"),
+                Ui.muted("заливка: 1.2 с, плавно"),
+                Ui.muted("скругление: после задержки 0.4 с"),
+                Ui.muted("рамка: мгновенно")));
+    }
+
+    private static Panel transforms() {
+        Panel shifted = Ui.box(0xFF22D3EE, 30, 30);
+        shifted.style(b -> b.set(Styles.RADIUS, Radii.all(6)).set(Styles.TRANSITION, Transition.of(0.25f, Easing.OUT_BACK))
+                .hovered(h -> h.set(Styles.TRANSLATE_Y, -6f).set(Styles.GLOW, new Shadow(0, 0, 10, 1, 0xC022D3EE))));
+        Panel stretched = Ui.box(0xFFA855F7, 30, 30);
+        stretched.style(b -> b.set(Styles.RADIUS, Radii.all(6)).set(Styles.TRANSITION, Transition.of(0.3f, Easing.OUT_BACK))
+                .hovered(h -> h.set(Styles.SCALE_X, 1.4f).set(Styles.SCALE_Y, 0.8f)));
+        Panel big = Ui.column(0, new Label("FONT_SCALE"));
+        big.style(b -> b.set(Styles.FONT_SCALE, 1f).set(Styles.TRANSITION, Transition.of(0.3f))
+                .hovered(h -> h.set(Styles.FONT_SCALE, 1.6f)));
+        Panel multiplied = Ui.box(0xFFF5A524, 30, 30);
+        multiplied.style(b -> b.set(Styles.RADIUS, Radii.all(6)).set(Styles.BLEND, BlendMode.ADD)
+                .set(Styles.BACKGROUND, Brush.radial(0xFFFFE070, 0x00F5A524)));
+        return Ui.row(16, Ui.labeled(shifted, "сдвиг"), Ui.labeled(stretched, "растяжение"),
+                Ui.labeled(multiplied, "ADD"), big);
     }
 }

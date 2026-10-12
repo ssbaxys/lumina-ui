@@ -6,6 +6,8 @@ import io.github.ssbaxys.lumina.node.UiElement;
 import io.github.ssbaxys.lumina.node.UiRoot;
 import io.github.ssbaxys.lumina.platform.Platform;
 import io.github.ssbaxys.lumina.render.AbstractCanvas;
+import io.github.ssbaxys.lumina.render.BlendMode;
+import io.github.ssbaxys.lumina.render.ShapePaint;
 import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.render.TextureRef;
 import io.github.ssbaxys.lumina.style.State;
@@ -66,7 +68,7 @@ class ShowcaseSmokeTest {
 
         List<Button> nav = new ArrayList<>();
         collectNav(root.content(), nav);
-        assertEquals(7, nav.size());
+        assertEquals(11, nav.size());
 
         for (Button b : nav) {
             click(root, b);
@@ -131,9 +133,19 @@ class ShowcaseSmokeTest {
         }
 
         @Override
-        protected void drawShape(float x0, float y0, float x1, float y1, float rTL, float rTR, float rBR, float rBL,
-                                 int tl, int tr, int br, int bl, float stroke, float softness) {
+        protected void drawFreeQuad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                                    int c0, int c1, int c2, int c3) {
             draws++;
+        }
+
+        @Override
+        protected void drawShape(float x0, float y0, float x1, float y1, float rTL, float rTR, float rBR, float rBL,
+                                 int tl, int tr, int br, int bl, float stroke, float softness, ShapePaint paint) {
+            draws++;
+        }
+
+        @Override
+        protected void applyBlendMode(BlendMode mode) {
         }
 
         @Override
@@ -142,8 +154,15 @@ class ShowcaseSmokeTest {
         }
 
         @Override
-        protected void drawTextureImpl(TextureRef texture, float x0, float y0, float x1, float y1,
-                                       float u0, float v0, float u1, float v1, int tint) {
+        protected void drawTextureQuadImpl(TextureRef texture, float x0, float y0, float x1, float y1,
+                                           float x2, float y2, float x3, float y3,
+                                           float u0, float v0, float u1, float v1,
+                                           float u2, float v2, float u3, float v3, int tint) {
+            draws++;
+        }
+
+        @Override
+        protected void drawItemImpl(String itemId, float x, float y, float size) {
             draws++;
         }
 

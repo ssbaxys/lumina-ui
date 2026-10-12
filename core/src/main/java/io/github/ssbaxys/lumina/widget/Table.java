@@ -1,10 +1,13 @@
 package io.github.ssbaxys.lumina.widget;
 
 import io.github.ssbaxys.lumina.Lumina;
+import io.github.ssbaxys.lumina.data.DataView;
 import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.event.UiEvent;
 import io.github.ssbaxys.lumina.input.Keys;
+import io.github.ssbaxys.lumina.reactive.ReadableSignal;
 import io.github.ssbaxys.lumina.reactive.Signal;
+import io.github.ssbaxys.lumina.reactive.Subscription;
 import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Canvas;
 import io.github.ssbaxys.lumina.render.Color;
@@ -19,7 +22,11 @@ import java.util.function.Function;
 /**
  * Таблица: колонки с заголовками, сортировка по клику на заголовок, «зебра», подсветка строки
  * под мышью и выбор строки. Ячейки рисуются напрямую, без виджета на ячейку, поэтому большие
- * таблицы не создают тысяч элементов.
+ * таблицы не создают тысяч элементов. Рисуются только строки, попадающие в видимую область
+ * (например, окно {@link ScrollPanel}), поэтому и таблица на тысячи строк в прокрутке не тормозит.
+ *
+ * <p>С {@link #bind(DataView)} строки берутся из представления данных (поиск, фильтры, страницы),
+ * а клик по заголовку сортирует всё представление, а не только видимую страницу.</p>
  *
  * <pre>{@code
  * Table<Player> t = new Table<Player>()
@@ -50,6 +57,11 @@ public class Table<T> extends Widget<Table<T>> {
     private boolean descending;
     private int hoverRow = -1;
     private int hoverHeader = -1;
+    private DataView<T> view;
+    private ReadableSignal<List<T>> binding;
+    private Subscription subscription;
+    private int paintedFirst;
+    private int paintedLast = -1;
 
     public Table() {
         super("table");
@@ -84,6 +96,53 @@ public class Table<T> extends Widget<Table<T>> {
         return List.copyOf(shown);
     }
 
+    /** Строки из сигнала (обновляются сами, пока таблица в дереве). */
+    public Table<T> bind(ReadableSignal<List<T>> signal) {
+        unbind();
+        this.binding = signal;
+        rows(signal.get());
+        if (root() != null) {
+            subscription = signal.subscribe(this::rows);
+        }
+        return this;
+    }
+
+    /**
+     * Строки текущей страницы представления; сортировка по заголовку уходит в само представление
+     * ({@link DataView#sort}), чтобы порядок был общим для всех страниц.
+     */
+    public Table<T> bind(DataView<T> view) {
+        this.view = view;
+        return bind(view.visible());
+    }
+
+    private void unbind() {
+        if (subscription != null) {
+            subscription.close();
+            subscription = null;
+        }
+    }
+
+    @Override
+    protected void onAttach() {
+        if (binding != null && subscription == null) {
+            rows(binding.get());
+            subscription = binding.subscribe(this::rows);
+        }
+    }
+
+    @Override
+    protected void onDetach() {
+        unbind();
+        hoverRow = -1;
+        hoverHeader = -1;
+    }
+
+    /** Диапазон строк, нарисованных в последнем кадре (для проверки отсечения), {@code [first, last]}. */
+    public int[] paintedRows() {
+        return new int[]{paintedFirst, paintedLast};
+    }
+
     /** Выбранная строка (или {@code null}). */
     public Signal<T> selection() {
         return selection;
@@ -96,6 +155,11 @@ public class Table<T> extends Widget<Table<T>> {
         } else {
             sortColumn = column;
             descending = false;
+        }
+        if (view != null) {
+            Comparator<T> c = column < columns.size() ? columns.get(column).order() : null;
+            view.sort(c, descending);
+            return this;
         }
         resort();
         return this;
@@ -195,7 +259,11 @@ public class Table<T> extends Widget<Table<T>> {
         }
 
         T selected = selection.peek();
-        for (int r = 0; r < shown.size(); r++) {
+        int first = firstVisibleRow(canvas, left, top + HEADER, inner);
+        int last = lastVisibleRow(canvas, left, top + HEADER, inner, first);
+        paintedFirst = first;
+        paintedLast = last;
+        for (int r = first; r <= last; r++) {
             T row = shown.get(r);
             float ry = top + HEADER + r * ROW;
             if (row == selected) {
@@ -217,6 +285,43 @@ public class Table<T> extends Widget<Table<T>> {
                 x += cw;
             }
         }
+    }
+
+    /**
+     * Первая строка, попадающая в видимую область. Видимые строки идут подряд, поэтому хватает двоичного
+     * поиска по {@link Canvas#isVisible}: «видно ли что-нибудь от начала таблицы до конца строки r» с ростом
+     * r меняется с «нет» на «да» один раз. Клип учитывает все области прокрутки и сдвиги над таблицей.
+     */
+    private int firstVisibleRow(Canvas canvas, float left, float top, float w) {
+        int lo = 0;
+        int hi = shown.size();
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (canvas.isVisible(left, top, w, (mid + 1) * ROW)) {
+                hi = mid;
+            } else {
+                lo = mid + 1;
+            }
+        }
+        return lo;
+    }
+
+    /** Последняя видимая строка: «видно ли что-нибудь от начала строки r до конца таблицы» — «да», потом «нет». */
+    private int lastVisibleRow(Canvas canvas, float left, float top, float w, int first) {
+        int n = shown.size();
+        int lo = first;
+        int hi = n - 1;
+        int ans = first - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            if (canvas.isVisible(left, top + mid * ROW, w, (n - mid) * ROW)) {
+                ans = mid;
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        return ans;
     }
 
     /** Обрезать текст с многоточием под ширину. */

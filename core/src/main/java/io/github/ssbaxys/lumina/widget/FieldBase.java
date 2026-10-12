@@ -11,11 +11,13 @@ import io.github.ssbaxys.lumina.event.UiEvent;
 import io.github.ssbaxys.lumina.input.Keys;
 import io.github.ssbaxys.lumina.layout.Dim;
 import io.github.ssbaxys.lumina.reactive.ReadableSignal;
+import io.github.ssbaxys.lumina.reactive.Signal;
 import io.github.ssbaxys.lumina.reactive.Subscription;
 import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Canvas;
 import io.github.ssbaxys.lumina.render.Color;
 import io.github.ssbaxys.lumina.render.TextMetrics;
+import io.github.ssbaxys.lumina.style.State;
 import io.github.ssbaxys.lumina.style.Styles;
 
 import java.util.ArrayDeque;
@@ -34,10 +36,16 @@ import java.util.function.Supplier;
  *
  * <p>Вид — стиль "field" и варианты через класс: {@code "field filled"}, {@code "field underline"},
  * {@code "field pill"} (см. {@link #variant}).</p>
+ *
+ * <p>Проверка ввода — {@link #validate(Validator, Validator...)}: поле проверяется при потере фокуса после правки,
+ * а после первой показанной ошибки — при каждой правке. Ошибка подсвечивает рамку красным и выставляет
+ * состояние {@link #INVALID}; текст ошибки ({@link #error()}) показывает {@link FormField} под полем.</p>
  */
 public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
     /** Цвет вспышки ошибки. */
     public static final int ERROR_COLOR = 0xFFF0506E;
+    /** Состояние «ввод не прошёл проверку» (для своих стилей: {@code .when(FieldBase.INVALID, ...)}). */
+    public static final int INVALID = State.FIRST_CUSTOM;
 
     /** Значок в начале поля, рисуется в квадрате {@code size} цветом подписи. */
     @FunctionalInterface
@@ -105,6 +113,15 @@ public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
 
     private AnimatedFloat focusAnim;
     private AnimatedFloat errorAnim;
+    private AnimatedFloat invalidAnim;
+
+    private final List<Validator> validators = new ArrayList<>();
+    private final Signal<String> error = Signal.of(null);
+    private final Signal<Boolean> valid = Signal.of(true);
+    /** Ошибка уже показывалась: дальше поле перепроверяется при каждой правке. */
+    private boolean touched;
+    /** Пользователь что-то менял: при потере фокуса поле проверяется. */
+    private boolean interacted;
     private ContextMenu contextMenu;
 
     /** @param source сигнал значения: при его изменении текст поля обновляется */
@@ -143,6 +160,7 @@ public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
         caret = Math.min(caret, text.length());
         anchor = caret;
         ensureCaretVisible();
+        revalidate();
     }
 
     /** Записать текст в значение (Enter, потеря фокуса). Неверный ввод — вспышка ошибки и откат. */
@@ -263,6 +281,101 @@ public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
             replace(0, text.length(), defaultText.get(), EDIT_OTHER);
             commit();
         }).enabledWhen(() -> isEditable() && !text.equals(defaultText.get())));
+    }
+
+    // ================================================================ проверка ввода
+
+    /** Добавить проверки (выполняются по порядку, показывается первая ошибка). */
+    public S validate(Validator check, Validator... more) {
+        validators.add(check);
+        for (Validator v : more) {
+            if (v != null) {
+                validators.add(v);
+            }
+        }
+        revalidate();
+        return self();
+    }
+
+    /** Обязательное поле с сообщением по умолчанию. */
+    public S required() {
+        return validate(Validator.required());
+    }
+
+    public List<Validator> validators() {
+        return List.copyOf(validators);
+    }
+
+    /** Первая ошибка для текущего текста или {@code null}; ничего не показывает. */
+    public String check() {
+        for (Validator v : validators) {
+            String e = v.validate(text);
+            if (e != null) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    /** Проверить и показать результат: рамка, вспышка и текст ошибки. {@code true} — ввод верен. */
+    public boolean validate() {
+        touched = true;
+        String e = check();
+        showError(e);
+        if (e != null) {
+            flashError();
+        }
+        return e == null;
+    }
+
+    /** Показанная ошибка ({@code null} — нет). Её текст выводит {@link FormField}. */
+    public ReadableSignal<String> error() {
+        return error;
+    }
+
+    /** Проходит ли текущий текст проверки — меняется при каждой правке, даже пока ошибка не показана. */
+    public ReadableSignal<Boolean> valid() {
+        return valid;
+    }
+
+    public boolean isValid() {
+        return check() == null;
+    }
+
+    /** Убрать показанную ошибку и вернуть поле в «нетронутое» состояние. */
+    public void resetValidation() {
+        touched = false;
+        interacted = false;
+        showError(null);
+    }
+
+    /** Показать свою ошибку (например, ответ сервера «имя занято»); {@code null} убирает. */
+    public void setError(String message) {
+        if (message != null) {
+            touched = true;
+            flashError();
+        }
+        showError(message);
+    }
+
+    private void showError(String message) {
+        error.set(message);
+        setState(INVALID, message != null);
+        if (invalidAnim != null) {
+            invalidAnim.animateTo(message != null ? 1f : 0f);
+        }
+    }
+
+    /** После правки: обновить {@link #valid()} и, если ошибка уже показывалась, её текст. */
+    private void revalidate() {
+        if (validators.isEmpty()) {
+            return;
+        }
+        String e = check();
+        valid.set(e == null);
+        if (touched) {
+            showError(e);
+        }
     }
 
     // ================================================================ состояние
@@ -452,9 +565,11 @@ public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
     private void edited() {
         resetBlink();
         ensureCaretVisible();
+        interacted = true;
         if (live) {
             commitText(text);
         }
+        revalidate();
     }
 
     private void deleteRange(int from, int to) {
@@ -660,6 +775,7 @@ public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
         focusAnim = new AnimatedFloat(root().animator(), isFocused() ? 1f : 0f).tween(0.22f, Easing.OUT_CUBIC);
         errorAnim = new AnimatedFloat(root().animator(), 0f).tween(0.6f, Easing.OUT_QUAD).listener(e ->
                 setAnimatedStyle(Styles.TRANSLATE_X, e > 0.001f ? (float) Math.sin(e * 6f * Math.PI) * 2f * e : null));
+        invalidAnim = new AnimatedFloat(root().animator(), error.peek() != null ? 1f : 0f).tween(0.2f, Easing.OUT_CUBIC);
         subscription = source.subscribe(v -> onSourceChanged());
         onSourceChanged();
     }
@@ -724,6 +840,10 @@ public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
             dragging = false;
             if (isDirty()) {
                 commit();
+            }
+            if (!validators.isEmpty() && (interacted || touched)) {
+                touched = true;
+                showError(check());
             }
         }
     }
@@ -940,7 +1060,8 @@ public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
                 canvas.fillRect((w - lw) / 2f, h - 2f, lw, 2f, style.get(Styles.ACCENT_COLOR));
             }
         }
-        float err = errorAnim != null ? errorAnim.get() : 0f;
+        float invalid = invalidAnim != null ? invalidAnim.get() : (error.peek() != null ? 1f : 0f);
+        float err = Math.max(errorAnim != null ? errorAnim.get() : 0f, invalid * 0.85f);
         if (err > 0.001f) {
             int red = Color.withAlpha(ERROR_COLOR, err);
             if (underline) {

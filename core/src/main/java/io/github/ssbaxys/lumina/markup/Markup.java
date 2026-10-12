@@ -3,6 +3,8 @@ package io.github.ssbaxys.lumina.markup;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.Easing;
 import io.github.ssbaxys.lumina.blocks.BlockMap;
+import io.github.ssbaxys.lumina.blocks.BlockModel;
+import io.github.ssbaxys.lumina.blocks.BlockStructure;
 import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.fx.FxLayer;
 import io.github.ssbaxys.lumina.layout.Align;
@@ -63,7 +65,7 @@ import java.util.regex.Pattern;
  * }</pre>
  *
  * Теги: {@code div column row stack scroll panel label span h1 h2 h3 p markdown button toggle slider
- * progress ring color-picker item img fx blocks spacer hr state style link}. Свои теги — {@link #tag}.
+ * progress ring color-picker item img fx blocks structure spacer hr state style link}. Свои теги — {@link #tag}.
  * Атрибуты: {@code id class style width height grow gap align justify padding margin if enabled bind
  * on-click} и атрибуты конкретного тега. Логика — через {@link Bindings}.
  */
@@ -83,7 +85,7 @@ public final class Markup {
     private static final Map<String, TagFactory> TAGS = new HashMap<>();
     private static final Set<String> VOID = Set.of("img", "item", "br", "hr", "state", "link", "spacer", "toggle",
             "slider", "progress", "ring", "color-picker", "fx", "input", "meta");
-    private static final Set<String> RAW = Set.of("style", "markdown", "script", "blocks");
+    private static final Set<String> RAW = Set.of("style", "markdown", "script", "blocks", "structure");
     private static final Pattern TEMPLATE = Pattern.compile("\\{\\{\\s*([\\w.-]+)\\s*(?:\\|\\s*(\\w+)\\s*)?}}");
 
     static {
@@ -186,9 +188,42 @@ public final class Markup {
             }
             return map.grid("true".equals(n.attr("grid")));
         });
+        // 3D-постройка: слои через строки "---", нижний первым; '.' — воздух
+        tag("structure", (n, c) -> {
+            BlockModel model = new BlockModel(BlockStructure.parse(n.attr("key"), n.text));
+            if (n.attr("tile") != null) {
+                model.tile(n.floatAttr("tile", 16f));
+            }
+            if (n.attr("yaw") != null) {
+                model.yaw(degrees(n.attr("yaw")));
+            }
+            if (n.attr("pitch") != null) {
+                model.pitch(degrees(n.attr("pitch")));
+            }
+            String spin = n.attr("auto-rotate");
+            if (spin != null && !"false".equals(spin)) {
+                model.autoRotate(spin.isEmpty() || "true".equals(spin) ? BlockModel.DEFAULT_SPIN : degrees(spin));
+            }
+            if (n.attr("zoom") != null) {
+                model.zoom(CssValues.number(n.attr("zoom")));
+            }
+            if ("false".equals(n.attr("shadow"))) {
+                model.shadow(false);
+            }
+            if ("false".equals(n.attr("interactive"))) {
+                model.interactive(false);
+            }
+            return model;
+        });
     }
 
     private Markup() {
+    }
+
+    /** "45", "45deg" → 45. */
+    private static float degrees(String v) {
+        String t = v.strip().toLowerCase(Locale.ROOT);
+        return Float.parseFloat(t.endsWith("deg") ? t.substring(0, t.length() - 3).strip() : t);
     }
 
     /** Свой тег: {@code Markup.tag("inventory-slot", (node, ctx) -> new MySlot(node.attr("item")))}. */

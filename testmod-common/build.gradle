@@ -1,0 +1,19 @@
+// Общий код тестового мода: витрина возможностей Lumina UI.
+// Использует только API ядра, поэтому одинаково работает на Forge 1.20.1 и NeoForge 1.21.1.
+dependencies {
+    compileOnly project(':core')
+
+    // Витрину можно прогнать целиком без запуска игры.
+    testImplementation project(':core')
+    testImplementation platform("org.junit:junit-bom:${junit_version}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+}
+
+test {
+    useJUnitPlatform()
+}

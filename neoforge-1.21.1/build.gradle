@@ -1,0 +1,90 @@
+plugins {
+    id 'net.neoforged.moddev'
+}
+
+// Исходники ядра компилируются прямо в этот модуль: в jar попадает один мод без вложенных библиотек.
+evaluationDependsOn(':core')
+evaluationDependsOn(':testmod-common')
+def core = project(':core')
+def testmodCommon = project(':testmod-common')
+
+// Тестовый мод (витрина) — отдельный мод `luminatest` в source set `testmod`, зависит от библиотеки.
+sourceSets {
+    testmod {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+}
+
+neoForge {
+    version = neo_version
+    addModdingDependenciesTo sourceSets.testmod
+
+    runs {
+        client {
+            client()
+            gameDirectory = project.file('run/client')
+        }
+        // Игра с библиотекой и тестовым модом: ./gradlew :neoforge-1.21.1:runTestmodClient
+        testmodClient {
+            client()
+            sourceSet = sourceSets.testmod
+            gameDirectory = project.file('run/testmod')
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+        luminatest {
+            sourceSet sourceSets.testmod
+        }
+    }
+}
+
+dependencies {
+    // Для IDE и проверки типов; сами классы ядра компилируются ниже из его исходников.
+    compileOnly core
+}
+
+tasks.named('compileJava', JavaCompile) {
+    source core.sourceSets.main.allJava
+}
+
+tasks.named('sourcesJar', Jar) {
+    from core.sourceSets.main.allSource
+}
+
+processResources {
+    from core.sourceSets.main.resources
+    def props = [
+        mod_id: mod_id, mod_name: mod_name, mod_version: mod_version, mod_authors: mod_authors,
+        mod_license: mod_license, mod_description: mod_description,
+        loader_range: neo_loader_range, minecraft_range: neo_minecraft_range
+    ]
+    inputs.properties props
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand props
+    }
+}
+
+tasks.named('compileTestmodJava', JavaCompile) {
+    source testmodCommon.sourceSets.main.allJava
+}
+
+tasks.named('processTestmodResources', ProcessResources) {
+    def props = [
+        mod_version: mod_version, mod_authors: mod_authors, lumina_id: mod_id,
+        loader_range: neo_loader_range, minecraft_range: neo_minecraft_range
+    ]
+    inputs.properties props
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand props
+    }
+}

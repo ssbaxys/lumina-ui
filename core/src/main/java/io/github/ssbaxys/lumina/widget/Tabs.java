@@ -7,6 +7,7 @@ import io.github.ssbaxys.lumina.event.KeyEvent;
 import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.event.UiEvent;
 import io.github.ssbaxys.lumina.input.Keys;
+import io.github.ssbaxys.lumina.node.TabSwitchable;
 import io.github.ssbaxys.lumina.reactive.Signal;
 import io.github.ssbaxys.lumina.reactive.Subscription;
 import io.github.ssbaxys.lumina.render.Brush;
@@ -22,7 +23,7 @@ import java.util.List;
  * Строка вкладок с подчёркиванием, которое пружиной переезжает к выбранной вкладке.
  * Выбор — индекс в {@link Signal}; {@link #stretch} раскладывает вкладки равномерно на всю ширину.
  */
-public class Tabs extends Widget<Tabs> {
+public class Tabs extends Widget<Tabs> implements TabSwitchable {
     private final Signal<Integer> selected;
     private final List<String> titles;
     private float gap = 20f;
@@ -56,6 +57,17 @@ public class Tabs extends Widget<Tabs> {
         this.gap = gap;
         invalidateLayout();
         return this;
+    }
+
+    /** Соседняя вкладка по кругу (бамперы геймпада). */
+    @Override
+    public boolean switchTab(int delta) {
+        int n = titles.size();
+        if (n <= 1 || !isEnabled()) {
+            return false;
+        }
+        selected.set(Math.floorMod(index() + delta, n));
+        return true;
     }
 
     private int index() {

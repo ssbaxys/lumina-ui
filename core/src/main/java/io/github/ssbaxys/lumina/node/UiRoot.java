@@ -11,6 +11,7 @@ import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.event.ScrollEvent;
 import io.github.ssbaxys.lumina.event.UiEvent;
 import io.github.ssbaxys.lumina.input.Keys;
+import io.github.ssbaxys.lumina.input.NavDirection;
 import io.github.ssbaxys.lumina.layout.Breakpoint;
 import io.github.ssbaxys.lumina.layout.Breakpoints;
 import io.github.ssbaxys.lumina.reactive.ReadableSignal;
@@ -41,6 +42,8 @@ import java.util.List;
  * <p>Корень также отвечает за то, что действует на весь интерфейс сразу: масштаб ({@link #setScale}),
  * класс ширины для адаптивной раскладки ({@link #breakpoint()}), настройки доступности
  * ({@link #accessibility()}) и звуки наведения ({@code Styles.HOVER_SOUND}).</p>
+ * <p>Инструменты: инспектор элементов ({@link #inspector()}, по умолчанию выключен, открывается F8) и
+ * управление с геймпада ({@link #gamepad()}): пространственная навигация фокусом {@link #focusDirection}.</p>
  */
 public final class UiRoot {
     /**
@@ -64,6 +67,8 @@ public final class UiRoot {
     private Breakpoints breakpoints = Breakpoints.DEFAULT;
     private final Signal<Breakpoint> breakpoint = Signal.of(Breakpoints.DEFAULT.of(0f));
     private final Accessibility accessibility = new Accessibility();
+    private final Inspector inspector = new Inspector(this);
+    private final GamepadNavigator gamepad = new GamepadNavigator(this);
     private long lastFrameNanos = -1L;
     private long hoverSoundInterval = 70_000_000L;
     private long lastHoverSound = Long.MIN_VALUE;
@@ -174,6 +179,16 @@ public final class UiRoot {
         }
     }
 
+    /** Инспектор интерфейса (рамки, отступы, стиль, дерево): {@code inspector().enabled(true)} — F8 открывает. */
+    public Inspector inspector() {
+        return inspector;
+    }
+
+    /** Управление с геймпада (опрос {@code Platform.pollGamepad()} каждый кадр). */
+    public GamepadNavigator gamepad() {
+        return gamepad;
+    }
+
     /** Минимальный промежуток между звуками наведения, в секундах (чтобы проведение мышью по списку не трещало). */
     public void setHoverSoundInterval(float seconds) {
         hoverSoundInterval = (long) (Math.max(0f, seconds) * 1_000_000_000L);
@@ -211,6 +226,7 @@ public final class UiRoot {
     }
 
     public void dispose() {
+        inspector.close();
         closePopups();
         content.detach();
         animator.clear();
@@ -241,6 +257,7 @@ public final class UiRoot {
             content.render(canvas, partialTick);
             renderPopups(canvas, partialTick);
             renderFocusRing(canvas);
+            inspector.render(canvas);
             if (scaled) {
                 canvas.restore();
             }
@@ -309,6 +326,7 @@ public final class UiRoot {
         }
         layoutIfNeeded();
         updateHover();
+        gamepad.update(dt);
     }
 
     public void layoutIfNeeded() {
@@ -529,6 +547,7 @@ public final class UiRoot {
         y /= scale;
         mouseX = x;
         mouseY = y;
+        inspector.pointerMove(x, y);
         updateHover();
         boolean consumed = false;
         if (pressed != null) {
@@ -546,6 +565,9 @@ public final class UiRoot {
         mouseX = x;
         mouseY = y;
         layoutIfNeeded();
+        if (inspector.pointerDown(x, y, button)) {
+            return true;
+        }
         updateHover();
         if (dismissPopupsAt(x, y)) {
             // Клик, закрывший меню, дальше не идёт: иначе он нечаянно нажмёт то, что под меню.
@@ -577,6 +599,9 @@ public final class UiRoot {
         y /= scale;
         mouseX = x;
         mouseY = y;
+        if (pressed == null && inspector.pointerUp()) {
+            return true;
+        }
         updateHover();
         UiElement p = pressed;
         if (p == null || button != pressedButton) {
@@ -597,6 +622,9 @@ public final class UiRoot {
         y /= scale;
         mouseX = x;
         mouseY = y;
+        if (inspector.scroll(x, y, deltaY)) {
+            return true;
+        }
         updateHover();
         return hovered != null && dispatch(hovered, new ScrollEvent(x, y, deltaX, deltaY));
     }
@@ -659,6 +687,9 @@ public final class UiRoot {
     // ================================================================ клавиатура и фокус
 
     public boolean keyDown(int key, int scanCode, int modifiers) {
+        if (inspector.keyDown(key)) {
+            return true;
+        }
         UiElement top = topPopup();
         if (top != null) {
             // Верхнее окно первым получает клавиши (стрелки в меню), Escape его закрывает.
@@ -738,6 +769,115 @@ public final class UiRoot {
             next = Math.floorMod(i + (backwards ? -1 : 1), list.size());
         }
         setFocus(list.get(next));
+        reveal(list.get(next));
+    }
+
+    /**
+     * Пространственная навигация: фокус на ближайший фокусируемый элемент в направлении {@code dir}
+     * (геймпад, стрелки). Кандидаты — в верхнем окне, если оно открыто, иначе во всём содержимом. Ближе тот,
+     * у кого меньше зазор по направлению движения и сильнее перекрытие поперёк него. Без фокуса фокусируется
+     * первый элемент (верхний левый). Контейнеры прокрутки прокручиваются к новому фокусу.
+     *
+     * @return сменился ли фокус
+     */
+    public boolean focusDirection(NavDirection dir) {
+        layoutIfNeeded();
+        UiElement scope = topPopup();
+        if (scope == null) {
+            scope = content;
+        }
+        List<UiElement> list = new ArrayList<>();
+        collectFocusable(scope, list);
+        if (list.isEmpty()) {
+            return false;
+        }
+        UiElement cur = focused;
+        if (cur == null || !list.contains(cur)) {
+            UiElement first = list.get(0);
+            for (UiElement e : list) {
+                if (e.screenY() < first.screenY() - 0.5f
+                        || (Math.abs(e.screenY() - first.screenY()) <= 0.5f && e.screenX() < first.screenX())) {
+                    first = e;
+                }
+            }
+            setFocus(first);
+            reveal(first);
+            return true;
+        }
+        float cx0 = cur.screenX();
+        float cy0 = cur.screenY();
+        float cx1 = cx0 + cur.width();
+        float cy1 = cy0 + cur.height();
+        float ccx = (cx0 + cx1) / 2f;
+        float ccy = (cy0 + cy1) / 2f;
+        UiElement best = null;
+        float bestScore = Float.MAX_VALUE;
+        for (UiElement c : list) {
+            if (c == cur) {
+                continue;
+            }
+            float x0 = c.screenX();
+            float y0 = c.screenY();
+            float x1 = x0 + c.width();
+            float y1 = y0 + c.height();
+            float mx = (x0 + x1) / 2f;
+            float my = (y0 + y1) / 2f;
+            float primary;
+            float ortho;
+            float orthoCenter;
+            switch (dir) {
+                case RIGHT -> {
+                    if (mx <= ccx + 0.5f) {
+                        continue;
+                    }
+                    primary = Math.max(0f, x0 - cx1);
+                    ortho = Math.max(0f, Math.max(y0 - cy1, cy0 - y1));
+                    orthoCenter = Math.abs(my - ccy);
+                }
+                case LEFT -> {
+                    if (mx >= ccx - 0.5f) {
+                        continue;
+                    }
+                    primary = Math.max(0f, cx0 - x1);
+                    ortho = Math.max(0f, Math.max(y0 - cy1, cy0 - y1));
+                    orthoCenter = Math.abs(my - ccy);
+                }
+                case DOWN -> {
+                    if (my <= ccy + 0.5f) {
+                        continue;
+                    }
+                    primary = Math.max(0f, y0 - cy1);
+                    ortho = Math.max(0f, Math.max(x0 - cx1, cx0 - x1));
+                    orthoCenter = Math.abs(mx - ccx);
+                }
+                default -> {
+                    if (my >= ccy - 0.5f) {
+                        continue;
+                    }
+                    primary = Math.max(0f, cy0 - y1);
+                    ortho = Math.max(0f, Math.max(x0 - cx1, cx0 - x1));
+                    orthoCenter = Math.abs(mx - ccx);
+                }
+            }
+            float score = primary + ortho * 3f + orthoCenter * 0.1f;
+            if (score < bestScore) {
+                bestScore = score;
+                best = c;
+            }
+        }
+        if (best == null) {
+            return false;
+        }
+        setFocus(best);
+        reveal(best);
+        return true;
+    }
+
+    /** Попросить контейнеры-предки показать элемент (прокрутка к нему). */
+    private static void reveal(UiElement e) {
+        for (UiElement p = e.parent(); p != null; p = p.parent()) {
+            p.revealChild(e);
+        }
     }
 
     private static void collectFocusable(UiElement e, List<UiElement> out) {

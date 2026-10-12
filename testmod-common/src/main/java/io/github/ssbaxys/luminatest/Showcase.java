@@ -51,6 +51,7 @@ public final class Showcase {
                 new PageDef("Компоненты", ComponentsPage::create),
                 new PageDef("Меню и подсказки", PopupsPage::create),
                 new PageDef("Списки, формы, книга", DataToolsPage::create),
+                new PageDef("Темы и доступность", ThemesPage::create),
                 new PageDef("Окна и обои", WindowsPage::create),
                 new PageDef("Ввод и события", InputPage::create),
                 new PageDef("Данные", DataPage::create),

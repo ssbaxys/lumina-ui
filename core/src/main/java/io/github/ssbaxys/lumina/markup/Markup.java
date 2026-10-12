@@ -22,16 +22,20 @@ import io.github.ssbaxys.lumina.reactive.ReadableSignal;
 import io.github.ssbaxys.lumina.reactive.Signal;
 import io.github.ssbaxys.lumina.reactive.Subscription;
 import io.github.ssbaxys.lumina.render.Brush;
+import io.github.ssbaxys.lumina.render.Images;
 import io.github.ssbaxys.lumina.render.TextureRef;
 import io.github.ssbaxys.lumina.style.Style;
 import io.github.ssbaxys.lumina.style.StyleKey;
 import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.widget.Button;
+import io.github.ssbaxys.lumina.widget.Checkbox;
 import io.github.ssbaxys.lumina.widget.ColorPicker;
 import io.github.ssbaxys.lumina.widget.Icon;
+import io.github.ssbaxys.lumina.widget.Image;
 import io.github.ssbaxys.lumina.widget.Label;
 import io.github.ssbaxys.lumina.widget.Panel;
 import io.github.ssbaxys.lumina.widget.ProgressBar;
+import io.github.ssbaxys.lumina.widget.RadioGroup;
 import io.github.ssbaxys.lumina.widget.RingProgress;
 import io.github.ssbaxys.lumina.widget.ScrollPanel;
 import io.github.ssbaxys.lumina.widget.Slider;
@@ -215,6 +219,131 @@ public final class Markup {
             }
             return model;
         });
+        // Флажки, радио-группы, картинки; иконка и загрузка у <button>. Эти теги не пустые:
+        // пишите <checkbox .../> и <image .../> с косой чертой (или с закрывающим тегом).
+        tag("checkbox", (n, c) -> {
+            Checkbox box = new Checkbox(c.signal(n, "bind", false));
+            if (n.attr("kind") != null) {
+                box.kind(checkboxKind(n.attr("kind")));
+            }
+            if (n.attr("label") != null) {
+                c.bindText(n, box::label, n.attr("label"));
+            } else {
+                c.bindText(n, box::label);
+            }
+            String mixed = n.attr("indeterminate");
+            if (mixed != null && !mixed.equals("false")) {
+                box.indeterminate(true);
+            }
+            if (n.attr("size") != null) {
+                box.boxSize(n.floatAttr("size", 12f));
+            }
+            if (n.attr("color") != null) {
+                box.color(CssValues.color(n.attr("color")));
+            }
+            return box;
+        });
+        tag("radio-group", (n, c) -> {
+            List<String> options = new ArrayList<>();
+            for (String o : (n.attr("options") == null ? "" : n.attr("options")).split(",")) {
+                if (!o.isBlank()) {
+                    options.add(o.strip());
+                }
+            }
+            String first = options.isEmpty() ? "" : options.get(0);
+            Signal<Object> raw = n.attr("bind") != null ? c.bindings.writable(n.attr("bind"))
+                    : Signal.of(n.attr("value") != null ? n.attr("value") : first);
+            if (raw.peek() == null) {
+                raw.set(n.attr("value") != null ? n.attr("value") : first);
+            }
+            // Варианты — строки; значение в состоянии может быть числом ("1"), поэтому сравниваем как текст.
+            Signal<String> local = Signal.of(String.valueOf(raw.peek()));
+            Subscription in = raw.subscribe(v -> local.set(String.valueOf(v)));
+            Subscription out = local.subscribe(v -> {
+                Object prev = raw.peek();
+                if (!v.equals(String.valueOf(prev))) {
+                    raw.set(prev instanceof String || prev == null ? v : Bindings.guess(v));
+                }
+            });
+            c.disposers.add(in::close);
+            c.disposers.add(out::close);
+            RadioGroup<String> group = new RadioGroup<>(local, options);
+            if (n.attr("labels") != null) {
+                String[] labels = n.attr("labels").split(",");
+                group.labels(o -> {
+                    int i = options.indexOf(o);
+                    return i >= 0 && i < labels.length ? labels[i].strip() : o;
+                });
+            }
+            String dir = n.attr("direction");
+            if (n.attr("horizontal") != null || (dir != null && dir.startsWith("row"))) {
+                group.horizontal();
+            }
+            if (n.attr("kind") != null) {
+                group.kind(checkboxKind(n.attr("kind")));
+            }
+            return group;
+        });
+        tag("image", (n, c) -> {
+            Image image = new Image(imageRef(n.attr("src"), true)).fit(Image.Fit.parse(n.attr("fit")));
+            if (n.attr("radius") != null) {
+                image.radius(n.floatAttr("radius", 0f));
+            }
+            return image;
+        });
+        TagFactory plainButton = TAGS.get("button");
+        tag("button", (n, c) -> {
+            Button b = (Button) plainButton.create(n, c);
+            String icon = n.attr("icon");
+            if (icon != null && !icon.isEmpty()) {
+                b.icon(imageRef(icon, false));
+            }
+            String item = n.attr("item");
+            if (item != null && !item.isEmpty()) {
+                b.item(item);
+            }
+            if (n.attr("icon-size") != null) {
+                b.iconSize(n.floatAttr("icon-size", 12f));
+            }
+            String loading = n.attr("loading");
+            if (loading != null && !loading.equals("false")) {
+                if (loading.isEmpty() || loading.equals("true")) {
+                    b.loading(true);
+                } else {
+                    b.loading(c.signal(n, "loading", false));
+                }
+            }
+            return b;
+        });
+    }
+
+    /** "check", "heart", "switch-dot"... → вид флажка (неизвестное — CHECK). */
+    static Checkbox.Kind checkboxKind(String s) {
+        try {
+            return Checkbox.Kind.valueOf(s.trim().toUpperCase(Locale.ROOT).replace('-', '_'));
+        } catch (IllegalArgumentException e) {
+            System.err.println("[Lumina markup] unknown checkbox kind: " + s);
+            return Checkbox.Kind.CHECK;
+        }
+    }
+
+    /**
+     * {@code src} картинки: "file:путь" или путь без пространства имён — файл с диска, иначе ресурс
+     * "мод:путь". {@code measure} — узнать размер ресурса (для пропорций), иначе ссылка как есть.
+     */
+    static TextureRef imageRef(String src, boolean measure) {
+        if (src == null || src.isBlank()) {
+            return null;
+        }
+        String s = src.strip();
+        boolean drive = s.length() > 2 && s.charAt(1) == ':' && (s.charAt(2) == '/' || s.charAt(2) == '\\');
+        if (s.startsWith("file:")) {
+            return Images.fromFile(s.substring(5));
+        }
+        if (drive || s.indexOf(':') < 0) {
+            return Images.fromFile(s);
+        }
+        return measure && Lumina.isInitialized() ? Images.fromResource(s) : TextureRef.of(s);
     }
 
     private Markup() {

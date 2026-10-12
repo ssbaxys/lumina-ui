@@ -61,6 +61,10 @@ button.primary:hover { transform: scale(1.06); glow: 6px var(--accent); transiti
 | `fx` | эффект из реестра FX | `effect="minecraft:snow"` |
 | `blocks` | 2D-карта из блоков, ряды — текстом внутри тега, `.` — пусто | `tile`, `key="G=minecraft:grass_block; S=minecraft:stone"`, `brush` (редактор), `grid="true"` |
 | `structure` | 3D-постройка, слои — текстом через строки `---` (нижний первым), `.` — воздух | `key`, `tile`, `yaw`, `pitch`, `auto-rotate` (без значения или °/с), `zoom`, `shadow="false"`, `interactive="false"` |
+| `slot` | слот инвентаря со своей ячейкой; перетаскивается в другие слоты | `item="minecraft:diamond"` (или `item="coal*12"`), `count`, `name`, `lore="строка\|строка"`, `glint`, `durability="осталось/всего"`, `max-stack`, `look="modern"`, `size` (18), `placeholder="id"`, `takeable="false"`, `droppable="false"` |
+| `entity` | сущность в 3D, крутится мышью | `type="minecraft:zombie"`, `yaw`, `pitch`, `auto-rotate` (без значения или °/с), `zoom`, `follow-mouse`, `baby`, `mainhand` `offhand` `head` `chest` `legs` `feet` (id предмета), `interactive="false"`, `zoomable="false"`, `size` |
+| `player` | игрок в своей броне (как `entity`, без `type`, `baby` и снаряжения) | `follow-mouse`, `yaw`, `pitch`, `auto-rotate`, `zoom`, `interactive`, `zoomable`, `size` |
+| `item-view` | крупный предмет в 3D | `item`, `glint`, `yaw`, `pitch`, `auto-rotate`, `zoom`, `interactive`, `zoomable`, `size` |
 | `select` | выпадающий список; варианты в `options` или дочерними `<option value="…" item="…">Подпись</option>` | `bind`, `options="a,b,c"`, `labels="А,Б,В"`, `icons="minecraft:a,,minecraft:c"`, `search`, `placeholder`, `rows` |
 | `keybind` | поле назначения клавиши | `bind` (код GLFW или название: `R`, `space`, `F5`, `left-shift`), `value`, `default` |
 | `date-picker` | поле даты с календарём во всплывающем окне | `bind`, `value="2026-10-12"`, `min`, `max` (`today` — сегодня), `placeholder` |
@@ -92,6 +96,21 @@ button.primary:hover { transform: scale(1.06); glow: 6px var(--accent); transiti
 <keybind bind="drop" default="Q"/>
 <date-picker bind="day" min="today"/>
 ```
+
+Теги `slot`, `entity`, `player` и `item-view` тоже пустые:
+
+```html
+<row gap="8">
+  <slot item="minecraft:diamond_sword" glint durability="1161/1561" name="Экскалибур" lore="Древний|Острый"/>
+  <slot item="minecraft:coal" count="48" look="modern"/>
+  <entity type="minecraft:zombie" mainhand="minecraft:iron_sword" baby auto-rotate width="60" height="80"/>
+  <player follow-mouse zoomable="false" width="60" height="80"/>
+  <item-view item="minecraft:beacon" auto-rotate="60" size="48"/>
+</row>
+```
+
+Слоты из разметки перетаскиваются между собой и в слоты из Java (общая `SlotGroup.shared()`); подробнее о слотах,
+перетаскивании и 3D — в [STYLING.md](STYLING.md#слоты-инвентаря-сущности-и-предметы-в-3d).
 
 Теги `keybind`, `date-picker` и `calendar` пустые (как `input`), `select` — нет: пишите `<select …/>` или с `</select>`.
 `bind` у `select` хранит значение варианта (число из `<state>` останется числом), у `keybind` — код клавиши,

@@ -13,6 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -94,6 +95,11 @@ final class McPlatform implements Platform {
         if (text != null && !text.isBlank()) {
             Minecraft.getInstance().getNarrator().sayNow(Component.literal(text));
         }
+    }
+
+    @Override
+    public boolean isShiftDown() {
+        return Screen.hasShiftDown();
     }
 
     @Override

@@ -46,6 +46,8 @@ public final class Showcase {
                 new PageDef("HTML и CSS", MarkupPage::create),
                 new PageDef("Блоки", BlocksPage::create),
                 new PageDef("3D-постройки", StructuresPage::create),
+                new PageDef("Предметы и мобы", ItemsPage::create),
+                new PageDef("HUD и данные игры", HudPage::create),
                 new PageDef("Поля ввода", FieldsPage::create),
                 new PageDef("Кнопки и флажки", ButtonsPage::create),
                 new PageDef("Компоненты", ComponentsPage::create),

@@ -14,7 +14,8 @@ import io.github.ssbaxys.lumina.style.State;
 
 /**
  * Вертикальная прокрутка одного дочернего элемента с плавной (пружинной) инерцией
- * и перетаскиваемым ползунком.
+ * и перетаскиваемым ползунком. Со стилем {@code Styles.CLIP_ROUNDED} содержимое обрезается по скруглению
+ * {@code Styles.RADIUS} (если бэкенд умеет точную маску).
  */
 public class ScrollPanel extends Widget<ScrollPanel> {
     private static final float SCROLL_STEP = 24f;
@@ -74,6 +75,12 @@ public class ScrollPanel extends Widget<ScrollPanel> {
         } else if (top + child.height() > current + view) {
             scrollTo(Math.min(top, top + child.height() - view), animate);
         }
+    }
+
+    /** Фокус перешёл на потомка (Tab, геймпад): прокрутить к нему. */
+    @Override
+    protected void revealChild(UiElement child) {
+        scrollIntoView(child, true);
     }
 
     @Override

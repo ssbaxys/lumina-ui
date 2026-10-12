@@ -650,7 +650,12 @@ public abstract class UiElement {
             if (!children.isEmpty()) {
                 if (clip) {
                     canvas.save();
-                    canvas.clipRect(0, 0, width, height);
+                    Radii clipRadii = style.get(Styles.CLIP_ROUNDED) ? style.get(Styles.RADIUS) : Radii.ZERO;
+                    if (clipRadii.isZero()) {
+                        canvas.clipRect(0, 0, width, height);
+                    } else {
+                        canvas.clipRoundRect(0, 0, width, height, clipRadii);
+                    }
                 }
                 for (int i = 0, n = children.size(); i < n; i++) {
                     children.get(i).render(canvas, partialTick);
@@ -669,9 +674,13 @@ public abstract class UiElement {
         return s.isNone() ? 0f : s.blur() + s.spread() + Math.max(Math.abs(s.offsetX()), Math.abs(s.offsetY()));
     }
 
-    /** Свечение, тень, фон, рамка и внешняя обводка из стиля. */
+    /** Размытие фона, свечение, тень, фон, рамка и внешняя обводка из стиля. */
     protected void paintBackground(Canvas canvas) {
         Radii radii = style.get(Styles.RADIUS);
+        float blur = style.get(Styles.BACKDROP_BLUR);
+        if (blur > 0f) {
+            canvas.drawBackdropBlur(0, 0, width, height, radii, blur);
+        }
         Shadow glow = style.get(Styles.GLOW);
         if (!glow.isNone()) {
             canvas.drawGlow(0, 0, width, height, radii, glow);
@@ -721,6 +730,13 @@ public abstract class UiElement {
 
     /** Поверх детей (полосы прокрутки, индикаторы фокуса). */
     protected void paintOverlay(Canvas canvas, float partialTick) {
+    }
+
+    /**
+     * Потомок {@code child} получил фокус с клавиатуры или геймпада: контейнер может прокрутиться к нему
+     * (так делает {@code ScrollPanel}). По умолчанию ничего не делает.
+     */
+    protected void revealChild(UiElement child) {
     }
 
     // ================================================================ попадание мыши

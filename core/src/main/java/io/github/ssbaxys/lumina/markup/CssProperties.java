@@ -63,6 +63,7 @@ public final class CssProperties {
         register("text-shadow", (v, o) -> o.put(Styles.TEXT_SHADOW, !v.trim().equalsIgnoreCase("none")));
         register("mix-blend-mode", (v, o) -> o.put(Styles.BLEND, CssValues.blend(v)));
         register("transition", (v, o) -> o.put(Styles.TRANSITION, transition(v)));
+        register("backdrop-filter", (v, o) -> o.put(Styles.BACKDROP_BLUR, backdropBlur(v)));
 
         token("--accent", Tokens.ACCENT);
         token("--text", Tokens.TEXT);
@@ -91,6 +92,22 @@ public final class CssProperties {
     }
 
     private CssProperties() {
+    }
+
+    /** {@code blur(8px)} → 8, {@code none} → 0. */
+    static float backdropBlur(String v) {
+        String s = v.trim().toLowerCase(Locale.ROOT);
+        int open = s.indexOf("blur(");
+        if (open < 0) {
+            return 0f;
+        }
+        int close = s.indexOf(')', open);
+        String arg = s.substring(open + 5, close < 0 ? s.length() : close).replace("px", "").trim();
+        try {
+            return Math.max(0f, Float.parseFloat(arg));
+        } catch (NumberFormatException e) {
+            return 0f;
+        }
     }
 
     /** Своё свойство CSS. */

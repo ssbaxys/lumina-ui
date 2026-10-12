@@ -40,6 +40,51 @@ public interface Canvas {
         return null;
     }
 
+    /**
+     * Отсечение по скруглённому прямоугольнику: всё, что нарисовано до парного {@link #restore()}, видно только
+     * внутри фигуры. Бэкенд, который не умеет точную маску ({@link #supportsRoundClip()} = {@code false}),
+     * отсекает по обычному прямоугольнику — углы тогда не скругляются.
+     */
+    default void clipRoundRect(float x, float y, float w, float h, Radii radii) {
+        clipRect(x, y, w, h);
+    }
+
+    /** Умеет ли бэкенд точно отсекать по скруглённой фигуре ({@link #clipRoundRect}). */
+    default boolean supportsRoundClip() {
+        return false;
+    }
+
+    /**
+     * Размыть то, что уже нарисовано под прямоугольником («матовое стекло», CSS {@code backdrop-filter: blur}).
+     * {@code radius} — сила размытия в пикселях. Без поддержки бэкенда ({@link #supportsBackdropBlur()})
+     * рисуется полупрозрачная матовая подложка ({@link #frostedFallback}).
+     */
+    default void drawBackdropBlur(float x, float y, float w, float h, Radii radii, float radius) {
+        frostedFallback(this, x, y, w, h, radii, radius);
+    }
+
+    /** Умеет ли бэкенд настоящее размытие фона ({@link #drawBackdropBlur}). */
+    default boolean supportsBackdropBlur() {
+        return false;
+    }
+
+    /**
+     * Запасной вид размытия: светлая полупрозрачная заливка с бликом сверху. Чем больше радиус, тем она
+     * плотнее, поэтому фон за карточкой всё равно «приглушается», как за матовым стеклом.
+     */
+    static void frostedFallback(Canvas canvas, float x, float y, float w, float h, Radii radii, float radius) {
+        if (radius <= 0f || w <= 0f || h <= 0f) {
+            return;
+        }
+        float k = Math.min(1f, radius / 12f);
+        int top = Color.withAlpha(0xFFDDE4F0, (int) (0x18 + 0x30 * k));
+        int bottom = Color.withAlpha(0xFF9AA6BC, (int) (0x14 + 0x28 * k));
+        canvas.fillRoundRect(x, y, w, h, radii, Brush.vertical(top, bottom));
+        float glare = Math.min(h, Math.max(2f, h * 0.35f));
+        canvas.fillRoundRect(x, y, w, glare, radii == null ? Radii.ZERO : new Radii(radii.topLeft(), radii.topRight(), 0f, 0f),
+                Brush.vertical(Color.withAlpha(0xFFFFFFFF, (int) (0x10 * k + 0x06)), 0x00FFFFFF));
+    }
+
     /** Попадает ли прямоугольник в видимую область. Для отсечения невидимых поддеревьев. */
     boolean isVisible(float x, float y, float w, float h);
 

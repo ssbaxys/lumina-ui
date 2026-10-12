@@ -191,3 +191,25 @@ String[] rows = map.toRows();             // обратно в ряды + map.ke
 
 Свой вид блока: `BlockTextures.register("mymod:crystal", TextureRef.of("mymod:textures/block/crystal.png"), 0xFFFFFFFF)`.
 Блок без найденной текстуры рисуется иконкой предмета. В разметке — тег `<blocks>` (см. [MARKUP.md](MARKUP.md)).
+
+## Постройки в 3D
+
+`BlockStructure` — разреженная 3D-сетка блоков (y вверх), `BlockModel` рисует её в ортографической проекции:
+изометрия 45°/30° по умолчанию, вращение мышью с инерцией, приближение колесом, автовращение. Рисуются только
+открытые грани (стекло, листва, вода, огонь, факелы соседей не закрывают), от дальних к ближним, с затенением как
+в игре; верх и низ берутся из `_top`/`_bottom`/`_end` (`BlockTextures.top/bottom`). Без текстуры грань заливается
+цветом из id блока.
+
+```java
+BlockStructure house = BlockStructure.fromLayers(Map.of('P', "minecraft:oak_planks", 'G', "minecraft:glass"),
+        "PPP", "PPP",      // нижний слой: строка — ряд по z, символ — x
+        "---",
+        "PGP", "P.P");     // следующий слой; '.' — воздух
+house.fill(0, 2, 0, 2, 2, 1, "minecraft:spruce_planks");
+BlockStructure wall = BlockStructure.extrude(blockMap, 3);   // 2D-карта → 3D
+BlockModel model = new BlockModel(house).autoRotate(true).size(200, 200);
+model.camera(30, 20).cutAbove(1);                             // ракурс и срез по слою
+BlockModel.drawBlockIcon(canvas, "minecraft:tnt", x, y, 16, time);  // один блок в изометрии
+```
+
+В разметке — тег `<structure>` (см. [MARKUP.md](MARKUP.md)).

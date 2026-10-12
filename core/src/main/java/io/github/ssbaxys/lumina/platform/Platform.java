@@ -127,6 +127,28 @@ public interface Platform {
         return null;
     }
 
+    // ================================================================ HUD и данные игры
+
+    /**
+     * Заполнить снимок состояния игрока (здоровье, координаты, инвентарь...) — вызывается на каждом тике
+     * клиента из {@link io.github.ssbaxys.lumina.game.GameData#update()}. {@code out} уже сброшен в значения
+     * по умолчанию и переиспользуется: реализация не должна его запоминать. По умолчанию мира нет.
+     *
+     * @return {@code true}, если игрок в мире и данные заполнены
+     */
+    default boolean pollGameData(io.github.ssbaxys.lumina.game.GameState out) {
+        return false;
+    }
+
+    /**
+     * Что сейчас мешает HUD — битовая маска флагов {@code HudVisibility.GUI_HIDDEN}, {@code DEBUG_SCREEN},
+     * {@code CHAT_OPEN}, {@code SCREEN_OPEN}. Вызывается каждый кадр, поэтому должна быть дешёвой.
+     * По умолчанию {@code 0}: ничто не мешает.
+     */
+    default int hudState() {
+        return 0;
+    }
+
     // ================================================================ доступность
 
     /**

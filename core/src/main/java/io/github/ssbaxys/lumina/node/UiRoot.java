@@ -15,14 +15,23 @@ import io.github.ssbaxys.lumina.style.State;
 import io.github.ssbaxys.lumina.style.Theme;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * Корень интерфейса: владеет деревом, темой, аниматором, фокусом и наведением.
  * Не знает о Minecraft: экран загрузчика просто пересылает сюда ввод и вызывает {@link #render}.
+ *
+ * <p>Поверх содержимого — слой всплывающих окон ({@link #showPopup}): контекстные меню, подсказки,
+ * выпадающие списки. Они рисуются после содержимого и первыми получают мышь и клавиатуру.</p>
  */
 public final class UiRoot {
+    /** Всплывающее окно: элемент, запрошенная точка и закрывается ли оно кликом мимо. */
+    private record Popup(UiElement element, float x, float y, boolean dismissable) {
+    }
+
     private final UiElement content;
+    private final List<Popup> popups = new ArrayList<>();
     private final Animator animator = new Animator();
     private Theme theme;
     private int themeRevision;
@@ -67,6 +76,10 @@ public final class UiRoot {
         this.themeRevision = theme.revision();
         content.refreshStyleTree(true);
         content.invalidateLayout();
+        for (Popup p : popups) {
+            p.element.refreshStyleTree(true);
+            p.element.invalidateLayout();
+        }
     }
 
     public float width() {
@@ -86,6 +99,7 @@ public final class UiRoot {
     }
 
     public void dispose() {
+        closePopups();
         content.detach();
         animator.clear();
         hovered = null;
@@ -102,6 +116,14 @@ public final class UiRoot {
         lastFrameNanos = now;
         tick(dt);
         content.render(canvas, partialTick);
+        renderPopups(canvas, partialTick);
+    }
+
+    /** Нарисовать только слой всплывающих окон (если содержимое рисуется отдельно). */
+    public void renderPopups(Canvas canvas, float partialTick) {
+        for (int i = 0; i < popups.size(); i++) {
+            popups.get(i).element.render(canvas, partialTick);
+        }
     }
 
     /** Анимации + раскладка. Отдельно от render, чтобы можно было тестировать без Canvas. */
@@ -110,6 +132,9 @@ public final class UiRoot {
             // Тему поменяли на месте (токен, стиль класса): перетекаем в новые значения.
             themeRevision = theme.revision();
             content.refreshStyleTree(true);
+            for (Popup p : popups) {
+                p.element.refreshStyleTree(true);
+            }
         }
         if (!animator.isIdle()) {
             animator.tick(dt);
@@ -121,6 +146,158 @@ public final class UiRoot {
     public void layoutIfNeeded() {
         content.measure(width, height);
         content.setBounds(0f, 0f, content.measuredWidth(), content.measuredHeight());
+        for (int i = 0; i < popups.size(); i++) {
+            layoutPopup(popups.get(i));
+        }
+    }
+
+    /** Окно своего размера в точке; не влезает — открывается в другую сторону от точки или прижимается к краю. */
+    private void layoutPopup(Popup p) {
+        UiElement e = p.element;
+        e.measure(width, height);
+        float w = e.measuredWidth();
+        float h = e.measuredHeight();
+        e.setBounds(fit(p.x, w, width), fit(p.y, h, height), w, h);
+    }
+
+    private static float fit(float at, float size, float limit) {
+        if (at + size <= limit) {
+            return Math.max(0f, at);
+        }
+        if (at - size >= 0f) {
+            return at - size;
+        }
+        return Math.max(0f, limit - size);
+    }
+
+    // ================================================================ всплывающие окна
+
+    /** Показать всплывающее окно в точке экрана; закрывается кликом мимо и Escape. */
+    public void showPopup(UiElement popup, float x, float y) {
+        showPopup(popup, x, y, true);
+    }
+
+    /**
+     * Показать всплывающее окно поверх содержимого. Окно измеряется по своему размеру и не выходит
+     * за экран. {@code dismissable = false} — клик мимо его не закрывает (только Escape или код).
+     */
+    public void showPopup(UiElement popup, float x, float y, boolean dismissable) {
+        if (popup.parent() != null) {
+            throw new IllegalArgumentException("Popup must not have a parent: " + popup);
+        }
+        closePopup(popup);
+        Popup p = new Popup(popup, x, y, dismissable);
+        popups.add(p);
+        popup.attach(this);
+        layoutPopup(p);
+        updateHover();
+    }
+
+    /** Закрыть окно; {@code false}, если оно не было открыто. */
+    public boolean closePopup(UiElement popup) {
+        for (int i = 0; i < popups.size(); i++) {
+            if (popups.get(i).element == popup) {
+                popups.remove(i);
+                release(popup);
+                popup.detach();
+                updateHover();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Закрыть все окна. */
+    public void closePopups() {
+        while (!popups.isEmpty()) {
+            closePopup(popups.get(popups.size() - 1).element);
+        }
+    }
+
+    public boolean isPopupOpen(UiElement popup) {
+        return indexOfPopup(popup) >= 0;
+    }
+
+    /** Открытые окна снизу вверх. */
+    public List<UiElement> popups() {
+        List<UiElement> out = new ArrayList<>(popups.size());
+        for (Popup p : popups) {
+            out.add(p.element);
+        }
+        return Collections.unmodifiableList(out);
+    }
+
+    private int indexOfPopup(UiElement popup) {
+        for (int i = 0; i < popups.size(); i++) {
+            if (popups.get(i).element == popup) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** Лежит ли элемент внутри какого-нибудь окна. */
+    private boolean inPopup(UiElement e) {
+        for (Popup p : popups) {
+            if (p.element.isAncestorOrSelfOf(e)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean contains(UiElement e, float x, float y) {
+        return e.isVisible() && x >= e.x() && y >= e.y() && x < e.x() + e.width() && y < e.y() + e.height();
+    }
+
+    /** Снять наведение и нажатие с элементов закрываемого окна, чтобы они не залипли. */
+    private void release(UiElement popup) {
+        if (hovered != null && popup.isAncestorOrSelfOf(hovered)) {
+            for (UiElement e = hovered; e != null; e = e.parent()) {
+                e.setState(State.HOVERED, false);
+            }
+            hovered = null;
+        }
+        if (pressed != null && popup.isAncestorOrSelfOf(pressed)) {
+            setStateChain(pressed, State.PRESSED, false);
+            pressed = null;
+            pressedButton = -1;
+        }
+    }
+
+    /** Попадание мыши: сначала окна сверху вниз, затем содержимое. Окно заслоняет то, что под ним. */
+    private UiElement hitTest(float x, float y) {
+        for (int i = popups.size() - 1; i >= 0; i--) {
+            UiElement p = popups.get(i).element;
+            UiElement hit = p.hitTest(x, y);
+            if (hit != null) {
+                return hit;
+            }
+            if (contains(p, x, y)) {
+                return null;
+            }
+        }
+        return content.hitTest(x, y);
+    }
+
+    /** Нажатие мимо всех окон закрывает те, что закрываются кликом мимо. */
+    private boolean dismissPopupsAt(float x, float y) {
+        if (popups.isEmpty() || (hovered != null && inPopup(hovered))) {
+            return false;
+        }
+        for (Popup p : popups) {
+            if (contains(p.element, x, y)) {
+                return false;
+            }
+        }
+        boolean closed = false;
+        for (int i = popups.size() - 1; i >= 0; i--) {
+            if (popups.get(i).dismissable) {
+                closePopup(popups.get(i).element);
+                closed = true;
+            }
+        }
+        return closed;
     }
 
     // ================================================================ мышь
@@ -144,12 +321,19 @@ public final class UiRoot {
         mouseY = y;
         layoutIfNeeded();
         updateHover();
+        if (dismissPopupsAt(x, y)) {
+            // Клик, закрывший меню, дальше не идёт: иначе он нечаянно нажмёт то, что под меню.
+            return true;
+        }
         UiElement target = hovered;
         UiElement focusTarget = target;
         while (focusTarget != null && !focusTarget.isFocusable()) {
             focusTarget = focusTarget.parent();
         }
-        setFocus(focusTarget);
+        // Клик по пункту меню не отнимает фокус у поля, которое это меню открыло.
+        if (focusTarget != null || target == null || !inPopup(target)) {
+            setFocus(focusTarget);
+        }
         if (target == null) {
             return false;
         }
@@ -192,7 +376,7 @@ public final class UiRoot {
     }
 
     private void updateHover() {
-        UiElement hit = mouseX < 0f ? null : content.hitTest(mouseX, mouseY);
+        UiElement hit = mouseX < 0f ? null : hitTest(mouseX, mouseY);
         UiElement old = hovered;
         if (hit == old) {
             return;
@@ -221,6 +405,18 @@ public final class UiRoot {
     // ================================================================ клавиатура и фокус
 
     public boolean keyDown(int key, int scanCode, int modifiers) {
+        if (!popups.isEmpty()) {
+            // Верхнее окно первым получает клавиши (стрелки в меню), Escape его закрывает.
+            UiElement top = popups.get(popups.size() - 1).element;
+            UiElement target = focused != null && top.isAncestorOrSelfOf(focused) ? focused : top;
+            if (dispatch(target, new KeyEvent(KeyEvent.PRESS, key, scanCode, modifiers))) {
+                return true;
+            }
+            if (key == Keys.ESCAPE) {
+                closePopup(top);
+                return true;
+            }
+        }
         KeyEvent e = new KeyEvent(KeyEvent.PRESS, key, scanCode, modifiers);
         if (dispatch(focused != null ? focused : content, e)) {
             return true;

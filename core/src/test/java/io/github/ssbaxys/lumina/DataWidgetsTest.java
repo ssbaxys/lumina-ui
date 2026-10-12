@@ -8,6 +8,7 @@ import io.github.ssbaxys.lumina.node.UiRoot;
 import io.github.ssbaxys.lumina.style.ModernTheme;
 import io.github.ssbaxys.lumina.widget.FancyText;
 import io.github.ssbaxys.lumina.widget.Panel;
+import io.github.ssbaxys.lumina.widget.ScrollPanel;
 import io.github.ssbaxys.lumina.widget.Skeleton;
 import io.github.ssbaxys.lumina.widget.Spinner;
 import io.github.ssbaxys.lumina.widget.Table;
@@ -139,5 +140,18 @@ class DataWidgetsTest {
                 new Spinner(Spinner.Kind.PULSE, 16), Skeleton.line(80), Skeleton.circle(20));
         root.tick(0.3f);
         assertFalse(paint(root).isEmpty());
+    }
+
+    @Test
+    void scrollBarDoesNotCoverContent() {
+        Panel tall = Panel.box(FlexLayout.column()).add(Panel.box(FlexLayout.column()).width(Dim.FILL).height(Dim.px(900)));
+        Panel shortContent = Panel.box(FlexLayout.column()).add(Panel.box(FlexLayout.column()).width(Dim.FILL).height(Dim.px(50)));
+        ScrollPanel scrolling = new ScrollPanel(tall).width(Dim.px(120)).height(Dim.px(200));
+        ScrollPanel fitting = new ScrollPanel(shortContent).width(Dim.px(120)).height(Dim.px(200));
+        scrolling.setStyleClass(null);
+        fitting.setStyleClass(null);
+        mount(Panel.box(FlexLayout.row()).add(scrolling, fitting));
+        assertTrue(tall.width() <= 120 - 8, "gutter for the bar: " + tall.width());
+        assertEquals(120, shortContent.width(), 0.01f, "no gutter without a bar");
     }
 }

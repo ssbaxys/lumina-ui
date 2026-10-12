@@ -107,6 +107,10 @@ public class Pages extends Widget<Pages> {
     @Override
     protected void onAttach() {
         subscription = index.subscribe(i -> show(i == null ? 0 : i, shown >= 0));
+        // Страницы добавлены до появления в дереве: показать текущую сразу, без анимации.
+        if (current == null && !factories.isEmpty()) {
+            show(currentIndex(), false);
+        }
     }
 
     @Override

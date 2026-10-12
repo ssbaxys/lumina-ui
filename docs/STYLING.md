@@ -159,7 +159,8 @@ Markdown.bound(signal);                            // текст из сигна
 - таблицы с выравниванием;
 - ссылки и автоссылки;
 - разделители, экранирование;
-- иконки `![](item:minecraft:diamond)` и `![](texture:minecraft:textures/block/stone.png)`.
+- иконки `![](item:minecraft:diamond)` и `![](texture:minecraft:textures/block/stone.png)`;
+- подсветка блоков кода с языком: java, json, css, html и другие (см. «Данные, формы и книги»).
 
 Текст переносится по ширине. Разбор выполняется один раз при смене текста, раскладка — при смене ширины.
 Цвета берутся из стиля темы.
@@ -377,3 +378,151 @@ new CalendarView(date).onPick(d -> log(d));
 Все новые классы есть в `Theme.dark()`, `Theme.light()` и `ModernTheme` и построены на токенах.
 В разметке — теги `<select>`, `<keybind>`, `<date-picker>`, `<calendar>` и атрибут `tooltip` (см. [MARKUP.md](MARKUP.md)).
 Пример всего вместе — страница витрины `PopupsPage`.
+
+## Данные, формы и книги
+
+### Список на десятки тысяч строк (`VirtualList<T>`)
+
+Строки одной высоты; рисуется и раскладывается только видимое, поэтому 10 000 или 100 000 записей стоят столько же,
+сколько десять. Прокрутка плавная (пружина; дальний прыжок по Home/End сразу подводит к цели и доезжает последний экран),
+с колесом и ползунком; клавиши ↑/↓, PageUp/PageDown, Home/End двигают выбор, Enter и двойной клик вызывают `onActivate`.
+
+```java
+// Строки рисуются прямо на Canvas — без единого элемента на строку.
+VirtualList<Item> list = new VirtualList<Item>(18, (c, item, i, x, y, w, h, row) -> {
+            c.drawItem(item.id(), x + 2, y + 1, 16);
+            c.drawText(item.name(), x + 22, y + 5, row.textColor(), false);   // row.selected(), row.hovered()
+        })
+        .bind(view.visible())            // или .items(list)
+        .emptyText("Ничего не найдено")
+        .onActivate(this::give)
+        .height(Dim.px(180));
+list.selection().subscribe(this::preview);   // выбранная запись; selection().set(x) выбирает извне
+VirtualList.ofText(16, Item::name);          // просто текст
+
+// Строки-виджеты: создаётся столько, сколько видно (+1), при прокрутке в них подставляются другие записи.
+new VirtualList<Item>(24, null).rows(ItemRow::new, (row, item, index) -> row.show(item));
+```
+
+Методы: `items()`, `refresh()` (после правки списка на месте), `select(i)`, `selectedIndex()`, `scrollTo(y, анимация)`,
+`ensureVisible(i, анимация)`, `firstVisible()`/`lastVisible()`, `visibleRows(n)` (высота без явного размера), `zebra(false)`.
+Стиль — `virtual-list`.
+
+### Поиск, фильтры, сортировка и страницы (`data.DataView<T>`)
+
+Представление над списком: результат — сигналы, их читают `VirtualList`, `Table` и `Paginator`.
+
+```java
+DataView<Item> view = new DataView<>(items)            // или DataView.of(сигналСоСписком)
+        .searchBy(i -> i.name() + " " + i.category())  // поиск: все слова запроса, без учёта регистра
+        .sort(Comparator.comparing(Item::name))        // sort(c, true) — по убыванию, sort(null) — как в данных
+        .pageSize(50);                                 // 0 — без страниц
+new TextField(view.query());                           // строка поиска — обычный Signal<String>
+view.setFilter("блоки", Item::isBlock);                // именованный фильтр; setFilter("блоки", null) снимает
+view.filterWhen("редкие", onlyRare, i -> i.rarity() > 1);   // действует, пока сигнал true
+view.visible();   // записи текущей страницы    view.filtered();  // все совпавшие    view.total();  // сколько
+view.page(); view.pageCount(); view.nextPage(); view.previousPage(); view.dispose();
+```
+
+Новый запрос или фильтр возвращает на первую страницу; номер страницы вне границ приводится к ним. Строки поиска
+приводятся к нижнему регистру один раз при смене данных.
+
+**Переключатель страниц** (`Paginator`): «« ‹ 1 … 4 5 6 … 20 › »», подсветка текущей страницы переезжает пружиной,
+←/→/Home/End и клик. `new Paginator(view)` или `new Paginator(page, pageCount)`; `siblings(2)`, `edgeArrows(false)`.
+Стиль — `paginator`.
+
+**Таблица** (`Table`) рисует только строки, попавшие в видимую область (окно `ScrollPanel`, край экрана), поэтому
+таблица на тысячи строк в прокрутке не тормозит. `table.bind(view)` показывает текущую страницу представления, а клик
+по заголовку сортирует всё представление; `table.bind(signal)` — строки из любого сигнала.
+
+### Проверка ввода и формы
+
+Проверки (`Validator`) вешаются на любое поле (`TextField`, `NumberField`, `ColorField`):
+
+```java
+new TextField(login).validate(Validator.required(), Validator.minLength(3),
+        Validator.pattern("[A-Za-z0-9_]+", "Только латиница, цифры и _"));
+new NumberField(age).validate(Validator.range(13, 120, "Возраст от 13 до 120"));
+new TextField(repeat).validate(Validator.sameAs(password::peek, "Пароли не совпадают"));
+Validator.of(s -> s.chars().anyMatch(Character::isDigit), "Нужна цифра");   // своя проверка
+// ещё: Validator.email(), integer(), maxLength(16), v.and(other), v.message("Своё сообщение"); field.required()
+```
+
+Все готовые проверки, кроме `required`, пропускают пустой текст. Ошибка показывается, когда поле теряет фокус после
+правки, и дальше обновляется на каждой правке. У поля: `error()` — показанная ошибка (сигнал), `valid()` — проходит ли
+текст проверки прямо сейчас (сигнал), `validate()` — проверить и показать, `check()` — проверить молча,
+`setError("Имя занято")` — своя ошибка (ответ сервера), `resetValidation()`. Неверное поле получает состояние
+`FieldBase.INVALID` и красную рамку.
+
+**Строка формы** (`FormField`): подпись, поле, пояснение (`hint`) и ошибка, которая выезжает под полем, раздвигая место.
+**Форма** (`Form`) собирает поля:
+
+```java
+Form form = new Form()
+        .onSubmit(() -> register(nick.peek()))
+        .onInvalid(() -> toast("Исправьте ошибки"));
+panel.add(
+        form.field("Ник", new TextField(nick).required()).hint("3–16 символов"),
+        form.field("Почта", new TextField(mail).validate(Validator.required(), Validator.email())),
+        form.submitButton(new Button("Создать"), false));    // true — кнопка недоступна, пока форма неверна
+form.check(() -> agree.peek());      // своя проверка всей формы
+form.valid();                        // сигнал «всё верно», меняется на каждой правке
+form.validate(); form.submit(); form.reset(); form.errors();
+new Form().collect(markupRoot);      // все поля с проверками внутри элемента
+```
+
+`submit()` записывает незаписанный ввод, показывает ошибки у всех полей сразу и ставит фокус на первое неверное.
+Стили: `form-field`, `form-label`, `form-hint`, `form-error`. В разметке — `<form>`, `<field>` и атрибуты `required`,
+`minlength`, `pattern` (см. [MARKUP.md](MARKUP.md)).
+
+### Мастер настройки (`Wizard`) и индикатор шагов (`Stepper`)
+
+`Stepper` — пронумерованные кружки с линией прогресса и подписями: пройденные шаги с галочкой, текущий пульсирует,
+линия пружиной дотягивается до шага. `new Stepper(step, "Аккаунт", "Профиль", "Готово").clickable(i -> i < step.peek())`.
+
+`Wizard` — `Stepper`, страница шага (сдвиг через `Pages`) и кнопки «Назад» / «Далее» / «Готово». «Далее» сначала
+выполняет проверку шага; не прошла — страница вздрагивает и остаётся.
+
+```java
+new Wizard()
+        .step("Сервер", serverPage, serverForm)               // проверка — Form шага (ошибки под полями)
+        .step("Режим", this::modePage, () -> mode.peek() != null)
+        .step("Готово", this::summary)
+        .labels("Назад", "Далее", "Создать сервер")
+        .onFinish(this::create);
+wizard.step();   // Signal<Integer> с номером шага; next(), back(), isFinished()
+```
+
+Стили: `stepper`, `wizard`, `wizard-nav`.
+
+### Книга (`markdown.Book`)
+
+Markdown, разбитый на страницы: разрыв — строка `<!-- page -->` или `\newpage`; что не влезло, само переносится на
+следующую страницу (длинные абзацы режутся по словам).
+
+```java
+new Book(text);                                              // как книга Minecraft: текстура, «Страница 1 из 5», стрелки
+new Book(text).look(Book.Look.MODERN).tableOfContents(true)  // разворот на карточке темы + оглавление первой страницей
+        .width(Dim.px(340)).height(Dim.px(220));
+book.page().set(4); book.next(); book.previous(); book.goTo(0); book.pageCount(); book.toc();
+```
+
+Листается стрелками, колесом, ←/→, PageUp/PageDown, Home/End, с анимацией переворота листа и звуком
+`item.book.page_turn` (`sound(false)`, `flipDuration(0.3f)`). Оглавление собирается из заголовков `#` и `##`
+(`tocLevel(3)`), его пункты — ссылки. Ссылки `[текст](#page:5)` и `[текст](#название-главы)` листают книгу,
+остальные уходят в `onLink`. `spread(false)` — современная книга в одну страницу. Стили: `book` и `book.vanilla`.
+
+### Подсветка кода (`markdown.SyntaxHighlighter`)
+
+Блоки кода в `Markdown` и `Book` с языком подсвечиваются: `java`, `kotlin`, `javascript`/`js`/`ts`, `json`, `css`,
+`html`/`xml`/`svg`. Разбор идёт один раз при раскладке, многострочные комментарии и текстовые блоки учитываются.
+Цвета подбираются под тему (светлый или тёмный текст, акцент в ключевых словах); задать свои — токенами темы:
+
+```java
+theme.set(SyntaxHighlighter.STRING_COLOR, 0xFF98C379).set(SyntaxHighlighter.KEYWORD_COLOR, 0xFFC678DD);
+SyntaxHighlighter.register((line, state, out) -> { out.span(0, line.length(), SyntaxHighlighter.COMMENT); return 0; },
+        "mylang");                                     // свой язык: размечает строку, возвращает состояние
+SyntaxHighlighter.highlight("java", code);             // куски строк с видами лексем
+```
+
+Пример всего раздела — страница витрины `DataToolsPage`.

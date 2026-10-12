@@ -65,6 +65,10 @@ button.primary:hover { transform: scale(1.06); glow: 6px var(--accent); transiti
 | `keybind` | поле назначения клавиши | `bind` (код GLFW или название: `R`, `space`, `F5`, `left-shift`), `value`, `default` |
 | `date-picker` | поле даты с календарём во всплывающем окне | `bind`, `value="2026-10-12"`, `min`, `max` (`today` — сегодня), `placeholder` |
 | `calendar` | встроенный календарь на месяц | `bind`, `value`, `min`, `max` |
+| `input`, `number` | поле текста и числа | `bind`, `placeholder`, `type="password"`/`"email"`, `maxlength`, `min`, `max`, `step`, `variant`, `prefix`, `suffix`; проверки — см. «Формы» |
+| `field` | строка формы: подпись, поле-ребёнок, пояснение и ошибка под полем | `label`, `hint` |
+| `form` | колонка-форма: собирает поля с проверками, `<button type="submit">` её отправляет | `on-submit`, `on-invalid`, `valid="имя"` (флаг «всё верно»), `disable-invalid="true"` |
+| `book` | книга из Markdown внутри тега, разрыв страницы — `<!-- page -->` | `look="modern"`, `toc` (или `toc="Заголовок"`), `spread="false"`, `src`, `on-link` |
 | `spacer` `hr` `br` | распорка, линия, отступ | |
 | `state` | переменная состояния | `name`, `value` |
 | `style`, `link rel="stylesheet"` | CSS внутри файла и из ресурса | `href` |
@@ -164,6 +168,38 @@ new Bindings()
         .handler("shake", source -> source.play(VanillaFx.shake(source, 4f, .4f)))   // получает элемент-источник
         .action("give", (arg, source) -> give(arg));          // своё действие: on-click="give:minecraft:apple"
 ```
+
+## Формы
+
+Проверки задаются атрибутами, как в HTML, у `<input>` и `<number>`:
+
+| Атрибут | Проверка |
+|---|---|
+| `required`, `required="Своё сообщение"` | поле не пустое |
+| `minlength="3"` | не короче (а `maxlength` просто не даёт ввести больше) |
+| `pattern="[a-z]+"` + `title="Только строчные"` | весь текст подходит под регулярное выражение; `title` — сообщение |
+| `type="email"` | адрес почты |
+| `min`, `max` у `<input>` | число в диапазоне |
+| `error="…"` | одно сообщение вместо стандартных для всех проверок поля |
+
+Ошибка появляется, когда поле потеряло фокус после правки (или при отправке формы), и дальше обновляется на каждой правке.
+Чтобы текст ошибки выезжал под полем, оберните поле в `<field>`:
+
+```html
+<state name="nick" value=""/>
+<form on-submit="register" valid="formOk">
+  <field label="Ник" hint="3–16 символов">
+    <input bind="nick" required minlength="3" pattern="[A-Za-z0-9_]+" title="Только латиница и цифры"/>
+  </field>
+  <field label="Почта"><input bind="mail" type="email" required="Укажите почту"/></field>
+  <button type="submit">Создать</button>
+  <label if="!formOk">Заполните поля</label>
+</form>
+```
+
+`<button type="submit">` проверяет все поля формы, показывает ошибки, ставит фокус на первое неверное поле и только
+при успехе вызывает `on-submit` (иначе — `on-invalid`). Неверное поле получает состояние `FieldBase.INVALID`
+(красная рамка); строки формы оформляются классами `form-field`, `form-label`, `form-hint`, `form-error`.
 
 ## Горячая перезагрузка
 

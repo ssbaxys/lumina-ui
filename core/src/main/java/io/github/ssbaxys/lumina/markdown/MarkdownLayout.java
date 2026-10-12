@@ -2,7 +2,12 @@ package io.github.ssbaxys.lumina.markdown;
 
 import io.github.ssbaxys.lumina.markdown.Md.Block;
 import io.github.ssbaxys.lumina.markdown.Md.Inline;
+import io.github.ssbaxys.lumina.render.Brush;
+import io.github.ssbaxys.lumina.render.Canvas;
+import io.github.ssbaxys.lumina.render.Color;
+import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.TextMetrics;
+import io.github.ssbaxys.lumina.render.TextureRef;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +28,10 @@ final class MarkdownLayout {
     static final int HEAD_BG = 7;
     static final int HIGHLIGHT = 8;
     static final int ACCENT = 9;
+    /** Роли подсветки кода: {@code SYNTAX + вид лексемы} ({@link SyntaxHighlighter#KEYWORD} и т. д.). */
+    static final int SYNTAX = 10;
+    /** Размер палитры: базовые роли и все виды лексем. */
+    static final int ROLES = SYNTAX + SyntaxHighlighter.KINDS;
 
     record Run(float x, float y, String text, int role, float scale, int link) {
     }
@@ -136,17 +145,34 @@ final class MarkdownLayout {
             cy += lh * s;
         }
         float inner = w - 2f * pad;
-        for (String line : c.code().split("\n", -1)) {
+        String[] lines = c.code().split("\n", -1);
+        // Подсветка считается один раз здесь, при раскладке; кадр рисует готовые куски.
+        List<List<SyntaxHighlighter.Span>> spans = SyntaxHighlighter.supports(c.language())
+                ? SyntaxHighlighter.highlight(c.language(), c.code()) : null;
+        for (int li = 0; li < lines.length; li++) {
+            String line = lines[li];
             if (line.isEmpty()) {
                 cy += lh + LINE_GAP;
                 continue;
             }
             // Код не переносится по словам, только по символам, если не влезает.
-            String rest = line;
-            while (!rest.isEmpty()) {
-                int fit = fitChars(rest, "", inner, 1f);
-                runs.add(new Run(x + pad, cy, rest.substring(0, fit), CODE, 1f, -1));
-                rest = rest.substring(fit);
+            int from = 0;
+            while (from < line.length()) {
+                int to = from + fitChars(line.substring(from), "", inner, 1f);
+                if (spans == null) {
+                    runs.add(new Run(x + pad, cy, line.substring(from, to), CODE, 1f, -1));
+                } else {
+                    for (SyntaxHighlighter.Span sp : spans.get(li)) {
+                        int a = Math.max(sp.start(), from);
+                        int b = Math.min(sp.end(), to);
+                        if (b <= a || line.substring(a, b).isBlank()) {
+                            continue;
+                        }
+                        float dx = metrics.width(line.substring(from, a));
+                        runs.add(new Run(x + pad + dx, cy, line.substring(a, b), SYNTAX + sp.kind(), 1f, -1));
+                    }
+                }
+                from = to;
                 cy += lh + LINE_GAP;
             }
         }
@@ -491,5 +517,87 @@ final class MarkdownLayout {
             sb.append("§n");
         }
         return sb.toString();
+    }
+
+    // ================================================================ рисование
+
+    /**
+     * Нарисовать готовую раскладку в точке (0, 0). {@code palette} — цвета по ролям (размер {@link #ROLES}),
+     * {@code hoveredLink} — подсвеченная ссылка или -1.
+     */
+    void paint(Canvas canvas, int[] palette, boolean shadow, int hoveredLink) {
+        int[] c = palette;
+        for (Box b : boxes) {
+            if (b.radius() > 0f) {
+                canvas.fillRoundRect(b.x(), b.y(), b.w(), b.h(), Radii.all(b.radius()), Brush.solid(c[b.role()]));
+            } else {
+                canvas.fillRect(b.x(), b.y(), b.w(), b.h(), c[b.role()]);
+            }
+        }
+        if (hoveredLink >= 0) {
+            for (LinkArea a : linkAreas) {
+                if (a.link() == hoveredLink) {
+                    canvas.fillRoundRect(a.x() - 1f, a.y(), a.w() + 2f, a.h(), Radii.all(2f),
+                            Brush.solid(Color.withAlpha(c[ACCENT], 0x30)));
+                }
+            }
+        }
+        for (Bullet b : bullets) {
+            int color = c[MUTED];
+            switch (b.kind()) {
+                case 0 -> canvas.fillCircle(b.cx(), b.cy(), b.r(), Brush.solid(color));
+                case 1 -> canvas.strokeCircle(b.cx(), b.cy(), b.r(), 1f, Brush.solid(color));
+                default -> canvas.fillRect(b.cx() - b.r(), b.cy() - b.r(), 2f * b.r(), 2f * b.r(), color);
+            }
+        }
+        for (Check ch : checks) {
+            paintCheck(canvas, ch, c);
+        }
+        for (Run r : runs) {
+            int color = r.link() >= 0 && r.link() == hoveredLink ? Color.lighten(c[r.role()], 0.12f) : c[r.role()];
+            if (r.scale() != 1f) {
+                canvas.save();
+                canvas.translate(r.x(), r.y());
+                canvas.scale(r.scale(), r.scale());
+                canvas.drawText(r.text(), 0f, 0f, color, shadow);
+                canvas.restore();
+            } else {
+                canvas.drawText(r.text(), r.x(), r.y(), color, shadow);
+            }
+        }
+        for (Icon icon : icons) {
+            String url = icon.url();
+            if (url.startsWith("item:")) {
+                canvas.drawItem(url.substring(5), icon.x(), icon.y(), icon.size());
+            } else {
+                canvas.drawTexture(TextureRef.of(url.substring(8)), icon.x(), icon.y(), icon.size(), icon.size(),
+                        Color.WHITE);
+            }
+        }
+    }
+
+    private static void paintCheck(Canvas canvas, Check ch, int[] c) {
+        float x = ch.x();
+        float y = ch.y();
+        float s = ch.size();
+        Radii r = Radii.all(2f);
+        if (Boolean.TRUE.equals(ch.item().checked())) {
+            canvas.fillRoundRect(x, y, s, s, r, Brush.solid(c[ACCENT]));
+            int mark = Color.luminance(c[ACCENT]) > 0.5f ? 0xFF1D2330 : Color.WHITE;
+            canvas.drawLine(x + s * 0.22f, y + s * 0.52f, x + s * 0.42f, y + s * 0.72f, 1.4f, mark);
+            canvas.drawLine(x + s * 0.42f, y + s * 0.72f, x + s * 0.8f, y + s * 0.28f, 1.4f, mark);
+        } else {
+            canvas.strokeRoundRect(x, y, s, s, r, 1f, c[MUTED]);
+        }
+    }
+
+    /** Ссылка под точкой или -1. */
+    int linkAt(float x, float y) {
+        for (LinkArea a : linkAreas) {
+            if (x >= a.x() && x < a.x() + a.w() && y >= a.y() && y < a.y() + a.h()) {
+                return a.link();
+            }
+        }
+        return -1;
     }
 }

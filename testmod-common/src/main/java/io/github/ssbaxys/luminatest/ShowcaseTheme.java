@@ -5,6 +5,7 @@ import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Color;
 import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
+import io.github.ssbaxys.lumina.style.ModernTheme;
 import io.github.ssbaxys.lumina.style.Style;
 import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.style.Theme;
@@ -26,6 +27,11 @@ final class ShowcaseTheme {
 
     static Theme light() {
         return extend(Theme.light());
+    }
+
+    /** Современная тема (как в настройках ModernUI) с классами витрины. */
+    static Theme modern(boolean light) {
+        return extend(light ? ModernTheme.light() : ModernTheme.dark());
     }
 
     /** Новая тема с токенами (акцент, скругление, скорость), перенесёнными из прежней. */

@@ -59,6 +59,21 @@ public class ScrollPanel extends Widget<ScrollPanel> {
         }
     }
 
+    /** Прокрутить так, чтобы потомок {@code child} оказался целиком виден (если он выше окна — его верх). */
+    public void scrollIntoView(UiElement child, boolean animate) {
+        if (!content.isAncestorOrSelfOf(child)) {
+            return;
+        }
+        float top = child.screenY() - content.screenY();
+        float view = height() - padding().vertical();
+        float current = scrollTarget;
+        if (top < current) {
+            scrollTo(top, animate);
+        } else if (top + child.height() > current + view) {
+            scrollTo(Math.min(top, top + child.height() - view), animate);
+        }
+    }
+
     @Override
     protected void onAttach() {
         offset = new AnimatedFloat(root().animator(), scrollTarget)

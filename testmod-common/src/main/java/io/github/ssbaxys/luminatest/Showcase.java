@@ -35,6 +35,7 @@ public final class Showcase {
 
         List<PageDef> pages = List.of(
                 new PageDef("Обзор", OverviewPage::create),
+                new PageDef("Современный стиль", ModernPage::create),
                 new PageDef("Раскладка", LayoutPage::create),
                 new PageDef("Стили и темы", () -> StylePage.create(light)),
                 new PageDef("Цвета", ColorsPage::create),
@@ -44,6 +45,11 @@ public final class Showcase {
                 new PageDef("Markdown", MarkdownPage::create),
                 new PageDef("HTML и CSS", MarkupPage::create),
                 new PageDef("Блоки", BlocksPage::create),
+                new PageDef("3D-постройки", StructuresPage::create),
+                new PageDef("Поля ввода", FieldsPage::create),
+                new PageDef("Кнопки и флажки", ButtonsPage::create),
+                new PageDef("Компоненты", ComponentsPage::create),
+                new PageDef("Окна и обои", WindowsPage::create),
                 new PageDef("Ввод и события", InputPage::create),
                 new PageDef("Данные", DataPage::create),
                 new PageDef("Производительность", PerformancePage::create));

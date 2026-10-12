@@ -68,9 +68,16 @@ class ShowcaseSmokeTest {
 
         List<Button> nav = new ArrayList<>();
         collectNav(root.content(), nav);
-        assertEquals(13, nav.size());
+        assertEquals(19, nav.size());
 
         for (Button b : nav) {
+            for (UiElement p = b.parent(); p != null; p = p.parent()) {
+                if (p instanceof io.github.ssbaxys.lumina.widget.ScrollPanel sp) {
+                    sp.scrollIntoView(b, false);
+                    break;
+                }
+            }
+            frame(root, canvas);
             click(root, b);
             for (int i = 0; i < 30; i++) {
                 frame(root, canvas);

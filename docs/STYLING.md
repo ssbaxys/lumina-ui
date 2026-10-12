@@ -263,3 +263,15 @@ panel.style(b -> b.set(Styles.NINE_SLICE, NineSlice.of("minecraft:textures/gui/d
 ```
 
 В CSS: `nine-slice: url(minecraft:textures/gui/demo_background.png) 248 166 4 / 2` (рамка 1 или 4 числами, после `/` масштаб).
+
+**Страницы с переходом** (`Pages`): показывает одну страницу по номеру из сигнала, удобно вместе с `Tabs` и `SideNav`.
+Эффекты `FADE`, `SLIDE` (по направлению смены номера), `SLIDE_UP`, `ZOOM`, `FLIP`; страница создаётся при первом показе
+и по умолчанию сохраняется (`keepAlive`).
+
+```java
+Signal<Integer> tab = Signal.of(0);
+new Tabs(tab, "Экран", "Вид");
+new Pages(tab).effect(Pages.Effect.SLIDE).page(this::screen).page(this::view);
+```
+
+Готовый пример экрана настроек в современном стиле — раздел «Современный стиль» витрины (`ModernPage`).

@@ -136,6 +136,16 @@ public interface Platform {
     default void narrate(String text) {
     }
 
+    // ================================================================ ввод
+
+    /**
+     * Зажат ли сейчас Shift (Shift+клик по слоту переносит стопку быстро). Событиям мыши ядра модификаторы
+     * не передаются, поэтому их спрашивают у игры. По умолчанию {@code false}.
+     */
+    default boolean isShiftDown() {
+        return false;
+    }
+
     /** Безопасное разрешение относительных путей внутри каталога данных. */
     final class DataPaths {
         private DataPaths() {

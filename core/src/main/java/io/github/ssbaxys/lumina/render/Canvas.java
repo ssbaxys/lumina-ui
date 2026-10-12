@@ -189,5 +189,41 @@ public interface Canvas {
      */
     void drawItem(String itemId, float x, float y, float size);
 
+    /**
+     * Предмет с переливом зачарования ({@code glint}). Бэкенд без поддержки перелива рисует обычный предмет.
+     */
+    default void drawItem(String itemId, float x, float y, float size, boolean glint) {
+        drawItem(itemId, x, y, size);
+    }
+
+    /**
+     * Предмет в 3D, повёрнутый вокруг своего центра: {@code yaw} — вокруг вертикали, {@code pitch} — наклон к
+     * зрителю (градусы). Вписан в квадрат {@code size × size} с левым верхним углом в (x, y). По умолчанию —
+     * плоская иконка без поворота.
+     */
+    default void drawItem3d(String itemId, float x, float y, float size, float yaw, float pitch, boolean glint) {
+        drawItem(itemId, x, y, size, glint);
+    }
+
+    /** Тип сущности, под которым {@link #drawEntity} рисует самого игрока (с его бронёй и предметами в руках). */
+    String PLAYER = "minecraft:player";
+
+    /**
+     * Сущность игры ({@code "minecraft:zombie"}) в 3D, как в окне инвентаря: вписана в квадрат
+     * {@code size × size} с левым верхним углом в (x, y), ногами вниз. {@code yaw} — поворот вокруг вертикали
+     * (0 — лицом к зрителю, плюс — поворот влево), {@code pitch} — наклон камеры (плюс — взгляд сверху).
+     * {@link #PLAYER} — локальный игрок. По умолчанию бэкенд сущности не рисует.
+     *
+     * @param options поза головы, детёныш, снаряжение; {@code null} — {@link EntityOptions#DEFAULT}
+     */
+    default void drawEntity(String entityTypeId, float x, float y, float size, float yaw, float pitch,
+                            EntityOptions options) {
+    }
+
+    /** Локальный игрок в его броне и с предметами в руках (то же, что {@code drawEntity(PLAYER, …)}). */
+    default void drawPlayer(float x, float y, float size, float yaw, float pitch, EntityOptions options) {
+        drawEntity(PLAYER, x, y, size, yaw, pitch, options);
+    }
+
     TextMetrics textMetrics();
 }

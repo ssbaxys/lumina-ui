@@ -546,6 +546,56 @@ public abstract class AbstractCanvas implements Canvas {
         drawItemImpl(itemId, x0, y0, s);
     }
 
+    @Override
+    public final void drawItem(String itemId, float x, float y, float size, boolean glint) {
+        if (!glint) {
+            drawItem(itemId, x, y, size);
+            return;
+        }
+        if (itemId == null || size <= 0f || opacity <= 0f) {
+            return;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        float s = size * Math.min(sx, sy);
+        if (culled(x0, y0, x0 + s, y0 + s)) {
+            return;
+        }
+        syncClip();
+        drawItemImpl(itemId, x0, y0, s, true);
+    }
+
+    @Override
+    public final void drawItem3d(String itemId, float x, float y, float size, float yaw, float pitch, boolean glint) {
+        if (itemId == null || size <= 0f || opacity <= 0f) {
+            return;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        float s = size * Math.min(sx, sy);
+        if (culled(x0, y0, x0 + s, y0 + s)) {
+            return;
+        }
+        syncClip();
+        drawItem3dImpl(itemId, x0, y0, s, yaw, pitch, glint);
+    }
+
+    @Override
+    public final void drawEntity(String entityTypeId, float x, float y, float size, float yaw, float pitch,
+                                 EntityOptions options) {
+        if (entityTypeId == null || size <= 0f || opacity <= 0f) {
+            return;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        float s = size * Math.min(sx, sy);
+        if (culled(x0, y0, x0 + s, y0 + s)) {
+            return;
+        }
+        syncClip();
+        drawEntityImpl(entityTypeId, x0, y0, s, yaw, pitch, options == null ? EntityOptions.DEFAULT : options);
+    }
+
     // ---------------------------------------------------------------- для бэкенда
 
     /** Прямоугольник без скругления; цвета углов уже с учётом прозрачности. Координаты экранные. */
@@ -590,6 +640,21 @@ public abstract class AbstractCanvas implements Canvas {
 
     /** Предмет размером {@code size} экранных пикселей с левым верхним углом в (x, y). */
     protected abstract void drawItemImpl(String itemId, float x, float y, float size);
+
+    /** Предмет с переливом зачарования; по умолчанию — обычный предмет. */
+    protected void drawItemImpl(String itemId, float x, float y, float size, boolean glint) {
+        drawItemImpl(itemId, x, y, size);
+    }
+
+    /** Повёрнутый 3D-предмет в экранном квадрате; по умолчанию — плоская иконка без поворота. */
+    protected void drawItem3dImpl(String itemId, float x, float y, float size, float yaw, float pitch, boolean glint) {
+        drawItemImpl(itemId, x, y, size, glint);
+    }
+
+    /** Сущность в экранном квадрате (см. {@link Canvas#drawEntity}); по умолчанию ничего не рисует. */
+    protected void drawEntityImpl(String entityTypeId, float x, float y, float size, float yaw, float pitch,
+                                  EntityOptions options) {
+    }
 
     /** Включить отсечение экранным прямоугольником (заменяет предыдущее). */
     protected abstract void applyClip(float x0, float y0, float x1, float y1);

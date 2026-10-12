@@ -86,7 +86,7 @@ import java.util.regex.Pattern;
  *
  * Теги: {@code div column row stack scroll panel label span h1 h2 h3 p markdown button toggle slider
  * progress ring color-picker input number color-field item img fx blocks structure checkbox radio-group image
- * select keybind date-picker calendar field form book spacer hr state style link}. Свои теги — {@link #tag}.
+ * select keybind date-picker calendar field form book slot entity player item-view spacer hr state style link}. Свои теги — {@link #tag}.
  * Атрибуты: {@code id class style width height grow gap align justify padding margin if enabled bind
  * on-click tooltip} и атрибуты конкретного тега. Логика — через {@link Bindings}.
  */
@@ -106,7 +106,7 @@ public final class Markup {
     private static final Map<String, TagFactory> TAGS = new HashMap<>();
     private static final Set<String> VOID = Set.of("img", "item", "br", "hr", "state", "link", "spacer", "toggle",
             "slider", "progress", "ring", "color-picker", "fx", "input", "number", "color-field", "meta",
-            "keybind", "date-picker", "calendar");
+            "keybind", "date-picker", "calendar", "slot", "entity", "player", "item-view");
     private static final Set<String> RAW = Set.of("style", "markdown", "script", "blocks", "structure", "book");
     private static final Pattern TEMPLATE = Pattern.compile("\\{\\{\\s*([\\w.-]+)\\s*(?:\\|\\s*(\\w+)\\s*)?}}");
 
@@ -496,6 +496,8 @@ public final class Markup {
             }
             return book;
         });
+        // Слоты, сущности и крупные предметы: <slot>, <entity>, <player>, <item-view>.
+        GameTags.register();
     }
 
     /**

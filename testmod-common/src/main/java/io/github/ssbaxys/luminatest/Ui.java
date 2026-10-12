@@ -44,6 +44,20 @@ final class Ui {
         return Panel.box(FlexLayout.column().gap(gap)).add(children);
     }
 
+    /** Элементы рядами по {@code perRow} штук (во flex нет переноса строк). */
+    static Panel grid(int perRow, float gap, UiElement... children) {
+        Panel col = column(gap);
+        Panel row = null;
+        for (int i = 0; i < children.length; i++) {
+            if (i % perRow == 0) {
+                row = row(gap);
+                col.add(row);
+            }
+            row.add(children[i]);
+        }
+        return col;
+    }
+
     static Panel spacer() {
         return Panel.box(FlexLayout.column()).grow(1);
     }

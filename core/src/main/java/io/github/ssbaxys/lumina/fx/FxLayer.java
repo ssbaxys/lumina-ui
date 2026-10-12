@@ -48,6 +48,16 @@ public class FxLayer extends Widget<FxLayer> implements Animation {
         return effect;
     }
 
+    /** Эффект по имени из {@link FxRegistry}: {@code spawn("minecraft:snow", 0, 0, width(), height())}. */
+    public Effect spawn(String id, float x, float y, float w, float h) {
+        return spawn(FxRegistry.create(id, x, y, w, h));
+    }
+
+    /** Эффект по имени на весь слой. */
+    public Effect spawn(String id) {
+        return spawn(id, 0f, 0f, width(), height());
+    }
+
     public void clear() {
         effects.clear();
         spawned.clear();

@@ -213,3 +213,53 @@ BlockModel.drawBlockIcon(canvas, "minecraft:tnt", x, y, 16, time);  // один 
 ```
 
 В разметке — тег `<structure>` (см. [MARKUP.md](MARKUP.md)).
+
+## Компоненты
+
+**Текст с эффектами** (`FancyText`) рисует строку посимвольно обычным шрифтом игры:
+
+```java
+new FancyText("Lumina UI").scale(2).gradient(0xFFFF8A00, 0xFFE52E71).flow(0.4f).outline(0xFF000000);
+new FancyText("Радуга").rainbow().wave(2f, 6f);        // радуга и волна (амплитуда, скорость)
+new FancyText("Тряска!").shake(0.8f);
+new FancyText("Привет!").typewriter(24f).typeSound("minecraft:ui.button.click").onTyped(this::next);
+```
+
+**Таблица** (`Table<T>`): колонки с весами ширины, сортировка кликом по заголовку, выбор строки, «зебра»,
+обрезка длинного текста многоточием. Ячейку можно рисовать самому (иконка, полоска):
+
+```java
+Table<Ore> t = new Table<Ore>()
+        .column("Руда", 2, Ore::name)
+        .column("Добыто", 1, o -> String.valueOf(o.count()), Comparator.comparingInt(Ore::count))
+        .column("Шанс", 1, (canvas, ore, x, y, w, h) -> canvas.fillRect(x, y + 5, w * ore.chance(), 6, 0xFF5B8CFF), null)
+        .rows(ores);
+t.selection().subscribe(o -> show(o));
+```
+
+**Дерево** (`TreeView`): узлы с иконками предметов, раскрытие стрелкой, двойным кликом или клавишами.
+`TreeView.node("Мир", "minecraft:grass_block").add(node("Незер"), ...)`, `selection()`, `onSelect(...)`.
+
+**Графики** (`Chart`): `LINE`, `AREA`, `BAR`, `PIE`, `DONUT`. Значения вырастают при появлении, `values(серия, ...)`
+плавно меняет их, наведение показывает подсказку.
+
+```java
+new Chart(Chart.Kind.BAR).labels("Пн", "Вт", "Ср").series("Камень", 0xFF8AB4F8, 120, 180, 90).unit(" шт.");
+```
+
+**Загрузка**: `Spinner` (`RING`, `DOTS`, `BARS`, `PULSE`) и `Skeleton` (`line(w)`, `fullLine()`, `circle(d)`) с бегущим бликом.
+
+**Окна** (`Window`): ставятся внутрь любого контейнера абсолютно (`at(x, y)`), таскаются за заголовок,
+растягиваются за уголок, нажатие поднимает окно наверх (`UiElement.bringToFront()`), Esc и крестик закрывают
+с анимацией. `modal(true)` затемняет всё под окном и не пропускает клики.
+
+**Живые обои** (`Backdrop`): `AURORA`, `STARS`, `WAVES`, `FLOW`, `GRID`; `colors(...)`, `speed(...)`,
+`parallax(пиксели)` — слои смещаются за мышью. Кладутся первым слоем в `StackLayout`, мышь не перехватывают.
+
+**Рамка из текстуры** (`NineSlice`): углы не растягиваются, края и середина — да.
+
+```java
+panel.style(b -> b.set(Styles.NINE_SLICE, NineSlice.of("minecraft:textures/gui/demo_background.png", 248, 166, 4).scaled(2)));
+```
+
+В CSS: `nine-slice: url(minecraft:textures/gui/demo_background.png) 248 166 4 / 2` (рамка 1 или 4 числами, после `/` масштаб).

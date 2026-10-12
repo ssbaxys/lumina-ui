@@ -205,7 +205,8 @@ final class ModernPage {
         Signal<Integer> accent = Signal.of(ModernTheme.DEFAULT_ACCENT);
         Signal<Float> motion = Signal.of(1f);
 
-        Panel preview = Ui.centered(new Label("Предпросмотр"), Ui.muted("ПКМ — меню"));
+        Panel preview = Ui.centered(Panel.box(FlexLayout.column().gap(3).align(Align.CENTER))
+                .add(new Label("Предпросмотр"), Ui.muted("ПКМ — меню")));
         preview.size(150, 70);
         Runnable restyle = () -> preview.style(b -> {
             b.set(Styles.BACKGROUND, Brush.solid(0x22FFFFFF))

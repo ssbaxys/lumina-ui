@@ -166,7 +166,8 @@ public final class CssValues {
 
     /**
      * {@code url(мод:textures/gui/frame.png) 248 166 4} — картинка, её размер и рамка (1 или 4 числа:
-     * верх, право, низ, лево); после {@code /} — масштаб: {@code ... 4 / 2}.
+     * верх, право, низ, лево); после {@code /} — масштаб: {@code ... 4 / 2}. Если рамка лежит в углу
+     * файла побольше — его размер после {@code in}: {@code url(...) 248 166 4 in 256 256 / 2}.
      */
     public static NineSlice nineSlice(String s) {
         String v = s.trim();
@@ -177,7 +178,18 @@ public final class CssValues {
             scale = number(v.substring(slash + 1));
             v = v.substring(0, slash).trim();
         }
-        List<String> p = split(v, ' ');
+        List<String> p = new java.util.ArrayList<>(split(v, ' '));
+        int fileW = -1;
+        int fileH = -1;
+        int in = p.indexOf("in");
+        if (in >= 0) {
+            if (in + 2 >= p.size()) {
+                throw new IllegalArgumentException("nine-slice: in width height");
+            }
+            fileW = (int) length(p.get(in + 1));
+            fileH = (int) length(p.get(in + 2));
+            p = p.subList(0, in);
+        }
         if (p.size() != 4 && p.size() != 7) {
             throw new IllegalArgumentException("nine-slice: url(texture) width height border...");
         }
@@ -193,7 +205,7 @@ public final class CssValues {
         int bottom = p.size() == 7 ? (int) length(p.get(5)) : top;
         int left = p.size() == 7 ? (int) length(p.get(6)) : top;
         return new NineSlice(TextureRef.of(tex), w, h, left, top, right, bottom,
-                scale, 0xFFFFFFFF);
+                scale, 0xFFFFFFFF, fileW > 0 ? fileW : w, fileH > 0 ? fileH : h);
     }
 
     /** Аргументы функции "name(a, b, c)". */

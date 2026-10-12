@@ -39,6 +39,10 @@ final class MarkdownLayout {
     record Box(float x, float y, float w, float h, int role, float radius) {
     }
 
+    /** Подчёркивание или зачёркивание: рисуется прямоугольником после текста. */
+    record Line(float x, float y, float w, float h, int role, int link) {
+    }
+
     /** Маркер списка: 0 — круг, 1 — кольцо, 2 — квадрат. */
     record Bullet(float cx, float cy, float r, int kind) {
     }
@@ -58,6 +62,7 @@ final class MarkdownLayout {
 
     final List<Run> runs = new ArrayList<>();
     final List<Box> boxes = new ArrayList<>();
+    final List<Line> lines = new ArrayList<>();
     final List<Bullet> bullets = new ArrayList<>();
     final List<Check> checks = new ArrayList<>();
     final List<Icon> icons = new ArrayList<>();
@@ -413,6 +418,15 @@ final class MarkdownLayout {
             float tx = p.code && !p.space ? x + 2f : x;
             String text = prefix(p.flags) + p.text;
             int role = p.code ? CODE : p.role;
+            // Линии рисуем сами, а не кодами §n/§m: шрифт игры кладёт их чуть «ближе к экрану»,
+            // и тогда они просвечивают сквозь всё, что рисуется поверх (лист перелистываемой книги).
+            float tw = p.code && !p.space ? w - 4f : w;
+            if ((p.flags & Md.UNDERLINE) != 0) {
+                lines.add(new Line(tx, y + (lh - 1f) * scale, tw, scale, role, p.link));
+            }
+            if ((p.flags & Md.STRIKE) != 0) {
+                lines.add(new Line(tx, y + (lh / 2f - 1f) * scale, tw, scale, role, p.link));
+            }
             // Склеиваем с предыдущим куском того же стиля на той же строке — меньше вызовов отрисовки.
             Run last = runs.isEmpty() ? null : runs.get(runs.size() - 1);
             if (!p.code && last != null && last.y == y && last.role == role && last.link == p.link
@@ -498,7 +512,10 @@ final class MarkdownLayout {
         return url.startsWith("item:") || url.startsWith("texture:");
     }
 
-    /** Коды форматирования шрифта Minecraft: §l жирный, §o курсив, §m зачёркнутый, §n подчёркнутый. */
+    /**
+     * Коды форматирования шрифта Minecraft: §l жирный, §o курсив. Подчёркивание и зачёркивание
+     * рисуются отдельно ({@link Line}), ширину текста они не меняют.
+     */
     static String prefix(int flags) {
         if (flags == 0) {
             return "";
@@ -509,12 +526,6 @@ final class MarkdownLayout {
         }
         if ((flags & Md.ITALIC) != 0) {
             sb.append("§o");
-        }
-        if ((flags & Md.STRIKE) != 0) {
-            sb.append("§m");
-        }
-        if ((flags & Md.UNDERLINE) != 0) {
-            sb.append("§n");
         }
         return sb.toString();
     }
@@ -564,6 +575,10 @@ final class MarkdownLayout {
             } else {
                 canvas.drawText(r.text(), r.x(), r.y(), color, shadow);
             }
+        }
+        for (Line l : lines) {
+            int color = l.link() >= 0 && l.link() == hoveredLink ? Color.lighten(c[l.role()], 0.12f) : c[l.role()];
+            canvas.fillRect(l.x(), l.y(), l.w(), l.h(), color);
         }
         for (Icon icon : icons) {
             String url = icon.url();

@@ -32,7 +32,7 @@ final class WindowsPage {
                         desk()),
                 Ui.section("Рамка из текстуры",
                         "NineSlice растягивает картинку рамки на любой размер: углы остаются чёткими. "
-                                + "В CSS: nine-slice: url(minecraft:textures/gui/demo_background.png) 248 166 4 / 2",
+                                + "В CSS: nine-slice: url(minecraft:textures/gui/demo_background.png) 248 166 4 in 256 256 / 2",
                         nineSlice()));
     }
 
@@ -47,7 +47,7 @@ final class WindowsPage {
             int n = ++opened[0];
             Signal<Float> volume = Signal.of(50f);
             Window w = new Window("Окно " + n,
-                    Ui.row(6, new Label("Звук"), new Slider(volume, 0, 100).width(Dim.px(90))),
+                    Ui.row(6, new Label("Звук"), new Slider(volume, 0, 100).width(Dim.AUTO).minSize(90, 14).grow(1f)),
                     Ui.row(6, new Label("Музыка"), new Toggle(Signal.of(n % 2 == 0))),
                     Label.bound(volume.map(v -> "Громкость: " + Math.round(v) + "%")).style(Ui.MUTED))
                     .at(16 + (n * 26) % 200, 12 + (n * 18) % 90)
@@ -57,7 +57,8 @@ final class WindowsPage {
         spawn.run();
         Chart mini = new Chart(Chart.Kind.LINE).labels("1", "2", "3", "4", "5").series("TPS", 0xFFA6E3A1, 20, 19.5f, 17, 20, 18.8f)
                 .max(20).legend(false).unit(" TPS");
-        mini.size(170, 80);
+        // Без фиксированного размера: график растягивается вместе с окном.
+        mini.width(Dim.AUTO).height(Dim.AUTO).minSize(170, 80).grow(1f);
         desk.add(new Window("Сервер", mini).at(230, 20));
 
         Panel kinds = Ui.row(4);
@@ -82,7 +83,7 @@ final class WindowsPage {
     }
 
     private static UiElement nineSlice() {
-        NineSlice frame = NineSlice.of("minecraft:textures/gui/demo_background.png", 248, 166, 4);
+        NineSlice frame = NineSlice.of("minecraft:textures/gui/demo_background.png", 248, 166, 4).inFile(256, 256);
         Panel small = framed(frame, 90, 50, "90×50");
         Panel wide = framed(frame, 220, 50, "220×50");
         Panel big = framed(frame.scaled(2f), 160, 90, "масштаб 2");

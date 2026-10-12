@@ -5,26 +5,39 @@ package io.github.ssbaxys.lumina.render;
  * картинка рамки (ванильное окно, свиток, панель из ресурспака) подходит под панель любого размера.
  *
  * <pre>{@code
- * NineSlice frame = NineSlice.of(TextureRef.of("minecraft:textures/gui/demo_background.png"), 248, 166, 4);
+ * NineSlice frame = NineSlice.of(TextureRef.of("minecraft:textures/gui/demo_background.png"), 248, 166, 4)
+ *         .inFile(256, 256);
  * panel.style(b -> b.set(Styles.NINE_SLICE, frame));
  * }</pre>
  *
- * @param texWidth  ширина картинки в пикселях
- * @param texHeight высота картинки в пикселях
+ * @param texWidth  ширина картинки рамки в пикселях
+ * @param texHeight высота картинки рамки в пикселях
+ * @param fileWidth  ширина всего файла текстуры: у ванильных картинок рамка часто лежит в левом верхнем
+ *                   углу файла 256×256 (так же fileHeight)
  * @param left      ширина левой рамки в пикселях картинки (так же top, right, bottom)
  * @param scale     во сколько раз увеличивать рамку на экране (2 — пиксели вдвое крупнее)
  * @param tint      умножающий цвет ARGB
  */
 public record NineSlice(TextureRef texture, int texWidth, int texHeight,
-                        int left, int top, int right, int bottom, float scale, int tint) {
+                        int left, int top, int right, int bottom, float scale, int tint,
+                        int fileWidth, int fileHeight) {
 
     public NineSlice {
         if (texWidth <= 0 || texHeight <= 0) {
             throw new IllegalArgumentException("texture size must be positive");
         }
+        if (fileWidth < texWidth || fileHeight < texHeight) {
+            throw new IllegalArgumentException("texture file smaller than the frame");
+        }
         if (left + right > texWidth || top + bottom > texHeight) {
             throw new IllegalArgumentException("borders larger than the texture");
         }
+    }
+
+    /** Картинка занимает весь файл. */
+    public NineSlice(TextureRef texture, int texWidth, int texHeight,
+                     int left, int top, int right, int bottom, float scale, int tint) {
+        this(texture, texWidth, texHeight, left, top, right, bottom, scale, tint, texWidth, texHeight);
     }
 
     /** Одинаковая рамка со всех сторон. */
@@ -37,11 +50,16 @@ public record NineSlice(TextureRef texture, int texWidth, int texHeight,
     }
 
     public NineSlice scaled(float scale) {
-        return new NineSlice(texture, texWidth, texHeight, left, top, right, bottom, scale, tint);
+        return new NineSlice(texture, texWidth, texHeight, left, top, right, bottom, scale, tint, fileWidth, fileHeight);
     }
 
     public NineSlice tinted(int argb) {
-        return new NineSlice(texture, texWidth, texHeight, left, top, right, bottom, scale, argb);
+        return new NineSlice(texture, texWidth, texHeight, left, top, right, bottom, scale, argb, fileWidth, fileHeight);
+    }
+
+    /** Рамка лежит в левом верхнем углу файла размером {@code width × height} (например, 256×256). */
+    public NineSlice inFile(int width, int height) {
+        return new NineSlice(texture, texWidth, texHeight, left, top, right, bottom, scale, tint, width, height);
     }
 
     /** Нарисовать в прямоугольнике; если он меньше рамки, рамка пропорционально сжимается. */
@@ -65,8 +83,10 @@ public record NineSlice(TextureRef texture, int texWidth, int texHeight,
         }
         float[] xs = {x, x + l, x + w - r, x + w};
         float[] ys = {y, y + t, y + h - b, y + h};
-        float[] us = {0f, (float) left / texWidth, 1f - (float) right / texWidth, 1f};
-        float[] vs = {0f, (float) top / texHeight, 1f - (float) bottom / texHeight, 1f};
+        float fw = fileWidth;
+        float fh = fileHeight;
+        float[] us = {0f, left / fw, (texWidth - right) / fw, texWidth / fw};
+        float[] vs = {0f, top / fh, (texHeight - bottom) / fh, texHeight / fh};
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
                 float cw = xs[col + 1] - xs[col];

@@ -260,10 +260,10 @@ new Chart(Chart.Kind.BAR).labels("Пн", "Вт", "Ср").series("Камень", 
 **Рамка из текстуры** (`NineSlice`): углы не растягиваются, края и середина — да.
 
 ```java
-panel.style(b -> b.set(Styles.NINE_SLICE, NineSlice.of("minecraft:textures/gui/demo_background.png", 248, 166, 4).scaled(2)));
+panel.style(b -> b.set(Styles.NINE_SLICE, NineSlice.of("minecraft:textures/gui/demo_background.png", 248, 166, 4).inFile(256, 256).scaled(2)));
 ```
 
-В CSS: `nine-slice: url(minecraft:textures/gui/demo_background.png) 248 166 4 / 2` (рамка 1 или 4 числами, после `/` масштаб).
+В CSS: `nine-slice: url(minecraft:textures/gui/demo_background.png) 248 166 4 in 256 256 / 2` (рамка 1 или 4 числами; после `in` размер всего файла, если рамка лежит в его углу, как у ванильных картинок 256×256; после `/` масштаб).
 
 **Страницы с переходом** (`Pages`): показывает одну страницу по номеру из сигнала, удобно вместе с `Tabs` и `SideNav`.
 Эффекты `FADE`, `SLIDE` (по направлению смены номера), `SLIDE_UP`, `ZOOM`, `FLIP`; страница создаётся при первом показе

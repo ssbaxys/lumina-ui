@@ -162,4 +162,27 @@ class MarkdownTest {
         assertTrue(canvas.ops.stream().anyMatch(o -> o.startsWith("text")), String.valueOf(canvas.ops));
         assertTrue(canvas.ops.stream().anyMatch(o -> o.startsWith("tex ")), String.valueOf(canvas.ops));
     }
+
+    @Test
+    void underlineAndStrikeAreDrawnAsRectsNotFontCodes() {
+        Markdown md = new Markdown("Ссылка [тут](x) и ~~старое~~");
+        UiRoot root = new UiRoot(Panel.box(FlexLayout.column()).fill().add(md), Theme.dark());
+        root.resize(300, 100);
+        root.tick(0f);
+        TestSupport.RecordingCanvas canvas = new TestSupport.RecordingCanvas();
+        canvas.begin(300, 100);
+        root.render(canvas, 0f);
+        canvas.end();
+        // Коды §n/§m шрифт игры рисует поверх всего, что идёт следом; линии рисуем сами.
+        assertTrue(canvas.ops.stream().noneMatch(o -> o.startsWith("text") && (o.contains("§n") || o.contains("§m"))),
+                String.valueOf(canvas.ops));
+        long lastText = canvas.ops.stream().filter(o -> o.startsWith("text")).count();
+        int firstLine = -1;
+        for (int i = 0; i < canvas.ops.size(); i++) {
+            if (canvas.ops.get(i).startsWith("quad") && i > 0) {
+                firstLine = i;
+            }
+        }
+        assertTrue(lastText > 0 && firstLine > 0, String.valueOf(canvas.ops));
+    }
 }

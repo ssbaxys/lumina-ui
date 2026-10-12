@@ -87,6 +87,26 @@ class WindowChartTest {
     }
 
     @Test
+    void contentWithGrowStretchesWithTheWindow() {
+        Chart chart = new Chart(Chart.Kind.LINE).series("TPS", 0xFFA6E3A1, 20, 19, 18);
+        chart.width(Dim.AUTO).height(Dim.AUTO).minSize(170, 80).grow(1f);
+        Window w = new Window("Сервер", chart).at(0, 0);
+        UiRoot root = mount(w);
+        assertEquals(170, chart.width(), 0.5f);
+        assertEquals(80, chart.height(), 0.5f);
+        // растянули окно за уголок
+        float gx = w.screenX() + w.width() - 3;
+        float gy = w.screenY() + w.height() - 3;
+        root.pointerMove(gx, gy);
+        root.pointerDown(gx, gy, Keys.MOUSE_LEFT);
+        root.pointerMove(gx + 100, gy + 60);
+        root.pointerUp(gx + 100, gy + 60, Keys.MOUSE_LEFT);
+        root.tick(0f);
+        assertEquals(w.body().width() - w.body().padding().horizontal(), chart.width(), 0.5f);
+        assertEquals(140, chart.height(), 0.5f);
+    }
+
+    @Test
     void closeButtonRemovesWindow() {
         boolean[] closed = {false};
         Window w = new Window("Settings").at(20, 20).size(150, 90).onClose(() -> closed[0] = true);
@@ -154,6 +174,13 @@ class WindowChartTest {
         assertEquals(6, css.bottom());
         assertEquals(7, css.left());
         assertEquals(2f, css.scale(), 1e-6);
+        assertEquals(248, css.fileWidth());
+
+        // Рамка в углу файла 256×256: координаты текстуры считаются от размера файла.
+        NineSlice atlas = CssValues.nineSlice("url(minecraft:textures/gui/demo_background.png) 248 166 4 in 256 256");
+        assertEquals(256, atlas.fileWidth());
+        assertEquals(256, atlas.fileHeight());
+        assertEquals(atlas, NineSlice.of("minecraft:textures/gui/demo_background.png", 248, 166, 4).inFile(256, 256));
     }
 
     @Test

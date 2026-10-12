@@ -38,6 +38,8 @@ public class BlockMap extends Widget<BlockMap> implements Animation {
 
     private final int cols;
     private final int rows;
+    /** Нахлёст непрозрачных блоков на соседей, в единицах интерфейса. */
+    private static final float SEAM = 0.5f;
     private final float tile;
     private final String[] cells;
     private final char[] chars;
@@ -266,7 +268,20 @@ public class BlockMap extends Widget<BlockMap> implements Animation {
             for (int x = 0; x < cols; x++) {
                 String id = cells[y * cols + x];
                 if (id != null) {
-                    drawBlock(canvas, id, x * tile, y * tile, tile, time);
+                    // Непрозрачный блок чуть заходит на соседа справа и снизу: при дробном масштабе
+                    // интерфейса граница может лечь посреди пикселя экрана, и тогда между блоками
+                    // просвечивает фон.
+                    float w = tile;
+                    float h = tile;
+                    if (opaque(id)) {
+                        if (x + 1 < cols && cells[y * cols + x + 1] != null && opaque(cells[y * cols + x + 1])) {
+                            w += SEAM;
+                        }
+                        if (y + 1 < rows && cells[(y + 1) * cols + x] != null && opaque(cells[(y + 1) * cols + x])) {
+                            h += SEAM;
+                        }
+                    }
+                    drawBlock(canvas, id, x * tile, y * tile, w, h, time);
                 }
             }
         }
@@ -294,11 +309,25 @@ public class BlockMap extends Widget<BlockMap> implements Animation {
 
     /** Нарисовать один блок сбоку в квадрате (x, y, size): текстурой, а без неё — иконкой предмета. */
     public static void drawBlock(Canvas canvas, String blockId, float x, float y, float size, float time) {
+        drawBlock(canvas, blockId, x, y, size, size, time);
+    }
+
+    private static void drawBlock(Canvas canvas, String blockId, float x, float y, float w, float h, float time) {
         BlockTextures.Face face = BlockTextures.side(blockId);
         if (face != null) {
-            face.sheet().draw(canvas, face.sheet().frameAt(time), x, y, size, size, face.tint());
+            face.sheet().draw(canvas, face.sheet().frameAt(time), x, y, w, h, face.tint());
         } else {
-            canvas.drawItem(blockId, x, y, size);
+            canvas.drawItem(blockId, x, y, Math.min(w, h));
         }
+    }
+
+    /** Блок без прозрачности: вода, стекло, лёд и листва просвечивают, и нахлёст на них был бы заметен. */
+    private static boolean opaque(String blockId) {
+        BlockTextures.Face face = BlockTextures.side(blockId);
+        if (face == null || (face.tint() >>> 24) != 0xFF) {
+            return false;
+        }
+        return !(blockId.contains("glass") || blockId.contains("ice") || blockId.contains("leaves")
+                || blockId.contains("water") || blockId.contains("slime") || blockId.contains("honey"));
     }
 }

@@ -14,6 +14,7 @@ import io.github.ssbaxys.lumina.layout.FlexLayout;
 import io.github.ssbaxys.lumina.layout.Justify;
 import io.github.ssbaxys.lumina.layout.LayoutParams;
 import io.github.ssbaxys.lumina.layout.StackLayout;
+import io.github.ssbaxys.lumina.markdown.Book;
 import io.github.ssbaxys.lumina.markdown.Markdown;
 import io.github.ssbaxys.lumina.node.StyleAnimation;
 import io.github.ssbaxys.lumina.node.UiElement;
@@ -32,6 +33,8 @@ import io.github.ssbaxys.lumina.widget.Checkbox;
 import io.github.ssbaxys.lumina.widget.ColorField;
 import io.github.ssbaxys.lumina.widget.ColorPicker;
 import io.github.ssbaxys.lumina.widget.FieldBase;
+import io.github.ssbaxys.lumina.widget.Form;
+import io.github.ssbaxys.lumina.widget.FormField;
 import io.github.ssbaxys.lumina.widget.Icon;
 import io.github.ssbaxys.lumina.widget.Image;
 import io.github.ssbaxys.lumina.widget.Label;
@@ -44,6 +47,7 @@ import io.github.ssbaxys.lumina.widget.ScrollPanel;
 import io.github.ssbaxys.lumina.widget.Slider;
 import io.github.ssbaxys.lumina.widget.TextField;
 import io.github.ssbaxys.lumina.widget.Toggle;
+import io.github.ssbaxys.lumina.widget.Validator;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -74,7 +78,7 @@ import java.util.regex.Pattern;
  *
  * Теги: {@code div column row stack scroll panel label span h1 h2 h3 p markdown button toggle slider
  * progress ring color-picker input number color-field item img fx blocks structure checkbox radio-group image
- * spacer hr state style link}. Свои теги — {@link #tag}.
+ * field form book spacer hr state style link}. Свои теги — {@link #tag}.
  * Атрибуты: {@code id class style width height grow gap align justify padding margin if enabled bind
  * on-click} и атрибуты конкретного тега. Логика — через {@link Bindings}.
  */
@@ -94,7 +98,7 @@ public final class Markup {
     private static final Map<String, TagFactory> TAGS = new HashMap<>();
     private static final Set<String> VOID = Set.of("img", "item", "br", "hr", "state", "link", "spacer", "toggle",
             "slider", "progress", "ring", "color-picker", "fx", "input", "number", "color-field", "meta");
-    private static final Set<String> RAW = Set.of("style", "markdown", "script", "blocks", "structure");
+    private static final Set<String> RAW = Set.of("style", "markdown", "script", "blocks", "structure", "book");
     private static final Pattern TEMPLATE = Pattern.compile("\\{\\{\\s*([\\w.-]+)\\s*(?:\\|\\s*(\\w+)\\s*)?}}");
 
     static {
@@ -310,6 +314,15 @@ public final class Markup {
             if (n.attr("icon-size") != null) {
                 b.iconSize(n.floatAttr("icon-size", 12f));
             }
+            if ("submit".equals(n.attr("type"))) {
+                // Кнопку отправки подключит ближайший <form> после постройки своих детей.
+                for (Node f = n.parent; f != null; f = f.parent) {
+                    if (f.tag.equals("form")) {
+                        c.submitButtons.computeIfAbsent(f, k -> new ArrayList<>()).add(b);
+                        break;
+                    }
+                }
+            }
             String loading = n.attr("loading");
             if (loading != null && !loading.equals("false")) {
                 if (loading.isEmpty() || loading.equals("true")) {
@@ -355,6 +368,75 @@ public final class Markup {
             }
             return fieldAttrs(n, c, new ColorField(v).alpha(!"false".equals(n.attr("alpha"))));
         });
+        // Строка формы: подпись, поле (единственный ребёнок), пояснение и анимированная ошибка.
+        tag("field", (n, c) -> {
+            UiElement inner = null;
+            for (Node child : n.children) {
+                UiElement e = c.build(child);
+                if (e != null) {
+                    inner = e;
+                    break;
+                }
+            }
+            FormField row = new FormField(n.attr("label"), inner != null ? inner : new Label(""));
+            if (n.attr("hint") != null) {
+                row.hint(n.attr("hint"));
+            }
+            return row;
+        });
+        // Форма: колонка; поля с проверками внутри неё и кнопки type="submit" связываются в Form.
+        tag("form", (n, c) -> {
+            Panel panel = c.children(n, Panel.box(FlexLayout.column().gap(6)));
+            Form form = new Form().collect(panel);
+            String submit = n.attr("on-submit");
+            if (submit != null) {
+                form.onSubmit(() -> c.bindings.run(submit, panel));
+            }
+            String invalid = n.attr("on-invalid");
+            if (invalid != null) {
+                form.onInvalid(() -> c.bindings.run(invalid, panel));
+            }
+            String valid = n.attr("valid");
+            if (valid != null) {
+                Signal<Boolean> flag = c.signal(n, "valid", Boolean.TRUE);
+                flag.set(form.valid().get());
+                Subscription sub = form.valid().subscribe(flag::set);
+                c.disposers.add(sub::close);
+            }
+            List<Button> buttons = c.submitButtons.remove(n);
+            if (buttons != null) {
+                for (Button b : buttons) {
+                    form.submitButton(b, "true".equals(n.attr("disable-invalid")));
+                }
+            }
+            c.disposers.add(form::dispose);
+            return panel;
+        });
+        // Книга из Markdown внутри тега (или src): разрывы страниц — <!-- page -->.
+        tag("book", (n, c) -> {
+            String src = n.attr("src");
+            String text = src != null ? c.resources.read(src) : n.text;
+            Book book = new Book(text == null ? "" : text);
+            if ("modern".equals(n.attr("look"))) {
+                book.look(Book.Look.MODERN);
+            }
+            if ("false".equals(n.attr("spread"))) {
+                book.spread(false);
+            }
+            String toc = n.attr("toc");
+            if (toc != null && !"false".equals(toc)) {
+                if (toc.isEmpty() || "true".equals(toc)) {
+                    book.tableOfContents(true);
+                } else {
+                    book.tableOfContents(toc);
+                }
+            }
+            String link = n.attr("on-link");
+            if (link != null) {
+                book.onLink(url -> c.bindings.run(link.replace("$url", url), book));
+            }
+            return book;
+        });
     }
 
     /** "check", "heart", "switch-dot"... → вид флажка (неизвестное — CHECK). */
@@ -396,11 +478,48 @@ public final class Markup {
             f.suffix(n.attr("suffix"));
         }
         f.readOnly(n.attr("readonly") != null);
+        validationAttrs(n, f);
         String submit = n.attr("on-submit");
         if (submit != null) {
             f.onSubmit(text -> c.bindings.run(submit, f));
         }
         return f;
+    }
+
+    /**
+     * Проверки как в HTML: {@code required} (значение — своё сообщение), {@code minlength},
+     * {@code pattern} (сообщение — {@code title}), {@code type="email"}, {@code min}/{@code max}
+     * у {@code <input>}, {@code error} — общее сообщение для всех проверок поля.
+     */
+    private static void validationAttrs(Node n, FieldBase<?> f) {
+        List<Validator> checks = new ArrayList<>();
+        String required = n.attr("required");
+        if (required != null && !"false".equals(required)) {
+            checks.add(required.isEmpty() || "true".equals(required) || "required".equals(required)
+                    ? Validator.required() : Validator.required(required));
+        }
+        if (n.attr("minlength") != null) {
+            checks.add(Validator.minLength((int) n.floatAttr("minlength", 0f)));
+        }
+        if ("email".equals(n.attr("type"))) {
+            checks.add(Validator.email());
+        }
+        String pattern = n.attr("pattern");
+        if (pattern != null && !pattern.isEmpty()) {
+            checks.add(Validator.pattern(pattern, n.attr("title") != null ? n.attr("title") : "Неверный формат"));
+        }
+        if (n.tag.equals("input") && (n.attr("min") != null || n.attr("max") != null)) {
+            float min = n.attr("min") != null ? n.floatAttr("min", 0f) : -Float.MAX_VALUE;
+            float max = n.attr("max") != null ? n.floatAttr("max", 0f) : Float.MAX_VALUE;
+            checks.add(Validator.range(min, max));
+        }
+        if (checks.isEmpty()) {
+            return;
+        }
+        String message = n.attr("error");
+        for (Validator v : checks) {
+            f.validate(message != null ? v.message(message) : v);
+        }
     }
 
     private Markup() {
@@ -709,6 +828,8 @@ public final class Markup {
         final Stylesheet css;
         final Resources resources;
         final List<Runnable> disposers = new ArrayList<>();
+        /** Кнопки type="submit", ждущие свой {@code <form>}. */
+        final Map<Node, List<Button>> submitButtons = new HashMap<>();
 
         Context(Bindings bindings, Stylesheet css, Resources resources) {
             this.bindings = bindings;

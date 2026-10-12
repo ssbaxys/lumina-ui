@@ -1,0 +1,338 @@
+package io.github.ssbaxys.lumina.render;
+
+/**
+ * Общая часть всех бэкендов: стек трансформаций, клипа и прозрачности, отсечение невидимого.
+ *
+ * <p>Бэкенд загрузчика получает уже готовые экранные координаты и реализует всего несколько
+ * примитивов. Состояние хранится в плоском float-массиве, поэтому кадр рисуется без аллокаций.</p>
+ */
+public abstract class AbstractCanvas implements Canvas {
+    private static final int STATE_SIZE = 9;
+
+    private float[] stack = new float[STATE_SIZE * 32];
+    private int depth;
+
+    private float tx;
+    private float ty;
+    private float sx = 1f;
+    private float sy = 1f;
+    private float opacity = 1f;
+    private float clipX0;
+    private float clipY0;
+    private float clipX1;
+    private float clipY1;
+
+    private float viewWidth;
+    private float viewHeight;
+
+    private boolean clipDirty;
+    private boolean clipApplied;
+    private float appliedX0;
+    private float appliedY0;
+    private float appliedX1;
+    private float appliedY1;
+
+    /** Начинает кадр. Размеры — в GUI-координатах экрана. */
+    protected void beginFrame(float width, float height) {
+        depth = 0;
+        tx = 0f;
+        ty = 0f;
+        sx = 1f;
+        sy = 1f;
+        opacity = 1f;
+        viewWidth = width;
+        viewHeight = height;
+        clipX0 = 0f;
+        clipY0 = 0f;
+        clipX1 = width;
+        clipY1 = height;
+        clipDirty = false;
+        clipApplied = false;
+    }
+
+    protected void endFrame() {
+        if (clipApplied) {
+            clearClip();
+            clipApplied = false;
+        }
+        if (depth != 0) {
+            int d = depth;
+            depth = 0;
+            throw new IllegalStateException("Unbalanced Canvas.save()/restore(): depth " + d);
+        }
+    }
+
+    // ---------------------------------------------------------------- состояние
+
+    @Override
+    public final void save() {
+        int base = depth * STATE_SIZE;
+        if (base + STATE_SIZE > stack.length) {
+            float[] grown = new float[stack.length * 2];
+            System.arraycopy(stack, 0, grown, 0, stack.length);
+            stack = grown;
+        }
+        float[] s = stack;
+        s[base] = tx;
+        s[base + 1] = ty;
+        s[base + 2] = sx;
+        s[base + 3] = sy;
+        s[base + 4] = opacity;
+        s[base + 5] = clipX0;
+        s[base + 6] = clipY0;
+        s[base + 7] = clipX1;
+        s[base + 8] = clipY1;
+        depth++;
+    }
+
+    @Override
+    public final void restore() {
+        if (depth == 0) {
+            throw new IllegalStateException("Canvas.restore() without save()");
+        }
+        depth--;
+        int base = depth * STATE_SIZE;
+        float[] s = stack;
+        tx = s[base];
+        ty = s[base + 1];
+        sx = s[base + 2];
+        sy = s[base + 3];
+        opacity = s[base + 4];
+        if (clipX0 != s[base + 5] || clipY0 != s[base + 6] || clipX1 != s[base + 7] || clipY1 != s[base + 8]) {
+            clipX0 = s[base + 5];
+            clipY0 = s[base + 6];
+            clipX1 = s[base + 7];
+            clipY1 = s[base + 8];
+            clipDirty = true;
+        }
+    }
+
+    @Override
+    public final void translate(float dx, float dy) {
+        tx += dx * sx;
+        ty += dy * sy;
+    }
+
+    @Override
+    public final void scale(float scaleX, float scaleY) {
+        sx *= scaleX;
+        sy *= scaleY;
+    }
+
+    @Override
+    public final void clipRect(float x, float y, float w, float h) {
+        float x0 = Math.max(clipX0, tx + x * sx);
+        float y0 = Math.max(clipY0, ty + y * sy);
+        float x1 = Math.min(clipX1, tx + (x + w) * sx);
+        float y1 = Math.min(clipY1, ty + (y + h) * sy);
+        clipX0 = x0;
+        clipY0 = y0;
+        clipX1 = Math.max(x0, x1);
+        clipY1 = Math.max(y0, y1);
+        clipDirty = true;
+    }
+
+    @Override
+    public final void multiplyOpacity(float factor) {
+        opacity *= factor < 0f ? 0f : Math.min(factor, 1f);
+    }
+
+    @Override
+    public final float opacity() {
+        return opacity;
+    }
+
+    @Override
+    public final boolean isVisible(float x, float y, float w, float h) {
+        if (opacity <= 0f) {
+            return false;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        return x0 < clipX1 && y0 < clipY1 && x0 + w * sx > clipX0 && y0 + h * sy > clipY0;
+    }
+
+    private boolean culled(float x0, float y0, float x1, float y1) {
+        return x1 <= clipX0 || y1 <= clipY0 || x0 >= clipX1 || y0 >= clipY1;
+    }
+
+    private void syncClip() {
+        if (!clipDirty) {
+            return;
+        }
+        clipDirty = false;
+        boolean fullScreen = clipX0 <= 0f && clipY0 <= 0f && clipX1 >= viewWidth && clipY1 >= viewHeight;
+        if (fullScreen) {
+            if (clipApplied) {
+                clearClip();
+                clipApplied = false;
+            }
+            return;
+        }
+        if (clipApplied && appliedX0 == clipX0 && appliedY0 == clipY0 && appliedX1 == clipX1 && appliedY1 == clipY1) {
+            return;
+        }
+        appliedX0 = clipX0;
+        appliedY0 = clipY0;
+        appliedX1 = clipX1;
+        appliedY1 = clipY1;
+        clipApplied = true;
+        applyClip(clipX0, clipY0, clipX1, clipY1);
+    }
+
+    // ---------------------------------------------------------------- примитивы
+
+    @Override
+    public final void fillRect(float x, float y, float w, float h, int argb) {
+        int c = Color.mulAlpha(argb, opacity);
+        if (w <= 0f || h <= 0f || Color.alpha(c) == 0) {
+            return;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        float x1 = x0 + w * sx;
+        float y1 = y0 + h * sy;
+        if (culled(x0, y0, x1, y1)) {
+            return;
+        }
+        syncClip();
+        drawQuad(x0, y0, x1, y1, c, c, c, c);
+    }
+
+    @Override
+    public final void fillRect(float x, float y, float w, float h, Brush brush) {
+        if (brush instanceof Brush.Solid s) {
+            fillRect(x, y, w, h, s.color());
+            return;
+        }
+        if (brush == null || w <= 0f || h <= 0f || opacity <= 0f) {
+            return;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        float x1 = x0 + w * sx;
+        float y1 = y0 + h * sy;
+        if (culled(x0, y0, x1, y1)) {
+            return;
+        }
+        syncClip();
+        drawQuad(x0, y0, x1, y1,
+                Color.mulAlpha(brush.topLeft(), opacity), Color.mulAlpha(brush.topRight(), opacity),
+                Color.mulAlpha(brush.bottomRight(), opacity), Color.mulAlpha(brush.bottomLeft(), opacity));
+    }
+
+    @Override
+    public final void fillRoundRect(float x, float y, float w, float h, Radii radii, Brush brush) {
+        if (radii == null || radii.isZero()) {
+            fillRect(x, y, w, h, brush);
+            return;
+        }
+        if (brush == null || w <= 0f || h <= 0f || opacity <= 0f) {
+            return;
+        }
+        shape(x, y, w, h, radii, brush.topLeft(), brush.topRight(), brush.bottomRight(), brush.bottomLeft(), 0f, 0f, 0f);
+    }
+
+    @Override
+    public final void strokeRoundRect(float x, float y, float w, float h, Radii radii, float width, int argb) {
+        if (width <= 0f || w <= 0f || h <= 0f || opacity <= 0f) {
+            return;
+        }
+        shape(x, y, w, h, radii == null ? Radii.ZERO : radii, argb, argb, argb, argb, width, 0f, 0f);
+    }
+
+    @Override
+    public final void drawShadow(float x, float y, float w, float h, Radii radii, Shadow shadow) {
+        if (shadow == null || shadow.isNone() || w <= 0f || h <= 0f || opacity <= 0f) {
+            return;
+        }
+        float s = shadow.spread();
+        Radii r = (radii == null ? Radii.ZERO : radii).expand(s);
+        int c = shadow.color();
+        shape(x + shadow.offsetX() - s, y + shadow.offsetY() - s, w + 2 * s, h + 2 * s, r, c, c, c, c, 0f,
+                Math.max(shadow.blur(), 0.5f), shadow.blur());
+    }
+
+    private void shape(float x, float y, float w, float h, Radii r, int tl, int tr, int br, int bl,
+                       float stroke, float softness, float margin) {
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        float x1 = x0 + w * sx;
+        float y1 = y0 + h * sy;
+        float m = margin * sx;
+        if (culled(x0 - m, y0 - m, x1 + m, y1 + m)) {
+            return;
+        }
+        tl = Color.mulAlpha(tl, opacity);
+        tr = Color.mulAlpha(tr, opacity);
+        br = Color.mulAlpha(br, opacity);
+        bl = Color.mulAlpha(bl, opacity);
+        if (Color.alpha(tl) == 0 && Color.alpha(tr) == 0 && Color.alpha(br) == 0 && Color.alpha(bl) == 0) {
+            return;
+        }
+        float k = Math.min(sx, sy);
+        float max = Math.min(x1 - x0, y1 - y0) * 0.5f;
+        syncClip();
+        drawShape(x0, y0, x1, y1,
+                Math.min(r.topLeft() * k, max), Math.min(r.topRight() * k, max),
+                Math.min(r.bottomRight() * k, max), Math.min(r.bottomLeft() * k, max),
+                tl, tr, br, bl, stroke * k, softness * k);
+    }
+
+    @Override
+    public final void drawText(String text, float x, float y, int argb, boolean shadow) {
+        int c = Color.mulAlpha(argb, opacity);
+        // Шрифт Minecraft считает альфу < 4 непрозрачной, поэтому почти прозрачный текст не рисуем вовсе.
+        if (text == null || text.isEmpty() || Color.alpha(c) < 4) {
+            return;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        if (y0 >= clipY1 || x0 >= clipX1 || y0 + textMetrics().lineHeight() * sy <= clipY0) {
+            return;
+        }
+        syncClip();
+        drawTextImpl(text, x0, y0, sx, c, shadow);
+    }
+
+    @Override
+    public final void drawTexture(TextureRef texture, float x, float y, float w, float h,
+                                  float u0, float v0, float u1, float v1, int tint) {
+        int c = Color.mulAlpha(tint, opacity);
+        if (texture == null || w <= 0f || h <= 0f || Color.alpha(c) == 0) {
+            return;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        float x1 = x0 + w * sx;
+        float y1 = y0 + h * sy;
+        if (culled(x0, y0, x1, y1)) {
+            return;
+        }
+        syncClip();
+        drawTextureImpl(texture, x0, y0, x1, y1, u0, v0, u1, v1, c);
+    }
+
+    // ---------------------------------------------------------------- для бэкенда
+
+    /** Прямоугольник без скругления; цвета углов уже с учётом прозрачности. Координаты экранные. */
+    protected abstract void drawQuad(float x0, float y0, float x1, float y1, int tl, int tr, int br, int bl);
+
+    /**
+     * Скруглённая фигура через SDF. {@code stroke > 0} — только обводка такой толщины,
+     * {@code softness > 0} — размытый край (для теней).
+     */
+    protected abstract void drawShape(float x0, float y0, float x1, float y1,
+                                      float rTL, float rTR, float rBR, float rBL,
+                                      int tl, int tr, int br, int bl, float stroke, float softness);
+
+    protected abstract void drawTextImpl(String text, float x, float y, float scale, int argb, boolean shadow);
+
+    protected abstract void drawTextureImpl(TextureRef texture, float x0, float y0, float x1, float y1,
+                                            float u0, float v0, float u1, float v1, int tint);
+
+    /** Включить отсечение экранным прямоугольником (заменяет предыдущее). */
+    protected abstract void applyClip(float x0, float y0, float x1, float y1);
+
+    protected abstract void clearClip();
+}

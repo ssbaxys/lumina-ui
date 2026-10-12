@@ -1,0 +1,24 @@
+modLoader = "javafml"
+loaderVersion = "${loader_range}"
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "luminatest"
+version = "${mod_version}"
+displayName = "Lumina UI Showcase"
+authors = "${mod_authors}"
+description = '''Test mod: a showcase of Lumina UI features.'''
+
+[[dependencies.luminatest]]
+modId = "${lumina_id}"
+mandatory = true
+versionRange = "[${mod_version},)"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies.luminatest]]
+modId = "minecraft"
+mandatory = true
+versionRange = "${minecraft_range}"
+ordering = "NONE"
+side = "BOTH"

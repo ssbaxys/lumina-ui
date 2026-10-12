@@ -3,11 +3,16 @@ package io.github.ssbaxys.lumina.forge;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.ssbaxys.lumina.Lumina;
+import io.github.ssbaxys.lumina.input.Gamepad;
+import io.github.ssbaxys.lumina.map.MapGridSampler;
+import io.github.ssbaxys.lumina.map.MapSample;
 import io.github.ssbaxys.lumina.platform.Platform;
 import io.github.ssbaxys.lumina.render.Images;
 import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.render.TextureRef;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -22,6 +27,8 @@ import java.io.InputStream;
 import java.util.Optional;
 
 final class McPlatform implements Platform {
+    private MapGridSampler mapSampler;
+    private ClientLevel mapLevel;
     private final TextMetrics metrics = new TextMetrics() {
         @Override
         public float width(String text) {
@@ -134,5 +141,31 @@ final class McPlatform implements Platform {
     /** Старая текстура с тем же ключом закрывается менеджером текстур. */
     private static void registerTexture(ResourceLocation id, NativeImage image) {
         Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(image));
+    }
+
+    /**
+     * Сетка цветов вокруг игрока: столбцы читает {@link McMapColumn}, сетка кэшируется и дочитывается
+     * порциями ({@link MapGridSampler}); при смене мира или измерения начинается заново.
+     */
+    @Override
+    public MapSample sampleMap(int radius) {
+        Minecraft mc = Minecraft.getInstance();
+        ClientLevel level = mc.level;
+        LocalPlayer player = mc.player;
+        if (level == null || player == null) {
+            mapSampler = null;
+            mapLevel = null;
+            return null;
+        }
+        if (mapSampler == null || mapLevel != level) {
+            mapLevel = level;
+            mapSampler = new MapGridSampler(new McMapColumn(level));
+        }
+        return mapSampler.sample(player.getX(), player.getZ(), player.getYRot(), radius, System.nanoTime());
+    }
+
+    @Override
+    public Gamepad.State pollGamepad() {
+        return McGamepad.poll();
     }
 }

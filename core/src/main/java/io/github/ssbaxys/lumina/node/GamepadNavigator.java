@@ -70,6 +70,11 @@ public final class GamepadNavigator {
         return this;
     }
 
+    /** Действие кнопки B или {@code null}; загрузчик ставит своё (закрыть экран), только если его нет. */
+    public Runnable onBack() {
+        return onBack;
+    }
+
     /** Опросить платформу и обработать состояние (вызывает корень каждый кадр). */
     void update(float dt) {
         if (!enabled || !Lumina.isInitialized()) {

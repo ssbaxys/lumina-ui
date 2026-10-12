@@ -68,7 +68,7 @@ class ShowcaseSmokeTest {
 
         List<Button> nav = new ArrayList<>();
         collectNav(root.content(), nav);
-        assertEquals(11, nav.size());
+        assertEquals(12, nav.size());
 
         for (Button b : nav) {
             click(root, b);
@@ -88,6 +88,29 @@ class ShowcaseSmokeTest {
             root.keyDown(Keys.TAB, 0, 0);
             root.keyDown(Keys.SPACE, 0, 0);
             frame(root, canvas);
+        }
+    }
+
+    @Test
+    void markupDemoLoadsFromResources() {
+        String html = Lumina.platform().readResource("luminatest:ui/markup_demo.html");
+        assertTrue(html != null && html.contains("<state"), "demo html on classpath");
+        io.github.ssbaxys.lumina.markup.Markup.Built built = io.github.ssbaxys.lumina.markup.Markup.build(html,
+                new io.github.ssbaxys.lumina.markup.Bindings());
+        assertEquals(1, built.linkedResources().size());
+        assertTrue(built.stylesheet().variables().containsKey("--gold"), "linked css parsed");
+        List<String> texts = new ArrayList<>();
+        collectText(built.root(), texts);
+        assertTrue(texts.contains("120"), "template {{coins}} resolved: " + texts);
+        built.dispose();
+    }
+
+    private static void collectText(UiElement e, List<String> out) {
+        if (e instanceof io.github.ssbaxys.lumina.widget.Label l) {
+            out.add(l.text());
+        }
+        for (UiElement c : e.children()) {
+            collectText(c, out);
         }
     }
 

@@ -79,6 +79,8 @@ tasks.named('compileTestmodJava', JavaCompile) {
 }
 
 tasks.named('processTestmodResources', ProcessResources) {
+    // Разметка и стили витрины (assets/luminatest/ui) лежат в общем модуле.
+    from testmodCommon.sourceSets.main.resources
     def props = [
         mod_version: mod_version, mod_authors: mod_authors, lumina_id: mod_id,
         loader_range: neo_loader_range, minecraft_range: neo_minecraft_range

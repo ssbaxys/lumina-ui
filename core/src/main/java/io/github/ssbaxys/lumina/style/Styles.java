@@ -70,6 +70,9 @@ public final class Styles {
             .defaultValue(BlendMode.NORMAL).register();
     public static final StyleKey<Transition> TRANSITION = StyleKey.builder("transition", Transition.class)
             .defaultValue(Transition.NONE).register();
+    /** Поле ввода с линией снизу вместо рамки; при фокусе акцентная линия растёт от центра. */
+    public static final StyleKey<Boolean> UNDERLINE = StyleKey.builder("field-underline", Boolean.class)
+            .defaultValue(Boolean.FALSE).register();
 
     private Styles() {
     }

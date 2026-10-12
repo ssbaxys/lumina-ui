@@ -24,6 +24,9 @@ public final class TestSupport {
         }
     };
 
+    /** Буфер обмена тестовой платформы. */
+    public static String clipboard = "";
+
     private TestSupport() {
     }
 
@@ -36,11 +39,12 @@ public final class TestSupport {
 
             @Override
             public String getClipboard() {
-                return "";
+                return clipboard;
             }
 
             @Override
             public void setClipboard(String text) {
+                clipboard = text == null ? "" : text;
             }
 
             @Override

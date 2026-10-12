@@ -4,6 +4,9 @@ import io.github.ssbaxys.lumina.anim.Easing;
 import io.github.ssbaxys.lumina.geom.Insets;
 import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Color;
+import io.github.ssbaxys.lumina.render.ColorSpace;
+import io.github.ssbaxys.lumina.render.ColorStops;
+import io.github.ssbaxys.lumina.render.Outline;
 import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
 
@@ -17,7 +20,9 @@ import java.util.function.Consumer;
  *
  * <ul>
  *   <li>Элемент берёт стиль своего класса и накладывает поверх inline-стиль. Классов может быть
- *       несколько через пробел ({@code "button danger"}) — они накладываются по порядку.</li>
+ *       несколько через пробел ({@code "button danger"}) — они накладываются по порядку.
+ *       Стиль с ключом {@code "button.danger"} — модификатор, который действует только вместе с первым
+ *       классом "button" (накладывается перед общим "danger", поэтому свой "danger" темы его перекрывает).</li>
  *   <li>Стили ссылаются на токены ({@link Style.Builder#bind}); {@link #set(ThemeVar, Object)} меняет
  *       токен на лету, и все элементы плавно перетекают в новые значения.</li>
  *   <li>Смена темы целиком — {@code UiRoot.setTheme}; {@link #copy()} даёт независимую копию для правок.</li>
@@ -54,8 +59,13 @@ public final class Theme {
             merged = styles.getOrDefault(styleClass, Style.EMPTY);
         } else {
             merged = Style.EMPTY;
-            for (String cls : styleClass.trim().split("\\s+")) {
-                merged = merged.merge(styles.getOrDefault(cls, Style.EMPTY));
+            String[] classes = styleClass.trim().split("\\s+");
+            for (int i = 0; i < classes.length; i++) {
+                if (i > 0) {
+                    // Модификатор только для первого класса: "button.danger" действует лишь в "button danger".
+                    merged = merged.merge(styles.getOrDefault(classes[0] + "." + classes[i], Style.EMPTY));
+                }
+                merged = merged.merge(styles.getOrDefault(classes[i], Style.EMPTY));
             }
         }
         Style result = resolve(merged);
@@ -211,6 +221,102 @@ public final class Theme {
                         .bind(Styles.RADIUS, Tokens.CORNER, c -> Radii.all(c * 0.5f))
                         .set(Styles.TRANSITION, smooth)
                         .disabled(d -> d.set(Styles.OPACITY, 0.45f))
+                        .build())
+                .put("checkbox", Style.builder()
+                        .set(Styles.TRANSITION, smooth)
+                        .disabled(d -> d.set(Styles.OPACITY, 0.45f))
+                        .build())
+                .put("image-button", Style.builder()
+                        .bind(Styles.RADIUS, Tokens.CORNER, c -> Radii.all(c * 0.8f))
+                        .bind(Styles.SHADOW, Tokens.SHADOW, c -> new Shadow(0, 3, 10, 0, c))
+                        .set(Styles.TEXT_COLOR, Color.WHITE)
+                        .set(Styles.TRANSITION, new Transition(0.22f, Easing.OUT_CUBIC))
+                        .hovered(h -> h
+                                .set(Styles.SCALE, 1.03f)
+                                .bind(Styles.SHADOW, Tokens.ACCENT, a -> new Shadow(0, 6, 18, 0, Color.withAlpha(a, 0x70))))
+                        .pressed(p -> p.set(Styles.SCALE, 0.97f))
+                        .focused(f -> f.bind(Styles.OUTLINE, Tokens.ACCENT, a -> Outline.of(1.5f, 2f, a)))
+                        .disabled(d -> d.set(Styles.OPACITY, 0.45f))
+                        .build())
+                // Модификаторы кнопки: действуют только вместе с "button" ({@code styleClass("button outline")}).
+                .put("button.primary", Style.builder()
+                        .bind(Styles.SHADOW, Tokens.ACCENT, a -> new Shadow(0, 2, 8, 0, Color.withAlpha(a, 0x70)))
+                        .hovered(h -> h.bind(Styles.GLOW, Tokens.ACCENT, a -> new Shadow(0, 0, 10, 0, Color.withAlpha(a, 0x50))))
+                        .build())
+                .put("button.outline", Style.builder()
+                        .bind(Styles.BACKGROUND, Tokens.ACCENT, a -> Brush.solid(Color.withAlpha(a, 0)))
+                        .bind(Styles.TEXT_COLOR, Tokens.TEXT)
+                        .set(Styles.BORDER_WIDTH, 1.5f)
+                        .bind(Styles.BORDER_COLOR, Tokens.ACCENT, a -> Color.withAlpha(a, 0xB0))
+                        .set(Styles.SHADOW, Shadow.NONE)
+                        .hovered(h -> h
+                                .bind(Styles.BACKGROUND, Tokens.ACCENT, a -> Brush.solid(Color.withAlpha(a, 0x2C)))
+                                .bind(Styles.BORDER_COLOR, Tokens.ACCENT)
+                                .set(Styles.SHADOW, Shadow.NONE))
+                        .pressed(p -> p.bind(Styles.BACKGROUND, Tokens.ACCENT, a -> Brush.solid(Color.withAlpha(a, 0x48))))
+                        .build())
+                .put("button.ghost", Style.builder()
+                        .bind(Styles.BACKGROUND, Tokens.TEXT, t -> Brush.solid(Color.withAlpha(t, 0)))
+                        .bind(Styles.TEXT_COLOR, Tokens.TEXT)
+                        .set(Styles.SHADOW, Shadow.NONE)
+                        .hovered(h -> h
+                                .bind(Styles.BACKGROUND, Tokens.TEXT, t -> Brush.solid(Color.withAlpha(t, 0x1C)))
+                                .set(Styles.SHADOW, Shadow.NONE))
+                        .pressed(p -> p.bind(Styles.BACKGROUND, Tokens.TEXT, t -> Brush.solid(Color.withAlpha(t, 0x30))))
+                        .build())
+                .put("button.pill", Style.builder()
+                        .set(Styles.RADIUS, Radii.all(100))
+                        .set(Styles.PADDING, Insets.of(6, 18))
+                        .build())
+                .put("button.gradient", gradientButton())
+                .put("button.danger", tintedButton(0xFFF0506E))
+                .put("button.success", tintedButton(0xFF34C38F))
+                .put("button.icon", Style.builder()
+                        .set(Styles.RADIUS, Radii.all(100))
+                        .set(Styles.PADDING, Insets.all(6))
+                        .build())
+                .put("button.big", Style.builder()
+                        .set(Styles.PADDING, Insets.of(10, 22))
+                        .set(Styles.FONT_SCALE, 1.25f)
+                        .bind(Styles.RADIUS, Tokens.CORNER, c -> Radii.all(c * 0.8f))
                         .build());
+    }
+
+    /** Кнопка своего цвета (danger, success): заливка, свечение тени при наведении. */
+    private static Style tintedButton(int color) {
+        return Style.builder()
+                .set(Styles.BACKGROUND, Brush.vertical(color, Color.darken(color, 0.07f)))
+                .set(Styles.TEXT_COLOR, Color.WHITE)
+                .set(Styles.SHADOW, new Shadow(0, 2, 6, 0, 0x60000000))
+                .hovered(h -> h
+                        .set(Styles.BACKGROUND, Brush.vertical(Color.lighten(color, 0.06f), color))
+                        .set(Styles.SHADOW, new Shadow(0, 4, 14, 0, Color.withAlpha(color, 0x80))))
+                .pressed(p -> p.set(Styles.BACKGROUND, Brush.vertical(Color.darken(color, 0.07f), Color.darken(color, 0.15f))))
+                .build();
+    }
+
+    /** Градиент из акцента и соседнего оттенка; при наведении по кнопке пробегает блик. */
+    private static Style gradientButton() {
+        ColorStops shine = ColorStops.builder()
+                .add(0f, 0x00FFFFFF).add(0.4f, 0x00FFFFFF).add(0.5f, 0x60FFFFFF).add(0.6f, 0x00FFFFFF).add(1f, 0x00FFFFFF)
+                .build();
+        // Параметр градиента = положение + сдвиг: при +0.95 полоса левее кнопки, при -0.95 — правее.
+        Brush.Linear idle = new Brush.Linear(110f, shine, ColorSpace.SRGB, false, 0.95f);
+        Brush.Linear swept = idle.withOffset(-0.95f);
+        return Style.builder()
+                .bind(Styles.BACKGROUND, Tokens.ACCENT, a -> Brush.linear(120f, a, Color.rotateHue(a, 50f)))
+                .set(Styles.TEXT_COLOR, Color.WHITE)
+                .set(Styles.TEXT_SHADOW, true)
+                .set(Styles.FOREGROUND, idle)
+                .set(Styles.TRANSITION, new Transition(0.16f, Easing.OUT_CUBIC)
+                        .key(Styles.FOREGROUND, 0.75f, Easing.OUT_CUBIC))
+                .hovered(h -> h
+                        .bind(Styles.BACKGROUND, Tokens.ACCENT,
+                                a -> Brush.linear(120f, Color.lighten(a, 0.06f), Color.lighten(Color.rotateHue(a, 50f), 0.06f)))
+                        .set(Styles.FOREGROUND, swept)
+                        .bind(Styles.SHADOW, Tokens.ACCENT, a -> new Shadow(0, 4, 14, 0, Color.withAlpha(a, 0x80))))
+                .pressed(p -> p.bind(Styles.BACKGROUND, Tokens.ACCENT,
+                        a -> Brush.linear(120f, Color.darken(a, 0.08f), Color.darken(Color.rotateHue(a, 50f), 0.08f))))
+                .build();
     }
 }

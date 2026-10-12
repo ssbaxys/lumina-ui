@@ -27,6 +27,7 @@ public abstract class AbstractCanvas implements Canvas {
 
     private BlendMode blend = BlendMode.NORMAL;
     private BlendMode appliedBlend = BlendMode.NORMAL;
+    private ColorFilter colorFilter;
     private final ShapePaint paint = new ShapePaint();
 
     private float viewWidth;
@@ -168,6 +169,28 @@ public abstract class AbstractCanvas implements Canvas {
     }
 
     @Override
+    public final void setColorFilter(ColorFilter filter) {
+        colorFilter = filter == ColorFilter.IDENTITY ? null : filter;
+    }
+
+    @Override
+    public final ColorFilter colorFilter() {
+        return colorFilter;
+    }
+
+    /** Цвет через фильтр (если он задан). */
+    private int filtered(int argb) {
+        ColorFilter f = colorFilter;
+        return f == null ? argb : f.filter(argb);
+    }
+
+    /** Кисть через фильтр: у градиента меняются цвета опор. */
+    private Brush filtered(Brush brush) {
+        ColorFilter f = colorFilter;
+        return f == null || brush == null ? brush : brush.map(f);
+    }
+
+    @Override
     public final boolean isVisible(float x, float y, float w, float h) {
         if (opacity <= 0f) {
             return false;
@@ -213,7 +236,7 @@ public abstract class AbstractCanvas implements Canvas {
 
     @Override
     public final void fillRect(float x, float y, float w, float h, int argb) {
-        int c = Color.mulAlpha(argb, opacity);
+        int c = Color.mulAlpha(filtered(argb), opacity);
         if (w <= 0f || h <= 0f || Color.alpha(c) == 0) {
             return;
         }
@@ -237,6 +260,7 @@ public abstract class AbstractCanvas implements Canvas {
         if (brush == null || w <= 0f || h <= 0f || opacity <= 0f || brush.isInvisible()) {
             return;
         }
+        brush = filtered(brush);
         float x0 = tx + x * sx;
         float y0 = ty + y * sy;
         float x1 = x0 + w * sx;
@@ -265,7 +289,7 @@ public abstract class AbstractCanvas implements Canvas {
         if (brush == null || w <= 0f || h <= 0f || opacity <= 0f) {
             return;
         }
-        shape(x, y, w, h, radii, brush, 0f, 0f, 0f);
+        shape(x, y, w, h, radii, filtered(brush), 0f, 0f, 0f);
     }
 
     @Override
@@ -273,7 +297,8 @@ public abstract class AbstractCanvas implements Canvas {
         if (width <= 0f || w <= 0f || h <= 0f || opacity <= 0f) {
             return;
         }
-        shape(x, y, w, h, radii == null ? Radii.ZERO : radii, argb, argb, argb, argb, null, width, 0f, 0f);
+        int c = filtered(argb);
+        shape(x, y, w, h, radii == null ? Radii.ZERO : radii, c, c, c, c, null, width, 0f, 0f);
     }
 
     @Override
@@ -285,7 +310,7 @@ public abstract class AbstractCanvas implements Canvas {
         if (brush == null || width <= 0f || w <= 0f || h <= 0f || opacity <= 0f) {
             return;
         }
-        shape(x, y, w, h, radii == null ? Radii.ZERO : radii, brush, width, 0f, 0f);
+        shape(x, y, w, h, radii == null ? Radii.ZERO : radii, filtered(brush), width, 0f, 0f);
     }
 
     @Override
@@ -295,7 +320,7 @@ public abstract class AbstractCanvas implements Canvas {
         }
         float s = shadow.spread();
         Radii r = (radii == null ? Radii.ZERO : radii).expand(s);
-        int c = shadow.color();
+        int c = filtered(shadow.color());
         shape(x + shadow.offsetX() - s, y + shadow.offsetY() - s, w + 2 * s, h + 2 * s, r, c, c, c, c, null, 0f,
                 Math.max(shadow.blur(), 0.5f), shadow.blur());
     }
@@ -362,10 +387,10 @@ public abstract class AbstractCanvas implements Canvas {
                 Math.max(Math.max(ax, bx), Math.max(cx, dx)), Math.max(Math.max(ay, by), Math.max(cy, dy)))) {
             return;
         }
-        c0 = Color.mulAlpha(c0, opacity);
-        c1 = Color.mulAlpha(c1, opacity);
-        c2 = Color.mulAlpha(c2, opacity);
-        c3 = Color.mulAlpha(c3, opacity);
+        c0 = Color.mulAlpha(filtered(c0), opacity);
+        c1 = Color.mulAlpha(filtered(c1), opacity);
+        c2 = Color.mulAlpha(filtered(c2), opacity);
+        c3 = Color.mulAlpha(filtered(c3), opacity);
         syncClip();
         // Порядок обхода как у drawQuad (верх-лево, низ-лево, низ-право, верх-право), иначе грань может отсечься.
         float cross = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
@@ -452,7 +477,7 @@ public abstract class AbstractCanvas implements Canvas {
 
     @Override
     public final void drawText(String text, float x, float y, int argb, boolean shadow) {
-        int c = Color.mulAlpha(argb, opacity);
+        int c = Color.mulAlpha(filtered(argb), opacity);
         // Шрифт Minecraft считает альфу < 4 непрозрачной, поэтому почти прозрачный текст не рисуем вовсе.
         if (text == null || text.isEmpty() || Color.alpha(c) < 4) {
             return;

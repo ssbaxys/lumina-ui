@@ -16,6 +16,7 @@ import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.render.TextureRef;
 import io.github.ssbaxys.lumina.style.State;
 import io.github.ssbaxys.lumina.style.Styles;
+import io.github.ssbaxys.lumina.sound.UiSounds;
 
 /**
  * Кнопка-карточка: картинка на всю кнопку (по умолчанию {@link Image.Fit#COVER}) со скруглёнными углами
@@ -93,12 +94,17 @@ public class ImageButton extends Widget<ImageButton> {
         return this;
     }
 
+    @Override
+    protected String defaultAccessibleLabel() {
+        return caption.isEmpty() ? null : caption;
+    }
+
     public void press() {
         if (!isEnabled()) {
             return;
         }
-        if (clickSound && Lumina.isInitialized()) {
-            Lumina.platform().playClickSound();
+        if (clickSound) {
+            UiSounds.click(this, true);
         }
         if (onPress != null) {
             onPress.run();

@@ -19,6 +19,8 @@ import io.github.ssbaxys.lumina.style.State;
 public class ScrollPanel extends Widget<ScrollPanel> {
     private static final float SCROLL_STEP = 24f;
     private static final float BAR_WIDTH = 4f;
+    /** Место справа под полосу прокрутки, когда содержимое не помещается: полоса не налезает на детей. */
+    private static final float GUTTER = BAR_WIDTH + 4f;
 
     private final UiElement content;
     private AnimatedFloat offset;
@@ -150,13 +152,23 @@ public class ScrollPanel extends Widget<ScrollPanel> {
         @Override
         public void measure(UiElement container, float maxWidth, float maxHeight) {
             content.measure(maxWidth, Float.POSITIVE_INFINITY);
-            container.setContentSize(content.measuredWidth(), Math.min(content.measuredHeight(), maxHeight));
+            float gutter = 0f;
+            if (content.measuredHeight() > maxHeight && maxWidth > GUTTER) {
+                gutter = GUTTER;
+                content.measure(maxWidth - gutter, Float.POSITIVE_INFINITY);
+            }
+            container.setContentSize(content.measuredWidth() + gutter, Math.min(content.measuredHeight(), maxHeight));
         }
 
         @Override
         public void arrange(UiElement container, float cx, float cy, float cw, float ch) {
             content.measure(cw, Float.POSITIVE_INFINITY);
-            content.setBounds(cx, cy - scrollOffset(), cw, content.measuredHeight());
+            float w = cw;
+            if (content.measuredHeight() > ch && cw > GUTTER) {
+                w = cw - GUTTER;
+                content.measure(w, Float.POSITIVE_INFINITY);
+            }
+            content.setBounds(cx, cy - scrollOffset(), w, content.measuredHeight());
         }
     }
 }

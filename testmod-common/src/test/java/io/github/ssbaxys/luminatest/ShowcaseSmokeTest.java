@@ -68,7 +68,7 @@ class ShowcaseSmokeTest {
 
         List<Button> nav = new ArrayList<>();
         collectNav(root.content(), nav);
-        assertEquals(12, nav.size());
+        assertEquals(13, nav.size());
 
         for (Button b : nav) {
             click(root, b);

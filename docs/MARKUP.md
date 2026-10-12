@@ -59,6 +59,7 @@ button.primary:hover { transform: scale(1.06); glow: 6px var(--accent); transiti
 | `item` | предмет игры | `item="minecraft:diamond"`, `size` |
 | `img` | текстура | `src`, `size` |
 | `fx` | эффект из реестра FX | `effect="minecraft:snow"` |
+| `blocks` | 2D-карта из блоков, ряды — текстом внутри тега, `.` — пусто | `tile`, `key="G=minecraft:grass_block; S=minecraft:stone"`, `brush` (редактор), `grid="true"` |
 | `spacer` `hr` `br` | распорка, линия, отступ | |
 | `state` | переменная состояния | `name`, `value` |
 | `style`, `link rel="stylesheet"` | CSS внутри файла и из ресурса | `href` |

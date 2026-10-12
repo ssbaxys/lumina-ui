@@ -2,6 +2,7 @@ package io.github.ssbaxys.lumina.markup;
 
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.Easing;
+import io.github.ssbaxys.lumina.blocks.BlockMap;
 import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.fx.FxLayer;
 import io.github.ssbaxys.lumina.layout.Align;
@@ -62,7 +63,7 @@ import java.util.regex.Pattern;
  * }</pre>
  *
  * Теги: {@code div column row stack scroll panel label span h1 h2 h3 p markdown button toggle slider
- * progress ring color-picker item img fx spacer hr state style link}. Свои теги — {@link #tag}.
+ * progress ring color-picker item img fx blocks spacer hr state style link}. Свои теги — {@link #tag}.
  * Атрибуты: {@code id class style width height grow gap align justify padding margin if enabled bind
  * on-click} и атрибуты конкретного тега. Логика — через {@link Bindings}.
  */
@@ -82,7 +83,7 @@ public final class Markup {
     private static final Map<String, TagFactory> TAGS = new HashMap<>();
     private static final Set<String> VOID = Set.of("img", "item", "br", "hr", "state", "link", "spacer", "toggle",
             "slider", "progress", "ring", "color-picker", "fx", "input", "meta");
-    private static final Set<String> RAW = Set.of("style", "markdown", "script");
+    private static final Set<String> RAW = Set.of("style", "markdown", "script", "blocks");
     private static final Pattern TEMPLATE = Pattern.compile("\\{\\{\\s*([\\w.-]+)\\s*(?:\\|\\s*(\\w+)\\s*)?}}");
 
     static {
@@ -163,6 +164,28 @@ public final class Markup {
                 .style(b -> b.set(Styles.BACKGROUND, Brush.solid(0x30808080))));
         tag("br", (n, c) -> Panel.box(FlexLayout.column()).height(Dim.px(6)));
         tag("fx", (n, c) -> new MarkupFx(n.attr("effect")));
+        tag("blocks", (n, c) -> {
+            java.util.List<String> lines = new java.util.ArrayList<>();
+            for (String line : n.text.split("\n")) {
+                if (!line.isBlank()) {
+                    lines.add(line.strip());
+                }
+            }
+            BlockMap map = BlockMap.of(n.floatAttr("tile", 16f), lines.toArray(new String[0]));
+            String key = n.attr("key");
+            if (key != null) {
+                for (String pair : key.split(";")) {
+                    int eq = pair.indexOf('=');
+                    if (eq > 0 && pair.substring(0, eq).strip().length() == 1) {
+                        map.key(pair.substring(0, eq).strip().charAt(0), pair.substring(eq + 1).strip());
+                    }
+                }
+            }
+            if (n.attr("brush") != null) {
+                map.editable(c.signal(n, "brush", (String) null));
+            }
+            return map.grid("true".equals(n.attr("grid")));
+        });
     }
 
     private Markup() {

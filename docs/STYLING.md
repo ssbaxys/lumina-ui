@@ -168,3 +168,26 @@ Markdown.bound(signal);                            // текст из сигна
 
 - `ColorPicker`: квадрат насыщенности и яркости, полоса оттенка и полоса прозрачности; работает с клавиатуры; значение хранится в `Signal<Integer>`.
 - `RingProgress`: круговой индикатор с градиентной дугой и процентом в центре или бесконечный спиннер (`.spinner()`).
+
+## Карты из блоков
+
+`BlockMap` рисует 2D-карту (вид сбоку) из блоков игры. Текстура подбирается по id блока из ресурсов игры
+(с ресурспаками): `minecraft:tnt` → `block/tnt_side`, `minecraft:water` → `block/water_still` с синим оттенком,
+листва и трава окрашиваются как на равнинах. Вода, лава и огонь анимируются со скоростью из `.png.mcmeta`.
+
+```java
+BlockMap map = BlockMap.of(16,
+        "....T....",
+        "GGGGGGWWG",
+        "DDDDDDDDD")
+    .key('G', "minecraft:grass_block").key('D', "minecraft:dirt")
+    .key('W', "minecraft:water").key('T', "minecraft:tnt");
+map.set(4, 0, "minecraft:fire");          // поставить, null — убрать
+map.fill(0, 2, 8, 2, "minecraft:stone");  // залить прямоугольник
+map.editable(brush).grid(true);           // редактор: ЛКМ ставит блок из brush, ПКМ ломает
+map.onChange((x, y, id) -> save());
+String[] rows = map.toRows();             // обратно в ряды + map.keyMap() — для сохранения
+```
+
+Свой вид блока: `BlockTextures.register("mymod:crystal", TextureRef.of("mymod:textures/block/crystal.png"), 0xFFFFFFFF)`.
+Блок без найденной текстуры рисуется иконкой предмета. В разметке — тег `<blocks>` (см. [MARKUP.md](MARKUP.md)).

@@ -43,6 +43,7 @@ public final class Showcase {
                 new PageDef("Эффекты", EffectsPage::create),
                 new PageDef("Markdown", MarkdownPage::create),
                 new PageDef("HTML и CSS", MarkupPage::create),
+                new PageDef("Блоки", BlocksPage::create),
                 new PageDef("Ввод и события", InputPage::create),
                 new PageDef("Данные", DataPage::create),
                 new PageDef("Производительность", PerformancePage::create));

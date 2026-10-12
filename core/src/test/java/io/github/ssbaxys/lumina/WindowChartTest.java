@@ -9,6 +9,7 @@ import io.github.ssbaxys.lumina.node.UiRoot;
 import io.github.ssbaxys.lumina.render.NineSlice;
 import io.github.ssbaxys.lumina.style.ModernTheme;
 import io.github.ssbaxys.lumina.style.Styles;
+import io.github.ssbaxys.lumina.widget.Backdrop;
 import io.github.ssbaxys.lumina.widget.Button;
 import io.github.ssbaxys.lumina.widget.Chart;
 import io.github.ssbaxys.lumina.widget.Label;
@@ -153,5 +154,22 @@ class WindowChartTest {
         assertEquals(6, css.bottom());
         assertEquals(7, css.left());
         assertEquals(2f, css.scale(), 1e-6);
+    }
+
+    @Test
+    void everyBackdropPaintsAndIgnoresMouse() {
+        for (Backdrop.Kind kind : Backdrop.Kind.values()) {
+            Backdrop bg = new Backdrop(kind).parallax(8f);
+            UiRoot root = new UiRoot(Panel.box(new StackLayout(Align.START, Align.START)).fill().add(bg), ModernTheme.dark());
+            root.resize(320, 200);
+            root.tick(0f);
+            root.pointerMove(300, 20);
+            for (int i = 0; i < 20; i++) {
+                root.tick(0.2f);
+            }
+            assertEquals(320, bg.width(), 0.01f, kind.name());
+            assertTrue(paint(root).size() >= 3, kind.name());
+            assertTrue(bg.root().content().hitTest(100, 100) != bg, "not hit-testable: " + kind);
+        }
     }
 }

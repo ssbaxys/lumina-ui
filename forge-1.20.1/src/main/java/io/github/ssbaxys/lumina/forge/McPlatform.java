@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.sounds.SoundEvent;
@@ -70,6 +71,13 @@ final class McPlatform implements Platform {
     }
 
     /** Биом под игроком ("minecraft:plains") или null, если мира нет. */
+    @Override
+    public void narrate(String text) {
+        if (text != null && !text.isBlank()) {
+            Minecraft.getInstance().getNarrator().sayNow(Component.literal(text));
+        }
+    }
+
     @Override
     public String biomeId() {
         Minecraft mc = Minecraft.getInstance();

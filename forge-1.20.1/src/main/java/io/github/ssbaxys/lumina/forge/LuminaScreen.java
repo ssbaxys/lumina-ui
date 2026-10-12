@@ -20,6 +20,14 @@ public class LuminaScreen extends Screen {
     public LuminaScreen(Component title, Function<? super LuminaScreen, UiRoot> factory) {
         super(title);
         this.ui = factory.apply(this);
+        if (ui.gamepad().onBack() == null) {
+            // кнопка B геймпада, которую UI не обработал, — как Esc
+            ui.gamepad().onBack(() -> {
+                if (shouldCloseOnEsc()) {
+                    onClose();
+                }
+            });
+        }
     }
 
     public UiRoot ui() {
@@ -111,6 +119,7 @@ public class LuminaScreen extends Screen {
     @Override
     public void removed() {
         ui.dispose();
+        canvas.dispose();
         super.removed();
     }
 }

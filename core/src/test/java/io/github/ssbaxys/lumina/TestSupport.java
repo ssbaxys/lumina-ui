@@ -53,7 +53,7 @@ public final class TestSupport {
         });
     }
 
-    public static final class RecordingCanvas extends AbstractCanvas {
+    public static class RecordingCanvas extends AbstractCanvas {
         public final List<String> ops = new ArrayList<>();
 
         public void begin(float w, float h) {

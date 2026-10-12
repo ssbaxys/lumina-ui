@@ -1,5 +1,7 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.anim.Animation;
+import io.github.ssbaxys.lumina.render.AnimatedTexture;
 import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Canvas;
 import io.github.ssbaxys.lumina.render.Color;
@@ -15,13 +17,16 @@ import java.util.Locale;
 /**
  * Картинка: {@link TextureRef} вписывается в размер виджета по правилу {@link Fit}. Скругление углов —
  * из {@link Styles#RADIUS} (картинка обрезается по скруглённой фигуре). Без заданного размера виджет
- * берёт размер самой картинки (если он известен, см. {@link ImageTexture}).
+ * берёт размер самой картинки (если он известен, см. {@link ImageTexture}). Анимированный GIF
+ * ({@link AnimatedTexture}) проигрывается сам с задержками кадров из файла; управлять проигрыванием —
+ * {@link AnimatedImage}. Со стилем {@link Styles#CLIP_ROUNDED} углы режутся точной маской бэкенда
+ * ({@code Canvas.clipRoundRect}), если он её умеет.
  *
  * <pre>{@code
  * Image.file(Path.of("screenshots/last.png")).fit(Image.Fit.COVER).size(160, 90).radius(8)
  * }</pre>
  */
-public class Image extends Widget<Image> {
+public class Image extends Widget<Image> implements Animation {
     /** Как вписать картинку в прямоугольник. */
     public enum Fit {
         /** Целиком, с сохранением пропорций (могут остаться поля). */
@@ -52,6 +57,8 @@ public class Image extends Widget<Image> {
     private int tint = Color.WHITE;
     private float sourceWidth;
     private float sourceHeight;
+    private float elapsed;
+    private boolean playing;
 
     public Image(TextureRef texture) {
         super("image");
@@ -79,8 +86,45 @@ public class Image extends Widget<Image> {
 
     public Image texture(TextureRef texture) {
         this.texture = texture;
+        elapsed = 0f;
         invalidateLayout();
+        startPlayback();
         return this;
+    }
+
+    /** Текстура текущего кадра (для GIF — кадр по прошедшему времени). */
+    public TextureRef currentTexture() {
+        if (texture instanceof AnimatedTexture a) {
+            return a.frame(a.frameAt((long) (elapsed * 1000f)));
+        }
+        return texture;
+    }
+
+    @Override
+    protected void onAttach() {
+        startPlayback();
+    }
+
+    @Override
+    protected void onDetach() {
+        playing = false;
+    }
+
+    private void startPlayback() {
+        if (!playing && root() != null && texture instanceof AnimatedTexture a && a.frameCount() > 1) {
+            playing = true;
+            root().animator().start(this);
+        }
+    }
+
+    @Override
+    public boolean tick(float dt) {
+        if (!playing || !(texture instanceof AnimatedTexture)) {
+            playing = false;
+            return false;
+        }
+        elapsed += dt;
+        return true;
     }
 
     public Fit fit() {
@@ -120,6 +164,9 @@ public class Image extends Widget<Image> {
         if (sourceWidth > 0f && sourceHeight > 0f) {
             return sourceWidth / sourceHeight;
         }
+        if (texture instanceof AnimatedTexture at) {
+            return at.aspect();
+        }
         return texture instanceof ImageTexture it ? it.aspect() : 1f;
     }
 
@@ -130,6 +177,9 @@ public class Image extends Widget<Image> {
         if ((w <= 0f || h <= 0f) && texture instanceof ImageTexture it && it.width() > 0) {
             w = it.width();
             h = it.height();
+        } else if ((w <= 0f || h <= 0f) && texture instanceof AnimatedTexture at && at.width() > 0) {
+            w = at.width();
+            h = at.height();
         }
         if (w <= 0f || h <= 0f) {
             w = DEFAULT_SIZE;
@@ -148,7 +198,8 @@ public class Image extends Widget<Image> {
         float y = padding().top();
         float w = width() - padding().horizontal();
         float h = height() - padding().vertical();
-        paint(canvas, texture, x, y, w, h, fit, aspect(), style.get(Styles.RADIUS), tint, 1f);
+        paint(canvas, currentTexture(), x, y, w, h, fit, aspect(), style.get(Styles.RADIUS), tint, 1f,
+                style.get(Styles.CLIP_ROUNDED));
     }
 
     /**
@@ -157,6 +208,15 @@ public class Image extends Widget<Image> {
      */
     public static void paint(Canvas canvas, TextureRef texture, float x, float y, float w, float h,
                              Fit fit, float aspect, Radii radii, int tint, float zoom) {
+        paint(canvas, texture, x, y, w, h, fit, aspect, radii, tint, zoom, false);
+    }
+
+    /**
+     * То же; {@code exactMask} — скругление точной маской {@code Canvas.clipRoundRect} (если бэкенд её умеет),
+     * а не нарезкой на полосы.
+     */
+    public static void paint(Canvas canvas, TextureRef texture, float x, float y, float w, float h,
+                             Fit fit, float aspect, Radii radii, int tint, float zoom, boolean exactMask) {
         if (w <= 0f || h <= 0f) {
             return;
         }
@@ -201,6 +261,13 @@ public class Image extends Widget<Image> {
             v0 = cv - hv;
             v1 = cv + hv;
         }
-        canvas.drawTextureRounded(texture, x, y, w, h, u0, v0, u1, v1, radii, tint);
+        if (exactMask && radii != null && !radii.isZero() && canvas.supportsRoundClip()) {
+            canvas.save();
+            canvas.clipRoundRect(x, y, w, h, radii);
+            canvas.drawTexture(texture, x, y, w, h, u0, v0, u1, v1, tint);
+            canvas.restore();
+        } else {
+            canvas.drawTextureRounded(texture, x, y, w, h, u0, v0, u1, v1, radii, tint);
+        }
     }
 }

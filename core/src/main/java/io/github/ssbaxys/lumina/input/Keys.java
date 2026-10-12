@@ -18,6 +18,20 @@ public final class Keys {
     public static final int END = 269;
     public static final int KP_ENTER = 335;
 
+    // Функциональные клавиши (инспектор интерфейса по умолчанию — F8).
+    public static final int F1 = 290;
+    public static final int F2 = 291;
+    public static final int F3 = 292;
+    public static final int F4 = 293;
+    public static final int F5 = 294;
+    public static final int F6 = 295;
+    public static final int F7 = 296;
+    public static final int F8 = 297;
+    public static final int F9 = 298;
+    public static final int F10 = 299;
+    public static final int F11 = 300;
+    public static final int F12 = 301;
+
     // Буквы (GLFW-коды по раскладке US): сочетания Ctrl+A/C/X/V/Z/Y.
     public static final int A = 65;
     public static final int B = 66;

@@ -759,6 +759,9 @@ new Panel("grid", new GridLayout(3, 8, 6));                   // просто р
 | `playSound(id, volume, pitch)` | ничего | звуки интерфейса (уже был) |
 | `pollGameData(GameState out)` | `false` (нет мира) | снимок игрока для `GameData`, на каждом тике клиента |
 | `hudState()` | `0` | флаги F1 / F3 / чат / экран для правил видимости HUD, каждый кадр |
+| `createTexture(key, w, h, argb)` | `null` | текстура из пикселей (кадры GIF, мини-карта) |
+| `sampleMap(radius)` | `null` | цвета карты вокруг игрока для `MiniMap` |
+| `pollGamepad()` | `null` | состояние геймпада для навигации |
 
 Пример всего вместе — страница `ThemesPage` в тестовом моде.
 
@@ -848,3 +851,166 @@ GameData.setSource(out -> { out.health = 7; return true; });   // свой ис�
 
 Пример всего вместе — страница `HudPage` и демо-HUD `HudDemo` в тестовом моде.
 
+## Инструменты: размытие, обрезка, GIF, карты, частицы, инспектор, геймпад, настройки
+
+Всё вместе — страница `ToolsPage` в тестовом моде.
+
+### Размытие фона (`backdrop-blur`)
+
+`Styles.BACKDROP_BLUR` (радиус в пикселях, анимируется) размывает то, что уже нарисовано под элементом;
+поверх рисуются фон, рамка и дети, поэтому полупрозрачный фон даёт «стекло».
+
+```java
+card.style(b -> b
+        .set(Styles.BACKDROP_BLUR, 8f)
+        .set(Styles.BACKGROUND, Brush.solid(0x30FFFFFF))
+        .set(Styles.RADIUS, Radii.all(12)));
+```
+
+```css
+.glass { backdrop-blur: 8; }                 /* или */
+.glass { backdrop-filter: blur(8px); }       /* none — выключить */
+```
+
+Холст: `Canvas.drawBackdropBlur(x, y, w, h, radii, radius)` и `supportsBackdropBlur()`. Бэкенд, который
+умеет копировать кадр, переопределяет у `AbstractCanvas` хук `captureBackdrop(radius)` — размытая копия всего
+кадра (UV (0,0) — левый верхний угол экрана); ядро вырезает из неё фигуру элемента. В игре кадр копируется
+в свой буфер и размывается ванильной цепочкой `minecraft:shaders/post/blur.json` (в 1.21.1 радиус передаётся
+в шейдер, в 1.20.1 он фиксирован в файле цепочки). Если копирования нет или что-то сломалось, рисуется матовая
+подложка `Canvas.frostedFallback`: светлый вертикальный градиент, прозрачность которого растёт с радиусом,
+и блик сверху. Ничего не ломается и в тестах, и на чужих бэкендах.
+
+### Точная скруглённая обрезка (`clip-rounded`)
+
+`Styles.CLIP_ROUNDED` вместе с `Styles.RADIUS` обрезает детей по скруглению, а не по прямоугольнику. Работает
+у любого элемента, который обрезает детей (`setClipChildren(true)`), в том числе у `ScrollPanel`; у `Image`
+то же свойство включает точную маску вместо нарезки текстуры полосами.
+
+```java
+new ScrollPanel(list).style(b -> b.set(Styles.RADIUS, Radii.all(14)).set(Styles.CLIP_ROUNDED, true));
+```
+
+Холст: `clipRoundRect(x, y, w, h, radii)`; по умолчанию — обычный `clipRect`, `supportsRoundClip()` говорит,
+есть ли точная маска. `AbstractCanvas` делает её без трафарета: перед детьми снимает копию кадра
+(`captureSnapshot(slot)`), а на парном `restore()` закрашивает из неё четыре угла за дугой веерами
+треугольников. Одновременно открыто не больше `snapshotSlots()` скруглённых клипов (в игре — 8); глубже —
+прямоугольная обрезка. Цена — одна копия кадра на каждый такой элемент в кадре.
+
+### Анимированный GIF (`render.Gif`, `widget.AnimatedImage`)
+
+`Images.fromBytes/fromFile/fromResource` для GIF из нескольких кадров возвращают `AnimatedTexture`: кадры
+читает `javax.imageio` (с учётом способов смены кадра), каждый кадр загружается через
+`Platform.createTexture` под ключом `<ключ>/<номер>`. Задержки берутся из файла (0–10 мс считаются как 100 мс,
+как в браузерах), число повторов — из блока NETSCAPE (нет блока — один проход). Обычный `Image` проигрывает
+такую текстуру сам. `AnimatedImage` даёт управление:
+
+```java
+AnimatedImage gif = AnimatedImage.resource("mymod:textures/gui/loading.gif")
+        .size(48, 48)
+        .loop(AnimatedImage.Loop.FOREVER)   // AS_FILE — как в файле, ONCE — один раз
+        .speed(1.5f)
+        .onFrame(i -> ...);
+gif.pause(); gif.seek(0); gif.play();
+```
+
+`Gif.encode(frames, delayMs, loopCount)` собирает GIF из `Images.Pixels` (удобно для тестов и картинок,
+нарисованных кодом), `Gif.decode(bytes)` отдаёт кадры без загрузки текстур. Ограничения: не больше 512 кадров
+и разумного общего числа пикселей.
+
+**Видео не поддерживается.** В ядре нет декодера видео (`javax.imageio` его не умеет), а FFmpeg/JavaCV —
+это десятки мегабайт нативных библиотек под каждую платформу, что для библиотеки интерфейса слишком тяжело.
+Короткую анимацию лучше сохранить GIF-ом или набором кадров.
+
+### Мини-карта и карта мира (`widget.MiniMap`, `widget.WorldMap`, пакет `map`)
+
+```java
+MiniMap map = new MiniMap()
+        .source(MapSource.platform().or(new DemoMap(42)))  // в мире — карта игры, без мира — демо
+        .shape(MiniMap.Shape.ROUND)     // или SQUARE
+        .rotate(true)                   // по взгляду игрока; false — север вверху
+        .zoom(1.5f).zoomRange(0.5f, 6f) // пикселей на блок; колесо мыши меняет масштаб
+        .showNorth(true).showCoordinates(true)
+        .marker("home", 0, 0, 0xFFFFE08A, "Дом");
+```
+
+Источник — `MapSource`: `MapSample sample(int radius)` с сеткой ARGB-цветов, положением и поворотом игрока.
+`MapSource.platform()` берёт `Platform.sampleMap(radius)`: загрузчик читает цвет верхнего блока
+(`BlockState.getMapColor`) через `map.MapGridSampler` — сетка кэшируется, сдвигается только когда игрок отошёл,
+за одно обновление читает не больше `budget` столбцов и не чаще `interval`; склоны затеняются, как на ванильной
+карте. Свой источник (сервер, план базы) — любая реализация `MapSource`. Текстура карты загружается через
+`createTexture` не чаще `uploadInterval(...)` и только когда сетка изменилась; без текстур карта рисуется
+клетками. Метки за краем прижимаются к краю и теряют подпись.
+
+`WorldMap(provider, centerX, centerZ, size)` — статичная карта области по `MapColorProvider.colorAt(x, z)`:
+цвета строятся один раз (`refresh()` — заново), перетаскивание двигает вид, колесо меняет масштаб.
+
+### Частицы за меню (`Backdrop.Kind.PARTICLES`)
+
+```java
+new Backdrop(Backdrop.Kind.PARTICLES)
+        .particles(Backdrop.ParticleStyle.SNOW)  // SPARKS, SNOW, DUST
+        .particleCount(90)
+        .repel(60f, 900f)                        // радиус и сила отталкивания от курсора
+        .speed(1f);
+```
+
+Искры поднимаются и гаснут (рисуются со сложением цветов), снег падает и покачивается, пыль медленно плавает.
+Курсор расталкивает частицы, потом они плавно возвращаются к своей скорости. Свои цвета — `colors(...)`.
+
+### Инспектор интерфейса (`root.inspector()`)
+
+```java
+root.inspector().enabled(true);         // теперь F8 открывает и закрывает
+root.inspector().toggleKey(Keys.F12);   // другая клавиша
+root.inspector().open();
+```
+
+Выключен по умолчанию. Открытый инспектор перехватывает мышь: наведение подсвечивает элемент (внешние
+отступы, границы, внутренние отступы) с подписью `Класс.классы-стиля#id`, клик выбирает, правый клик снимает
+выбор. Панель сбоку показывает дерево элементов (клик по строке выбирает, колесо прокручивает) и сведения
+о выбранном: класс Java, место и размер, padding/margin, флаги и вычисленный стиль (только отличия от значений
+по умолчанию). Стрелки ходят по дереву (вверх — к родителю), Esc закрывает, кнопки в заголовке закрывают
+панель и переносят её на другую сторону.
+
+### Геймпад (`root.gamepad()`, `UiRoot.focusDirection`)
+
+Корень каждый кадр опрашивает `Platform.pollGamepad()` (в игре — первый геймпад GLFW):
+
+| Кнопка | Действие |
+|---|---|
+| крестовина, левый стик | фокус в сторону (`focusDirection`), с автоповтором при удержании |
+| A | нажать: Enter элементу в фокусе, а если он его не принял — клик по центру |
+| B | Escape (закрывает всплывающее окно), иначе `onBack` — экран загрузчика закрывается |
+| LB / RB | соседняя вкладка у ближайших `Tabs` / `SideNav` (`TabSwitchable`) |
+
+`focusDirection(NavDirection)` работает и без геймпада: выбирает ближайший фокусируемый элемент в направлении
+(расстояние по направлению плюс штраф за сдвиг вбок), без фокуса — левый верхний. Фокус, полученный с клавиатуры
+или геймпада, прокручивает `ScrollPanel` к элементу (`UiElement.revealChild`). Настройки: `enabled`,
+`deadzone`, `repeat(delay, rate)`, `onBack(...)`.
+
+### Экран настроек из описания (`config.ConfigSpec`, `config.ConfigScreen`)
+
+```java
+ConfigSpec spec = ConfigSpec.builder("mymod/client.toml")
+        .header("Настройки MyMod")
+        .category("hud", "Интерфейс").icon("minecraft:compass")
+        .bool("showMinimap", "Мини-карта", true).comment("Показывать в углу экрана")
+        .integer("minimapSize", "Размер", 96, 48, 192).step(8)
+        .number("opacity", "Прозрачность", 0.85f, 0.2f, 1f).step(0.05f)
+        .key("zoomKey", "Приблизить", Keys.Z)
+        .category("look", "Вид")
+        .choice("quality", "Качество", Quality.MEDIUM, Quality.values()).labels(q -> ...)
+        .color("accent", "Акцент", 0xFF5B8CFF).alpha(false)
+        .string("greeting", "Приветствие", "Привет!").maxLength(24)
+        .build();
+spec.load();                                   // Platform.readFile
+boolean on = spec.bool("showMinimap").peek();  // значения — сигналы
+new ConfigScreen(spec).title("MyMod").autoSave(true);
+```
+
+Без рефлексии: каждое значение описано явно и хранится в `Signal`. `set` приводит значение к допустимому
+(диапазон, длина, вариант, без альфы). `ConfigScreen` строит боковую навигацию по разделам и строки:
+`Toggle`, `SliderField`, `TextField`, `Select`, `ColorField`, `KeyBindField`, у каждой — кнопка сброса к значению
+по умолчанию; поиск ищет по названиям, ключам, комментариям и разделам; «Сбросить всё», «Сохранить» и
+автосохранение. Файл — простой TOML: разделы `[категория]`, `ключ = значение`, комментарии с подписью и
+диапазоном; неизвестные и испорченные строки при чтении пропускаются.

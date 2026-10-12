@@ -43,6 +43,11 @@ final class McCanvas extends AbstractCanvas {
     private final Map<String, ItemStack> items = new HashMap<>();
     /** После 3D-предмета или сущности в буфере глубины остались их пиксели (см. {@link #clearDepth()}). */
     private boolean depthDirty;
+    private final McFrameCapture frames = new McFrameCapture();
+    private float clipX0;
+    private float clipY0;
+    private float clipX1;
+    private float clipY1;
 
     void begin(GuiGraphics graphics, int width, int height) {
         this.graphics = graphics;
@@ -62,6 +67,11 @@ final class McCanvas extends AbstractCanvas {
             graphics = null;
             blendMode = BlendMode.NORMAL;
         }
+    }
+
+    /** Освободить копии кадра (экран закрыт). */
+    void dispose() {
+        frames.close();
     }
 
     @Override
@@ -219,13 +229,23 @@ final class McCanvas extends AbstractCanvas {
                                        float x2, float y2, float x3, float y3,
                                        float u0, float v0, float u1, float v1,
                                        float u2, float v2, float u3, float v3, int tint) {
-        ResourceLocation location = location(texture);
-        if (location == null) {
-            return;
+        if (texture instanceof McFrameCapture.FrameTexture frame) {
+            // копия кадра: у OpenGL V растёт снизу вверх
+            v0 = 1f - v0;
+            v1 = 1f - v1;
+            v2 = 1f - v2;
+            v3 = 1f - v3;
+            flushQuads();
+            RenderSystem.setShaderTexture(0, frame.target().getColorTextureId());
+        } else {
+            ResourceLocation location = location(texture);
+            if (location == null) {
+                return;
+            }
+            flushQuads();
+            RenderSystem.setShaderTexture(0, location);
         }
-        flushQuads();
         clearDepth();
-        RenderSystem.setShaderTexture(0, location);
         setupBlend();
         RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
         Matrix4f m = pose();
@@ -324,6 +344,10 @@ final class McCanvas extends AbstractCanvas {
         }
         graphics.enableScissor((int) Math.floor(x0), (int) Math.floor(y0), (int) Math.ceil(x1), (int) Math.ceil(y1));
         scissor = true;
+        clipX0 = x0;
+        clipY0 = y0;
+        clipX1 = x1;
+        clipY1 = y1;
     }
 
     @Override
@@ -338,5 +362,53 @@ final class McCanvas extends AbstractCanvas {
 
     private static com.mojang.blaze3d.vertex.VertexConsumer color(com.mojang.blaze3d.vertex.VertexConsumer v, int argb) {
         return v.color((argb >> 16) & 255, (argb >> 8) & 255, argb & 255, argb >>> 24);
+    }
+
+    // ---------------------------------------------------------------- копии кадра (размытие, маски)
+
+    @Override
+    protected TextureRef captureBackdrop(float radius) {
+        if (!frames.blurAvailable()) {
+            return null;
+        }
+        float scale = (float) Minecraft.getInstance().getWindow().getGuiScale();
+        return capture(-1, radius * scale);
+    }
+
+    @Override
+    protected boolean backdropBlurAvailable() {
+        return frames.blurAvailable();
+    }
+
+    @Override
+    protected TextureRef captureSnapshot(int slot) {
+        return frames.snapshotsAvailable() ? capture(slot, 0f) : null;
+    }
+
+    @Override
+    protected int snapshotSlots() {
+        return frames.snapshotsAvailable() ? McFrameCapture.SLOTS : 0;
+    }
+
+    /**
+     * Дорисовать накопленное, снять ножницы (они режут и копирование), скопировать кадр и вернуть клип.
+     * {@code slot} &lt; 0 — размытая копия.
+     */
+    private TextureRef capture(int slot, float radius) {
+        flushQuads();
+        graphics.flush();
+        boolean hadScissor = scissor;
+        if (scissor) {
+            graphics.disableScissor();
+            scissor = false;
+        }
+        try {
+            return slot < 0 ? frames.blurred(radius) : frames.snapshot(slot);
+        } finally {
+            RenderSystem.defaultBlendFunc();
+            if (hadScissor) {
+                applyClip(clipX0, clipY0, clipX1, clipY1);
+            }
+        }
     }
 }

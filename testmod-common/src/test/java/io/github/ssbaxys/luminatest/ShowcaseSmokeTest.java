@@ -68,7 +68,7 @@ class ShowcaseSmokeTest {
 
         List<Button> nav = new ArrayList<>();
         collectNav(root.content(), nav);
-        assertEquals(24, nav.size());
+        assertEquals(25, nav.size());
 
         for (Button b : nav) {
             for (UiElement p = b.parent(); p != null; p = p.parent()) {

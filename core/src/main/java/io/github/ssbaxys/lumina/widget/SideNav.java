@@ -7,6 +7,7 @@ import io.github.ssbaxys.lumina.event.KeyEvent;
 import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.event.UiEvent;
 import io.github.ssbaxys.lumina.input.Keys;
+import io.github.ssbaxys.lumina.node.TabSwitchable;
 import io.github.ssbaxys.lumina.reactive.Signal;
 import io.github.ssbaxys.lumina.reactive.Subscription;
 import io.github.ssbaxys.lumina.render.Brush;
@@ -24,7 +25,7 @@ import java.util.List;
  * Боковая навигация в современном стиле: иконка над подписью, за иконкой выбранного пункта —
  * «таблетка» акцентного цвета, которая пружиной переезжает между пунктами.
  */
-public class SideNav extends Widget<SideNav> {
+public class SideNav extends Widget<SideNav> implements TabSwitchable {
     private static final float ICON = 16f;
     private static final float ITEM_H = 44f;
     private static final float PILL_W = 34f;
@@ -61,6 +62,17 @@ public class SideNav extends Widget<SideNav> {
         items.add(new Item(label, null, icon));
         invalidateLayout();
         return this;
+    }
+
+    /** Соседняя вкладка по кругу (бамперы геймпада). */
+    @Override
+    public boolean switchTab(int delta) {
+        int n = items.size();
+        if (n <= 1 || !isEnabled()) {
+            return false;
+        }
+        selected.set(Math.floorMod(index() + delta, n));
+        return true;
     }
 
     private int index() {

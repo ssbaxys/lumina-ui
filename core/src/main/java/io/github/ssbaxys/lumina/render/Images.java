@@ -16,7 +16,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Картинки из любых файлов: PNG, JPG, GIF (первый кадр), BMP. Декодирует {@code javax.imageio} в ядре,
+ * Картинки из любых файлов: PNG, JPG, GIF, BMP. Анимированный GIF (больше одного кадра) загружается
+ * целиком и возвращается как {@link AnimatedTexture}: {@code Image} проигрывает его сам. Декодирует {@code javax.imageio} в ядре,
  * в видеопамять загружает платформа ({@link io.github.ssbaxys.lumina.platform.Platform#createTexture}).
  *
  * <pre>{@code
@@ -79,7 +80,7 @@ public final class Images {
     }
 
     /** AWT нужен ImageIO только как библиотека: без окон и без конфликта с GLFW (особенно на macOS). */
-    private static void ensureHeadless() {
+    static void ensureHeadless() {
         if (!headlessChecked) {
             synchronized (Images.class) {
                 if (System.getProperty("java.awt.headless") == null) {
@@ -112,11 +113,22 @@ public final class Images {
             return cached;
         }
         try {
-            return remember(cacheKey, upload(key, decode(bytes)));
+            return remember(cacheKey, load(key, bytes));
         } catch (IOException | RuntimeException e) {
             System.err.println("[Lumina images] " + key + ": " + e.getMessage());
             return null;
         }
+    }
+
+    /** Картинка или, если это GIF с несколькими кадрами, {@link AnimatedTexture}. */
+    private static TextureRef load(String key, byte[] bytes) throws IOException {
+        if (Gif.isGif(bytes)) {
+            Gif.Animation anim = Gif.decode(bytes);
+            if (anim.frameCount() > 1) {
+                return Gif.upload(key, anim);
+            }
+        }
+        return upload(key, decode(bytes));
     }
 
     /** Картинка с диска. Изменённый файл (по времени изменения) перечитывается. */
@@ -129,7 +141,7 @@ public final class Images {
             if (cached != null) {
                 return cached;
             }
-            return remember(cacheKey, upload(key, decode(Files.readAllBytes(abs))));
+            return remember(cacheKey, load(key, Files.readAllBytes(abs)));
         } catch (IOException | RuntimeException e) {
             System.err.println("[Lumina images] " + abs + ": " + e);
             return null;
@@ -155,6 +167,12 @@ public final class Images {
             return TextureRef.of(id);
         }
         try {
+            if (Gif.isGif(bytes)) {
+                Gif.Animation anim = Gif.decode(bytes);
+                if (anim.frameCount() > 1) {
+                    return remember(cacheKey, Gif.upload("res/" + id, anim));
+                }
+            }
             Pixels pixels = decode(bytes);
             boolean png = id.toLowerCase(Locale.ROOT).endsWith(".png");
             // PNG игра грузит сама (и перезагружает с ресурспаками): в память второй раз не кладём.

@@ -82,6 +82,21 @@ public final class Styles {
     /** Звук нажатия (кнопки, переключатели, пункты меню); не задан — стандартный щелчок игры у кнопок. */
     public static final StyleKey<UiSound> CLICK_SOUND = StyleKey.builder("click-sound", UiSound.class).register();
 
+    /**
+     * Размытие того, что под элементом («матовое стекло», CSS {@code backdrop-filter: blur(8px)} или
+     * {@code backdrop-blur: 8}), в пикселях; 0 — выключено. Рисуется под фоном элемента, поэтому фон лучше
+     * делать полупрозрачным. Бэкенд без размытия рисует матовую полупрозрачную подложку.
+     */
+    public static final StyleKey<Float> BACKDROP_BLUR = StyleKey.builder("backdrop-blur", Float.class)
+            .defaultValue(0f).animated(Interpolator.FLOAT).register();
+    /**
+     * Обрезать детей по скруглению {@link #RADIUS}, а не по прямоугольнику (у элементов, которые обрезают детей:
+     * {@code ScrollPanel}, {@code Panel.clip(true)}; у {@code Image} — точная маска вместо полос).
+     * Если бэкенд не умеет точную маску, остаётся прямоугольный клип.
+     */
+    public static final StyleKey<Boolean> CLIP_ROUNDED = StyleKey.builder("clip-rounded", Boolean.class)
+            .defaultValue(Boolean.FALSE).register();
+
     private Styles() {
     }
 

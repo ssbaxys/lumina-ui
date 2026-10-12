@@ -35,6 +35,15 @@ public abstract class AbstractCanvas implements Canvas {
 
     private boolean clipDirty;
     private boolean clipApplied;
+
+    /** Открытые скруглённые клипы: глубина save, экранный прямоугольник и радиусы, снимок фона. */
+    private static final int MAX_ROUND_CLIPS = 8;
+    private static final int ROUND_STRIDE = 8;
+    private static final int CORNER_SEGMENTS = 8;
+    private int roundCount;
+    private final int[] roundDepth = new int[MAX_ROUND_CLIPS];
+    private final float[] roundRect = new float[MAX_ROUND_CLIPS * ROUND_STRIDE];
+    private final TextureRef[] roundSnapshot = new TextureRef[MAX_ROUND_CLIPS];
     private float appliedX0;
     private float appliedY0;
     private float appliedX1;
@@ -58,9 +67,13 @@ public abstract class AbstractCanvas implements Canvas {
         clipApplied = false;
         blend = BlendMode.NORMAL;
         appliedBlend = BlendMode.NORMAL;
+        roundCount = 0;
     }
 
     protected void endFrame() {
+        while (roundCount > 0) {
+            paintRoundCorners(--roundCount);
+        }
         if (appliedBlend != BlendMode.NORMAL) {
             appliedBlend = BlendMode.NORMAL;
             applyBlendMode(BlendMode.NORMAL);
@@ -121,6 +134,9 @@ public abstract class AbstractCanvas implements Canvas {
             clipY1 = s[base + 8];
             clipDirty = true;
         }
+        while (roundCount > 0 && roundDepth[roundCount - 1] > depth) {
+            paintRoundCorners(--roundCount);
+        }
     }
 
     @Override
@@ -146,6 +162,142 @@ public abstract class AbstractCanvas implements Canvas {
         clipX1 = Math.max(x0, x1);
         clipY1 = Math.max(y0, y1);
         clipDirty = true;
+    }
+
+    /**
+     * Прямоугольный клип плюс, если бэкенд умеет снимки кадра ({@link #captureSnapshot}), точная маска:
+     * перед детьми запоминается то, что уже нарисовано, а на парном {@link #restore()} углы за скруглением
+     * закрашиваются этим снимком обратно. Без снимков (или если вложенных клипов слишком много) остаётся
+     * обычный прямоугольный клип.
+     */
+    @Override
+    public final void clipRoundRect(float x, float y, float w, float h, Radii radii) {
+        clipRect(x, y, w, h);
+        if (radii == null || radii.isZero() || w <= 0f || h <= 0f || roundCount >= MAX_ROUND_CLIPS
+                || roundCount >= snapshotSlots()) {
+            return;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        float x1 = x0 + w * sx;
+        float y1 = y0 + h * sy;
+        if (culled(x0, y0, x1, y1)) {
+            return;
+        }
+        TextureRef snap = captureSnapshot(roundCount);
+        if (snap == null) {
+            return;
+        }
+        float k = Math.min(sx, sy);
+        float max = Math.min(x1 - x0, y1 - y0) * 0.5f;
+        int i = roundCount++;
+        int b = i * ROUND_STRIDE;
+        roundDepth[i] = depth;
+        roundRect[b] = x0;
+        roundRect[b + 1] = y0;
+        roundRect[b + 2] = x1;
+        roundRect[b + 3] = y1;
+        roundRect[b + 4] = Math.min(radii.topLeft() * k, max);
+        roundRect[b + 5] = Math.min(radii.topRight() * k, max);
+        roundRect[b + 6] = Math.min(radii.bottomRight() * k, max);
+        roundRect[b + 7] = Math.min(radii.bottomLeft() * k, max);
+        roundSnapshot[i] = snap;
+    }
+
+    @Override
+    public final boolean supportsRoundClip() {
+        return snapshotSlots() > 0;
+    }
+
+    /** Закрасить углы за скруглением клипа {@code i} снимком фона, сделанным до детей. */
+    private void paintRoundCorners(int i) {
+        TextureRef snap = roundSnapshot[i];
+        roundSnapshot[i] = null;
+        if (snap == null || viewWidth <= 0f || viewHeight <= 0f) {
+            return;
+        }
+        int b = i * ROUND_STRIDE;
+        float x0 = roundRect[b];
+        float y0 = roundRect[b + 1];
+        float x1 = roundRect[b + 2];
+        float y1 = roundRect[b + 3];
+        BlendMode saved = blend;
+        blend = BlendMode.NORMAL;
+        // Углы против часовой: центр дуги, угол (точка вне фигуры), начальный угол дуги.
+        cornerFan(snap, x0, y0, roundRect[b + 4], 1f, 1f, 180f);
+        cornerFan(snap, x1, y0, roundRect[b + 5], -1f, 1f, 270f);
+        cornerFan(snap, x1, y1, roundRect[b + 6], -1f, -1f, 0f);
+        cornerFan(snap, x0, y1, roundRect[b + 7], 1f, -1f, 90f);
+        blend = saved;
+    }
+
+    /**
+     * Веер треугольников между углом прямоугольника и дугой скругления: область, которая должна остаться
+     * нетронутой. {@code dx, dy} — направление от угла внутрь фигуры.
+     */
+    private void cornerFan(TextureRef snap, float px, float py, float r, float dx, float dy, float startDeg) {
+        if (r <= 0.5f || culled(Math.min(px, px + dx * r), Math.min(py, py + dy * r),
+                Math.max(px, px + dx * r), Math.max(py, py + dy * r))) {
+            return;
+        }
+        syncClip();
+        float cx = px + dx * r;
+        float cy = py + dy * r;
+        float prevX = cx + r * (float) Math.cos(Math.toRadians(startDeg));
+        float prevY = cy + r * (float) Math.sin(Math.toRadians(startDeg));
+        for (int k = 1; k <= CORNER_SEGMENTS; k++) {
+            double a = Math.toRadians(startDeg + 90f * k / CORNER_SEGMENTS);
+            float nx = cx + r * (float) Math.cos(a);
+            float ny = cy + r * (float) Math.sin(a);
+            snapshotTriangle(snap, px, py, prevX, prevY, nx, ny);
+            prevX = nx;
+            prevY = ny;
+        }
+    }
+
+    /** Треугольник снимка в экранных координатах (UV = положение на экране). */
+    private void snapshotTriangle(TextureRef snap, float ax, float ay, float bx, float by, float cx, float cy) {
+        float iw = 1f / viewWidth;
+        float ih = 1f / viewHeight;
+        float cross = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+        if (cross <= 0f) {
+            drawTextureQuadImpl(snap, ax, ay, bx, by, cx, cy, cx, cy,
+                    ax * iw, ay * ih, bx * iw, by * ih, cx * iw, cy * ih, cx * iw, cy * ih, Color.WHITE);
+        } else {
+            drawTextureQuadImpl(snap, ax, ay, cx, cy, bx, by, bx, by,
+                    ax * iw, ay * ih, cx * iw, cy * ih, bx * iw, by * ih, bx * iw, by * ih, Color.WHITE);
+        }
+    }
+
+    /**
+     * Настоящее размытие, если бэкенд его умеет ({@link #captureBackdrop}): размытая копия кадра рисуется
+     * в фигуре с экранными UV. Иначе — матовая подложка {@link Canvas#frostedFallback}.
+     */
+    @Override
+    public final void drawBackdropBlur(float x, float y, float w, float h, Radii radii, float radius) {
+        if (radius <= 0f || w <= 0f || h <= 0f || opacity <= 0f) {
+            return;
+        }
+        float x0 = tx + x * sx;
+        float y0 = ty + y * sy;
+        float x1 = x0 + w * sx;
+        float y1 = y0 + h * sy;
+        if (culled(x0, y0, x1, y1) || viewWidth <= 0f || viewHeight <= 0f) {
+            return;
+        }
+        syncClip();
+        TextureRef blurred = captureBackdrop(radius * Math.min(sx, sy));
+        if (blurred == null) {
+            Canvas.frostedFallback(this, x, y, w, h, radii, radius);
+            return;
+        }
+        drawTextureRounded(blurred, x, y, w, h, x0 / viewWidth, y0 / viewHeight, x1 / viewWidth, y1 / viewHeight,
+                radii, Color.WHITE);
+    }
+
+    @Override
+    public final boolean supportsBackdropBlur() {
+        return backdropBlurAvailable();
     }
 
     @Override
@@ -654,6 +806,38 @@ public abstract class AbstractCanvas implements Canvas {
     /** Сущность в экранном квадрате (см. {@link Canvas#drawEntity}); по умолчанию ничего не рисует. */
     protected void drawEntityImpl(String entityTypeId, float x, float y, float size, float yaw, float pitch,
                                   EntityOptions options) {
+    }
+
+    // ---------------------------------------------------------------- снимки кадра (размытие, маски)
+
+    /**
+     * Размытая копия всего, что уже нарисовано в кадре, или {@code null}, если бэкенд не умеет (тогда
+     * рисуется матовая подложка). UV текстуры: (0, 0) — левый верхний угол экрана, (1, 1) — правый нижний.
+     * Бэкенд сам дорисовывает накопленное перед снимком и не должен оставлять включённым свой клип.
+     *
+     * @param radius радиус размытия в экранных пикселях
+     */
+    protected TextureRef captureBackdrop(float radius) {
+        return null;
+    }
+
+    /** Есть ли у бэкенда настоящее размытие (для {@link #supportsBackdropBlur()}). */
+    protected boolean backdropBlurAvailable() {
+        return false;
+    }
+
+    /**
+     * Неразмытая копия кадра в слот {@code slot} (0..{@link #snapshotSlots()}−1) для точной маски
+     * {@link #clipRoundRect}; UV как у {@link #captureBackdrop}. Текстура рисуется непрозрачной.
+     * {@code null} — не вышло (маска станет прямоугольной).
+     */
+    protected TextureRef captureSnapshot(int slot) {
+        return null;
+    }
+
+    /** Сколько вложенных скруглённых клипов бэкенд может держать одновременно; 0 — снимков нет. */
+    protected int snapshotSlots() {
+        return 0;
     }
 
     /** Включить отсечение экранным прямоугольником (заменяет предыдущее). */

@@ -149,6 +149,25 @@ public interface Platform {
         return 0;
     }
 
+    // ================================================================ карта и геймпад
+
+    /**
+     * Карта вокруг игрока для {@code MiniMap}: цвета верхних блоков (как на ванильной карте) радиусом не меньше
+     * {@code radius} блоков, или {@code null}, если мира нет. Вызывается каждый кадр: загрузчик кэширует сетку
+     * и дочитывает её понемногу ({@code map.MapGridSampler}).
+     */
+    default io.github.ssbaxys.lumina.map.MapSample sampleMap(int radius) {
+        return null;
+    }
+
+    /**
+     * Состояние первого подключённого геймпада или {@code null}, если его нет (по умолчанию — нет).
+     * Корень опрашивает его каждый кадр для навигации ({@code GamepadNavigator}).
+     */
+    default io.github.ssbaxys.lumina.input.Gamepad.State pollGamepad() {
+        return null;
+    }
+
     // ================================================================ доступность
 
     /**

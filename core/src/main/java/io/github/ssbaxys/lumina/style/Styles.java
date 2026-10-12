@@ -5,6 +5,7 @@ import io.github.ssbaxys.lumina.geom.Insets;
 import io.github.ssbaxys.lumina.render.BlendMode;
 import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Color;
+import io.github.ssbaxys.lumina.render.NineSlice;
 import io.github.ssbaxys.lumina.render.Outline;
 import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
@@ -46,6 +47,8 @@ public final class Styles {
     /** Внешняя обводка с отступом (кольцо фокуса), не влияет на раскладку. */
     public static final StyleKey<Outline> OUTLINE = StyleKey.builder("outline", Outline.class)
             .defaultValue(Outline.NONE).animated(Interpolator.OUTLINE).register();
+    /** Фон из текстуры «9 частей» (рамка окна, свиток); рисуется над {@link #BACKGROUND}. */
+    public static final StyleKey<NineSlice> NINE_SLICE = StyleKey.builder("nine-slice", NineSlice.class).register();
     /** Заливка поверх содержимого и детей в границах элемента: тонировка, блик, затемнение. */
     public static final StyleKey<Brush> FOREGROUND = StyleKey.builder("foreground", Brush.class)
             .animated(Interpolator.BRUSH).register();

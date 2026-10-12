@@ -8,9 +8,11 @@ import io.github.ssbaxys.lumina.render.Color;
 import io.github.ssbaxys.lumina.render.ColorSpace;
 import io.github.ssbaxys.lumina.render.ColorStops;
 import io.github.ssbaxys.lumina.render.Gradients;
+import io.github.ssbaxys.lumina.render.NineSlice;
 import io.github.ssbaxys.lumina.render.Outline;
 import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.render.Shadow;
+import io.github.ssbaxys.lumina.render.TextureRef;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -160,6 +162,38 @@ public final class CssValues {
         } catch (RuntimeException e) {
             return false;
         }
+    }
+
+    /**
+     * {@code url(мод:textures/gui/frame.png) 248 166 4} — картинка, её размер и рамка (1 или 4 числа:
+     * верх, право, низ, лево); после {@code /} — масштаб: {@code ... 4 / 2}.
+     */
+    public static NineSlice nineSlice(String s) {
+        String v = s.trim();
+        float scale = 1f;
+        int slash = v.lastIndexOf('/');
+        int close = v.lastIndexOf(')');
+        if (slash > close) {
+            scale = number(v.substring(slash + 1));
+            v = v.substring(0, slash).trim();
+        }
+        List<String> p = split(v, ' ');
+        if (p.size() != 4 && p.size() != 7) {
+            throw new IllegalArgumentException("nine-slice: url(texture) width height border...");
+        }
+        String tex = p.get(0);
+        if (tex.startsWith("url(")) {
+            tex = tex.substring(4, tex.length() - 1);
+        }
+        tex = tex.replace("\"", "").replace("'", "").trim();
+        int w = (int) length(p.get(1));
+        int h = (int) length(p.get(2));
+        int top = (int) length(p.get(3));
+        int right = p.size() == 7 ? (int) length(p.get(4)) : top;
+        int bottom = p.size() == 7 ? (int) length(p.get(5)) : top;
+        int left = p.size() == 7 ? (int) length(p.get(6)) : top;
+        return new NineSlice(TextureRef.of(tex), w, h, left, top, right, bottom,
+                scale, 0xFFFFFFFF);
     }
 
     /** Аргументы функции "name(a, b, c)". */

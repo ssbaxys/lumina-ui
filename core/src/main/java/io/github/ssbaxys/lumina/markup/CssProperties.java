@@ -54,6 +54,7 @@ public final class CssProperties {
         register("glow", (v, o) -> o.put(Styles.GLOW, CssValues.glow(v)));
         register("outline", (v, o) -> o.put(Styles.OUTLINE, CssValues.outline(v)));
         register("foreground", (v, o) -> o.put(Styles.FOREGROUND, CssValues.brush(v)));
+        register("nine-slice", (v, o) -> o.put(Styles.NINE_SLICE, CssValues.nineSlice(v)));
         register("padding", (v, o) -> o.put(Styles.PADDING, CssValues.insets(v)));
         register("transform", CssProperties::transform);
         register("scale", (v, o) -> transform("scale(" + v.trim().replace(' ', ',') + ")", o));

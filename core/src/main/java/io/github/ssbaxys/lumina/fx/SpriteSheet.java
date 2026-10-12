@@ -105,6 +105,29 @@ public final class SpriteSheet {
         }
     }
 
+    /**
+     * Кадр на произвольном выпуклом четырёхугольнике: вершины — левый верхний, левый нижний,
+     * правый нижний и правый верхний углы кадра (грани 3D-модели, изометрия).
+     */
+    public void drawQuad(Canvas canvas, int frame, float x0, float y0, float x1, float y1,
+                         float x2, float y2, float x3, float y3, int tint) {
+        int n = frames();
+        int f = Math.floorMod(frame, n);
+        TextureRef tex;
+        float v0;
+        float v1;
+        if (textures.length == 1) {
+            tex = textures[0];
+            v0 = (float) f / n;
+            v1 = (f + 1f) / n;
+        } else {
+            tex = textures[f];
+            v0 = 0f;
+            v1 = 1f;
+        }
+        canvas.drawTextureQuad(tex, x0, y0, x1, y1, x2, y2, x3, y3, 0f, v0, 0f, v1, 1f, v1, 1f, v0, tint);
+    }
+
     /** То же, но отражённое по горизонтали (задняя плоскость модели, видимая с обратной стороны). */
     public void drawCroppedMirrored(Canvas canvas, int frame, float x, float y, float w, float h,
                                     float vFrom, float vTo, int tint) {

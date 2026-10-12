@@ -62,6 +62,23 @@ final class McPlatform implements Platform {
         }
     }
 
+    /** Время суток текущего мира (0..24000) для расписания тем; без мира — -1 (ядро возьмёт системные часы). */
+    @Override
+    public float dayTime() {
+        var level = Minecraft.getInstance().level;
+        return level == null ? -1f : (float) (level.getDayTime() % 24000L);
+    }
+
+    /** Биом под игроком ("minecraft:plains") или null, если мира нет. */
+    @Override
+    public String biomeId() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) {
+            return null;
+        }
+        return mc.level.getBiome(mc.player.blockPosition()).unwrapKey().map(k -> k.location().toString()).orElse(null);
+    }
+
     /** Через менеджер ресурсов игры: учитываются ресурспаки и их перезагрузка (F3+T). */
     @Override
     public byte[] readResourceBytes(String resourceId) {

@@ -2,6 +2,7 @@ package io.github.ssbaxys.lumina.widget;
 
 import io.github.ssbaxys.lumina.anim.Animation;
 import io.github.ssbaxys.lumina.node.UiRoot;
+import io.github.ssbaxys.lumina.render.BlendMode;
 import io.github.ssbaxys.lumina.render.Brush;
 import io.github.ssbaxys.lumina.render.Canvas;
 import io.github.ssbaxys.lumina.render.Color;
@@ -11,8 +12,9 @@ import io.github.ssbaxys.lumina.render.Radii;
 import java.util.Random;
 
 /**
- * Живые обои под интерфейсом: северное сияние, звёздное небо, волны, переливающийся градиент
- * или ретро-сетка. Мышь не ловит; с {@link #parallax} слои слегка смещаются за курсором.
+ * Живые обои под интерфейсом: северное сияние, звёздное небо, волны, переливающийся градиент,
+ * ретро-сетка или парящие частицы (искры, снег, пыль), которые разлетаются от курсора.
+ * Мышь не ловит; с {@link #parallax} слои слегка смещаются за курсором.
  *
  * <pre>{@code
  * Panel screen = Panel.box(new StackLayout(Align.START, Align.START)).fill()
@@ -30,8 +32,23 @@ public class Backdrop extends Widget<Backdrop> implements Animation {
         /** Медленно вращающийся конический градиент. */
         FLOW,
         /** Ретро-сетка с солнцем, бегущая к зрителю. */
-        GRID
+        GRID,
+        /** Парящие частицы ({@link ParticleStyle}: искры, снег, пыль), разлетаются от курсора. */
+        PARTICLES
     }
+
+    /** Вид частиц для {@link Kind#PARTICLES}. */
+    public enum ParticleStyle {
+        /** Тёплые искры поднимаются вверх и мерцают (аддитивное смешивание). */
+        SPARKS,
+        /** Снежинки падают и покачиваются. */
+        SNOW,
+        /** Пылинки медленно плавают во все стороны. */
+        DUST
+    }
+
+    /** Полей на частицу: x, y, vx, vy, базовые vx, vy, размер, фаза, жизнь. */
+    private static final int P_STRIDE = 9;
 
     private static final int STAR_COUNT = 140;
 
@@ -49,6 +66,14 @@ public class Backdrop extends Widget<Backdrop> implements Animation {
     private float shootX;
     private float shootY;
     private final Random random = new Random(7L);
+    private ParticleStyle particleStyle = ParticleStyle.SNOW;
+    private boolean customColors;
+    private int particleCount = 90;
+    private float repelRadius = 60f;
+    private float repelForce = 900f;
+    private float[] particles = new float[0];
+    private float fieldW;
+    private float fieldH;
 
     public Backdrop(Kind kind) {
         super("backdrop");
@@ -74,6 +99,15 @@ public class Backdrop extends Widget<Backdrop> implements Animation {
             case WAVES -> new int[]{0xFF2F6FD8, 0xFF3FA7E0, 0xFF6FD6F0};
             case FLOW -> new int[]{0xFF6A5AE0, 0xFFE05A9C, 0xFFF0A84A, 0xFF4AC6F0};
             case GRID -> new int[]{0xFFFF4FD8, 0xFFFFC14F, 0xFF4FE3FF};
+            case PARTICLES -> particleColors(ParticleStyle.SNOW);
+        };
+    }
+
+    private static int[] particleColors(ParticleStyle style) {
+        return switch (style) {
+            case SPARKS -> new int[]{0xFFFFB347, 0xFFFF7A3D, 0xFFFFE08A};
+            case SNOW -> new int[]{0xFFFFFFFF, 0xFFDDE8FF, 0xFFBFD4FF};
+            case DUST -> new int[]{0xFFE8D9B8, 0xFFBFAF92, 0xFFFFF2D6};
         };
     }
 
@@ -85,8 +119,47 @@ public class Backdrop extends Widget<Backdrop> implements Animation {
     public Backdrop colors(int... colors) {
         if (colors.length > 0) {
             this.colors = colors.clone();
+            customColors = true;
         }
         return this;
+    }
+
+    /** Вид частиц ({@link Kind#PARTICLES}); цвета, если свои не заданы, подбираются под вид. */
+    public Backdrop particles(ParticleStyle style) {
+        this.particleStyle = style == null ? ParticleStyle.SNOW : style;
+        if (!customColors) {
+            this.colors = particleColors(particleStyle);
+        }
+        particles = new float[0];
+        return this;
+    }
+
+    public ParticleStyle particleStyle() {
+        return particleStyle;
+    }
+
+    /** Сколько частиц (1–1000). */
+    public Backdrop particleCount(int count) {
+        this.particleCount = Math.max(1, Math.min(1000, count));
+        particles = new float[0];
+        return this;
+    }
+
+    public int particleCount() {
+        return particleCount;
+    }
+
+    /** Отталкивание от курсора: радиус в пикселях (0 — выключено) и сила (ускорение у самого курсора). */
+    public Backdrop repel(float radius, float force) {
+        this.repelRadius = Math.max(0f, radius);
+        this.repelForce = Math.max(0f, force);
+        return this;
+    }
+
+    /** Положение частицы {@code i} в координатах фона ({x, y}) или {@code null}; для тестов и своих эффектов. */
+    public float[] particlePosition(int i) {
+        int b = i * P_STRIDE;
+        return b + 1 < particles.length ? new float[]{particles[b], particles[b + 1]} : null;
     }
 
     /** Цвет фона под эффектом. */
@@ -128,6 +201,9 @@ public class Backdrop extends Widget<Backdrop> implements Animation {
             camX += (tx - camX) * k;
             camY += (ty - camY) * k;
         }
+        if (kind == Kind.PARTICLES) {
+            tickParticles(dt * speed, r);
+        }
         if (kind == Kind.STARS) {
             if (shootT < 0f && random.nextFloat() < dt * 0.25f) {
                 shootT = 0f;
@@ -161,6 +237,170 @@ public class Backdrop extends Widget<Backdrop> implements Animation {
             case WAVES -> paintWaves(canvas, w, h);
             case FLOW -> paintFlow(canvas, w, h);
             case GRID -> paintGrid(canvas, w, h);
+            case PARTICLES -> paintParticles(canvas, w, h);
+        }
+    }
+
+    // ---------------------------------------------------------------- частицы
+
+    private void spawn(int i, boolean anywhere) {
+        float w = fieldW;
+        float h = fieldH;
+        int b = i * P_STRIDE;
+        float depth = 0.3f + 0.7f * random.nextFloat();
+        float x = random.nextFloat() * w;
+        float y;
+        float bvx;
+        float bvy;
+        switch (particleStyle) {
+            case SPARKS -> {
+                y = anywhere ? random.nextFloat() * h : h + 4f;
+                bvx = (random.nextFloat() - 0.5f) * 10f;
+                bvy = -(14f + 34f * depth);
+            }
+            case SNOW -> {
+                y = anywhere ? random.nextFloat() * h : -6f;
+                bvx = (random.nextFloat() - 0.5f) * 6f;
+                bvy = 9f + 24f * depth;
+            }
+            default -> {
+                y = random.nextFloat() * h;
+                double a = random.nextFloat() * Math.PI * 2;
+                bvx = (float) Math.cos(a) * (3f + 6f * depth);
+                bvy = (float) Math.sin(a) * (3f + 6f * depth);
+            }
+        }
+        particles[b] = x;
+        particles[b + 1] = y;
+        particles[b + 2] = bvx;
+        particles[b + 3] = bvy;
+        particles[b + 4] = bvx;
+        particles[b + 5] = bvy;
+        particles[b + 6] = particleStyle == ParticleStyle.SNOW ? 1f + 2.6f * depth : 0.8f + 1.6f * depth;
+        particles[b + 7] = random.nextFloat() * 6.283f;
+        particles[b + 8] = anywhere ? random.nextFloat() : 0f;
+    }
+
+    private void tickParticles(float dt, UiRoot r) {
+        float w = width();
+        float h = height();
+        if (w <= 0f || h <= 0f) {
+            return;
+        }
+        if (particles.length != particleCount * P_STRIDE || Math.abs(w - fieldW) > 1f || Math.abs(h - fieldH) > 1f) {
+            fieldW = w;
+            fieldH = h;
+            particles = new float[particleCount * P_STRIDE];
+            for (int i = 0; i < particleCount; i++) {
+                spawn(i, true);
+            }
+        }
+        float mx = Float.NaN;
+        float my = Float.NaN;
+        if (r != null && r.mouseX() >= 0f && repelRadius > 0f) {
+            mx = r.mouseX() - screenX();
+            my = r.mouseY() - screenY();
+        }
+        float settle = 1f - (float) Math.exp(-dt * 1.6f);
+        float rr = repelRadius * repelRadius;
+        for (int i = 0; i < particleCount; i++) {
+            int b = i * P_STRIDE;
+            float x = particles[b];
+            float y = particles[b + 1];
+            float vx = particles[b + 2];
+            float vy = particles[b + 3];
+            if (!Float.isNaN(mx)) {
+                float dx = x - mx;
+                float dy = y - my;
+                float d2 = dx * dx + dy * dy;
+                if (d2 < rr && d2 > 0.0001f) {
+                    float d = (float) Math.sqrt(d2);
+                    float f = 1f - d / repelRadius;
+                    float a = repelForce * f * f * dt;
+                    vx += dx / d * a;
+                    vy += dy / d * a;
+                }
+            }
+            // плавно возвращаемся к своей скорости
+            vx += (particles[b + 4] - vx) * settle;
+            vy += (particles[b + 5] - vy) * settle;
+            float sway = particleStyle == ParticleStyle.SNOW
+                    ? (float) Math.sin(time * 1.3f + particles[b + 7]) * 8f
+                    : particleStyle == ParticleStyle.SPARKS ? (float) Math.sin(time * 3f + particles[b + 7]) * 4f : 0f;
+            x += (vx + sway) * dt;
+            y += vy * dt;
+            particles[b + 2] = vx;
+            particles[b + 3] = vy;
+            particles[b + 8] += dt * (particleStyle == ParticleStyle.SPARKS ? 0.22f : 0.05f);
+            boolean out = y > h + 8f || y < -8f;
+            if (particleStyle == ParticleStyle.SPARKS && particles[b + 8] >= 1f) {
+                out = true;
+            }
+            if (out && particleStyle != ParticleStyle.DUST) {
+                spawn(i, false);
+                continue;
+            }
+            // по горизонтали (а пыль и по вертикали) частицы уходят за край и возвращаются с другой стороны
+            if (x < -8f) {
+                x += w + 16f;
+            } else if (x > w + 8f) {
+                x -= w + 16f;
+            }
+            if (particleStyle == ParticleStyle.DUST) {
+                if (y < -8f) {
+                    y += h + 16f;
+                } else if (y > h + 8f) {
+                    y -= h + 16f;
+                }
+                if (particles[b + 8] >= 1f) {
+                    particles[b + 8] -= 1f;
+                }
+            }
+            particles[b] = x;
+            particles[b + 1] = y;
+        }
+    }
+
+    private void paintParticles(Canvas canvas, float w, float h) {
+        canvas.fillRect(0, 0, w, h, Brush.vertical(Color.withAlpha(color(1), 0x00), Color.withAlpha(color(1), 0x1C)));
+        if (particles.length < particleCount * P_STRIDE) {
+            return;
+        }
+        boolean sparks = particleStyle == ParticleStyle.SPARKS;
+        if (sparks) {
+            canvas.save();
+            canvas.setBlendMode(BlendMode.ADD);
+        }
+        for (int i = 0; i < particleCount; i++) {
+            int b = i * P_STRIDE;
+            float x = particles[b] - camX * parallax * 0.5f;
+            float y = particles[b + 1] - camY * parallax * 0.5f;
+            float size = particles[b + 6];
+            float life = particles[b + 8];
+            float alpha;
+            if (sparks) {
+                float flicker = 0.6f + 0.4f * (float) Math.sin(time * 9f + particles[b + 7] * 3f);
+                alpha = (float) Math.sin(Math.min(1f, life) * Math.PI) * flicker;
+            } else if (particleStyle == ParticleStyle.DUST) {
+                alpha = 0.25f + 0.35f * (0.5f + 0.5f * (float) Math.sin(life * 6.283f + particles[b + 7]));
+            } else {
+                alpha = 0.55f + 0.45f * (size / 3.6f);
+            }
+            int c = Color.withAlpha(color(i), (int) (255 * Math.max(0f, Math.min(1f, alpha))));
+            if (Color.alpha(c) < 4) {
+                continue;
+            }
+            if (sparks) {
+                canvas.fillRect(x - size * 1.5f, y - size * 1.5f, size * 3f, size * 3f, Color.mulAlpha(c, 0.18f));
+                canvas.fillRect(x - size / 2f, y - size / 2f, size, size, c);
+            } else if (size > 2.2f) {
+                canvas.fillCircle(x, y, size / 2f, Brush.solid(c));
+            } else {
+                canvas.fillRect(x - size / 2f, y - size / 2f, size, size, c);
+            }
+        }
+        if (sparks) {
+            canvas.restore();
         }
     }
 

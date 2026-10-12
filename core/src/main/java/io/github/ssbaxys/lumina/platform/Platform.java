@@ -23,6 +23,12 @@ public interface Platform {
      * игры, поэтому подхватываются ресурспаки (и их перезагрузка по F3+T).
      */
     default String readResource(String id) {
+        byte[] bytes = readResourceBytes(id);
+        return bytes == null ? null : new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /** Байты ресурса "мод:путь" или {@code null} (текстуры, звуки, данные). */
+    default byte[] readResourceBytes(String id) {
         int colon = id.indexOf(':');
         String path = colon < 0 ? "assets/minecraft/" + id : "assets/" + id.substring(0, colon) + "/" + id.substring(colon + 1);
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -30,7 +36,7 @@ public interface Platform {
             cl = Platform.class.getClassLoader();
         }
         try (java.io.InputStream in = cl.getResourceAsStream(path)) {
-            return in == null ? null : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            return in == null ? null : in.readAllBytes();
         } catch (java.io.IOException e) {
             return null;
         }

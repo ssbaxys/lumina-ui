@@ -12,7 +12,6 @@ import net.minecraft.sounds.SoundEvents;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 final class McPlatform implements Platform {
@@ -59,17 +58,17 @@ final class McPlatform implements Platform {
 
     /** Через менеджер ресурсов игры: учитываются ресурспаки и их перезагрузка (F3+T). */
     @Override
-    public String readResource(String resourceId) {
+    public byte[] readResourceBytes(String resourceId) {
         ResourceLocation id = ResourceLocation.tryParse(resourceId);
         if (id == null) {
             return null;
         }
         Optional<Resource> resource = Minecraft.getInstance().getResourceManager().getResource(id);
         if (resource.isEmpty()) {
-            return Platform.super.readResource(resourceId);
+            return Platform.super.readResourceBytes(resourceId);
         }
         try (InputStream in = resource.get().open()) {
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            return in.readAllBytes();
         } catch (IOException e) {
             return null;
         }

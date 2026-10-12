@@ -222,4 +222,17 @@ class MotionThemeTest {
         assertEquals(0, p.count());
         assertEquals(0, q.count(), "attracted particle reaches the target and disappears");
     }
+
+    @Test
+    void animatedStripReadsFrameCountFromPng() throws java.io.IOException {
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(16, 512, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(img, "png", out);
+        int[] size = io.github.ssbaxys.lumina.fx.SpriteSheet.pngSize(out.toByteArray());
+        assertEquals(16, size[0]);
+        assertEquals(512, size[1]);
+        assertEquals(null, io.github.ssbaxys.lumina.fx.SpriteSheet.pngSize(new byte[]{1, 2, 3}));
+        // без ресурса — запасное число кадров
+        assertEquals(32, io.github.ssbaxys.lumina.fx.VanillaFx.FIRE_0.frameCount());
+    }
 }

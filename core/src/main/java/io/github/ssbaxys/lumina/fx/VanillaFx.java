@@ -20,10 +20,10 @@ import java.util.Random;
  * и автоматически подхватывает ресурспаки игрока.
  */
 public final class VanillaFx {
-    public static final SpriteSheet FIRE_0 = SpriteSheet.strip(TextureRef.vanilla("block/fire_0"), 32, 20f);
-    public static final SpriteSheet FIRE_1 = SpriteSheet.strip(TextureRef.vanilla("block/fire_1"), 32, 20f);
-    public static final SpriteSheet SOUL_FIRE_0 = SpriteSheet.strip(TextureRef.vanilla("block/soul_fire_0"), 32, 20f);
-    public static final SpriteSheet SOUL_FIRE_1 = SpriteSheet.strip(TextureRef.vanilla("block/soul_fire_1"), 32, 20f);
+    public static final SpriteSheet FIRE_0 = SpriteSheet.animated(TextureRef.vanilla("block/fire_0"), 20f, 32);
+    public static final SpriteSheet FIRE_1 = SpriteSheet.animated(TextureRef.vanilla("block/fire_1"), 20f, 32);
+    public static final SpriteSheet SOUL_FIRE_0 = SpriteSheet.animated(TextureRef.vanilla("block/soul_fire_0"), 20f, 32);
+    public static final SpriteSheet SOUL_FIRE_1 = SpriteSheet.animated(TextureRef.vanilla("block/soul_fire_1"), 20f, 32);
     public static final SpriteSheet EXPLOSION = numbered("particle/explosion_", 16, 40f);
     public static final SpriteSheet BIG_SMOKE = numbered("particle/big_smoke_", 12, 12f);
     /** Обычный дым/пыль: в игре кадры идут от крупного к мелкому, поэтому номера обратные. */
@@ -66,6 +66,7 @@ public final class VanillaFx {
     public static final String SOUND_EXPLODE = "minecraft:entity.generic.explode";
     public static final String SOUND_FUSE = "minecraft:entity.tnt.primed";
     public static final String SOUND_FIRE = "minecraft:item.flintandsteel.use";
+    public static final String SOUND_FIRE_AMBIENT = "minecraft:block.fire.ambient";
     public static final String SOUND_LEVEL_UP = "minecraft:entity.player.levelup";
     public static final String SOUND_ENCHANT = "minecraft:block.enchantment_table.use";
     public static final String SOUND_TOTEM = "minecraft:item.totem.use";
@@ -128,14 +129,20 @@ public final class VanillaFx {
 
     /** Огонь как у горящего блока, в прямоугольнике (x, y, w, h). Гаснет плавно по {@link Effect#stop()}. */
     public static Fire fire(float x, float y, float w, float h) {
-        return new Fire(x, y, w, h, FIRE_0, FIRE_1, FLAME);
+        return new Fire(x, y, w, h, FIRE_0, FIRE_0);
     }
 
     /** Голубой огонь душ. */
     public static Fire soulFire(float x, float y, float w, float h) {
-        return new Fire(x, y, w, h, SOUL_FIRE_0, SOUL_FIRE_1, SOUL_FLAME);
+        return new Fire(x, y, w, h, SOUL_FIRE_0, SOUL_FIRE_0);
     }
 
+    /**
+     * Огонь горящего блока, как его видно сбоку: обе плоскости модели {@code fire_floor} с одной текстурой
+     * (задняя зеркальная), непрозрачные, полной яркости; анимация 20 кадров/с, как у ванильного атласа.
+     * Над огнём изредка поднимается тёмный {@code large_smoke}, иногда трещит {@code block.fire.ambient}.
+     * Ни свечения, ни полупрозрачных слоёв: в игре их нет.
+     */
     public static final class Fire extends Effect {
         private final float x;
         private final float y;
@@ -144,59 +151,60 @@ public final class VanillaFx {
         private final SpriteSheet front;
         private final SpriteSheet back;
         private final Particles smoke;
-        private final Particles flames;
         private float time;
         private float height;
+        private float nextAmbient = 1.5f;
 
-        Fire(float x, float y, float w, float h, SpriteSheet front, SpriteSheet back, SpriteSheet flame) {
+        Fire(float x, float y, float w, float h, SpriteSheet front, SpriteSheet back) {
             this.x = x;
             this.y = y;
             this.w = w;
             this.h = h;
             this.front = front;
             this.back = back;
-            this.smoke = new Particles(BIG_SMOKE).gravity(-30f).drag(0.6f).growth(1.6f).animateByLife(true)
-                    .tint(0xD0FFFFFF, 0x40FFFFFF);
-            this.flames = new Particles(flame).gravity(-60f).drag(0.4f).growth(0.3f).blend(BlendMode.ADD);
+            // LargeSmokeParticle: серый 0..0.3, медленно поднимается и растёт, кадры big_smoke по возрасту.
+            this.smoke = new Particles(BIG_SMOKE).gravity(-14f).drag(0.5f).growth(0.6f).animateByLife(true)
+                    .tint(0xF0FFFFFF, 0x00FFFFFF);
             sound(SOUND_FIRE, 1f, 1f);
         }
 
         @Override
         public boolean tick(float dt, FxLayer layer) {
             time += dt;
-            // Разгорается за ~0.3 с, гаснет за ~0.5 с.
+            // Ванильный огонь появляется сразу; здесь — за ~0.1 с, гаснет за ~0.15 с.
             float target = isStopped() ? 0f : 1f;
-            height += (target - height) * Math.min(1f, dt * (isStopped() ? 4f : 7f));
+            height += (target - height) * Math.min(1f, dt * 20f);
             Random r = layer.random();
             if (!isStopped()) {
-                if (r.nextFloat() < dt * 6f * (w / 32f)) {
-                    smoke.emit(x + r.nextFloat() * w, y + h * (1f - height) + 4f, (r.nextFloat() - 0.5f) * 8f,
-                            -12f - r.nextFloat() * 10f, 1.2f + r.nextFloat(), w * 0.35f + r.nextFloat() * 6f);
+                float block = Math.max(1f, w / 16f);
+                if (r.nextFloat() < dt * 1.6f * block) {
+                    int g = (int) (r.nextFloat() * 0.3f * 255f);
+                    smoke.emit(x + r.nextFloat() * w, y + h * (0.3f + 0.4f * r.nextFloat()),
+                            (r.nextFloat() - 0.5f) * 4f, -10f - r.nextFloat() * 8f,
+                            1.4f + r.nextFloat() * 1.2f, h * (0.25f + 0.2f * r.nextFloat()),
+                            0xFF000000 | g << 16 | g << 8 | g);
                 }
-                if (r.nextFloat() < dt * 10f * (w / 32f)) {
-                    flames.emit(x + w * (0.2f + 0.6f * r.nextFloat()), y + h * (1f - 0.5f * height),
-                            (r.nextFloat() - 0.5f) * 10f, -20f - r.nextFloat() * 20f, 0.5f + r.nextFloat() * 0.4f,
-                            w * 0.16f);
+                nextAmbient -= dt;
+                if (nextAmbient <= 0f) {
+                    nextAmbient = 2f + r.nextFloat() * 4f;
+                    sound(SOUND_FIRE_AMBIENT, 0.6f + r.nextFloat() * 0.4f, 0.7f + r.nextFloat() * 0.3f);
                 }
             }
             smoke.tick(dt, layer);
-            flames.tick(dt, layer);
-            return height > 0.01f || smoke.count() > 0 || flames.count() > 0;
+            return height > 0.01f || smoke.count() > 0;
         }
 
         @Override
         public void render(Canvas canvas) {
-            smoke.render(canvas);
             float vis = Math.max(0f, Math.min(1f, height));
             if (vis > 0.01f) {
                 float hh = h * vis;
+                float top = y + h - hh;
                 int frame = front.frameAt(time);
-                // Как у блока: две плоскости огня с разными кадрами, задняя чуть выше и шире.
-                back.drawCropped(canvas, frame + 7, x - w * 0.08f, y + h - hh * 1.08f, w * 1.16f, hh * 1.08f,
-                        1f - vis, 1f, 0xD0FFFFFF);
-                front.drawCropped(canvas, frame, x, y + h - hh, w, hh, 1f - vis, 1f, Color.WHITE);
+                back.drawCroppedMirrored(canvas, frame, x, top, w, hh, 1f - vis, 1f, Color.WHITE);
+                front.drawCropped(canvas, frame, x, top, w, hh, 1f - vis, 1f, Color.WHITE);
             }
-            flames.render(canvas);
+            smoke.render(canvas);
         }
     }
 

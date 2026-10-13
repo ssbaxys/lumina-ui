@@ -28,11 +28,21 @@ final class Ui {
     private Ui() {
     }
 
-    static Label heading(String text) {
-        return new Label(text).scale(1.25f);
+    /** Текст по ключу перевода: меняется сам при смене языка. Строка без перевода показывается как есть. */
+    static Label text(String key, Object... args) {
+        return Label.tr(key, args);
     }
 
-    static Label muted(String text) {
+    static Label heading(String key) {
+        return Label.tr(key).scale(1.25f);
+    }
+
+    static Label muted(String key, Object... args) {
+        return Label.tr(key, args).style(MUTED);
+    }
+
+    /** Приглушённый текст без перевода (имена констант, числа). */
+    static Label plain(String text) {
         return new Label(text).style(MUTED);
     }
 
@@ -62,11 +72,16 @@ final class Ui {
         return Panel.box(FlexLayout.column()).grow(1);
     }
 
-    /** Заголовок раздела, пояснение и содержимое. */
+    /** Заголовок раздела, пояснение и содержимое (заголовок и пояснение — ключи перевода). */
     static Panel section(String title, String hint, UiElement... content) {
+        return sectionWith(title, hint != null ? muted(hint) : null, content);
+    }
+
+    /** То же, но пояснение — готовая метка (например, перевод с аргументами). */
+    static Panel sectionWith(String title, Label hint, UiElement... content) {
         Panel p = column(5, heading(title));
         if (hint != null) {
-            p.add(muted(hint));
+            p.add(hint);
         }
         return p.add(content).width(Dim.FILL);
     }

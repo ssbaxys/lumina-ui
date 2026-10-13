@@ -1,6 +1,7 @@
 package io.github.ssbaxys.lumina.demo;
 
 import io.github.ssbaxys.lumina.geom.Insets;
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.layout.Align;
 import io.github.ssbaxys.lumina.layout.Dim;
 import io.github.ssbaxys.lumina.layout.Justify;
@@ -13,6 +14,7 @@ import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.style.Transition;
 import io.github.ssbaxys.lumina.widget.Button;
 import io.github.ssbaxys.lumina.widget.Label;
+import io.github.ssbaxys.lumina.widget.LanguageButton;
 import io.github.ssbaxys.lumina.widget.Panel;
 import io.github.ssbaxys.lumina.widget.ScrollPanel;
 
@@ -22,6 +24,9 @@ public final class LuminaDemo {
     }
 
     public static UiRoot create(Runnable onClose) {
+        // Демо переведено на два языка (assets/luminaui/lang); кнопка языка переключает их на лету.
+        I18n.declareLanguage("en_us");
+        I18n.declareLanguage("ru_ru");
         Signal<Integer> clicks = Signal.of(0);
 
         Panel list = Panel.box(io.github.ssbaxys.lumina.layout.FlexLayout.column().gap(4));
@@ -34,7 +39,7 @@ public final class LuminaDemo {
                             .set(Styles.PADDING, Insets.of(4, 8))
                             .set(Styles.TRANSITION, Transition.of(0.12f))
                             .hovered(h -> h.set(Styles.BACKGROUND, Brush.solid(0x30FFFFFF))))
-                    .add(new Label("Элемент списка #" + n)));
+                    .add(Label.tr("luminaui.demo.item", n)));
         }
 
         Panel window = Panel.column()
@@ -42,14 +47,15 @@ public final class LuminaDemo {
                 .width(Dim.px(260))
                 .add(
                         new Label("Lumina UI").scale(1.5f),
-                        new Label("Скругления, тени, градиенты и анимации")
+                        Label.tr("luminaui.demo.subtitle")
                                 .style(b -> b.set(Styles.TEXT_COLOR, 0xFF9AA3B5)),
-                        Label.bound(clicks.map(c -> "Нажатий: " + c)),
+                        Label.tr("luminaui.demo.clicks", clicks),
                         new ScrollPanel(list).height(Dim.px(120)),
                         Panel.box(io.github.ssbaxys.lumina.layout.FlexLayout.row().gap(8).justify(Justify.END))
                                 .add(
-                                        new Button("Нажми", () -> clicks.update(c -> c + 1)),
-                                        new Button("Закрыть", onClose)));
+                                        new LanguageButton(),
+                                        Button.tr("luminaui.demo.press").onPress(() -> clicks.update(c -> c + 1)),
+                                        Button.tr("luminaui.demo.close").onPress(onClose)));
 
         Panel screen = Panel.box(new StackLayout(Align.CENTER, Align.CENTER))
                 .fill()

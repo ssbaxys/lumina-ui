@@ -11,7 +11,6 @@ import io.github.ssbaxys.lumina.render.Radii;
 import io.github.ssbaxys.lumina.style.Style;
 import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.style.Transition;
-import io.github.ssbaxys.lumina.widget.Label;
 import io.github.ssbaxys.lumina.widget.Panel;
 import io.github.ssbaxys.lumina.widget.ScrollPanel;
 import io.github.ssbaxys.lumina.widget.Toggle;
@@ -36,16 +35,16 @@ final class PerformancePage {
         Panel rows = Panel.box(FlexLayout.column().gap(2));
         for (int i = 1; i <= ROWS; i++) {
             rows.add(Panel.box(FlexLayout.row().gap(10).align(Align.CENTER)).width(Dim.FILL).style(ROW).add(
-                    Ui.muted("#" + i).width(Dim.px(36)),
-                    new Label("Строка большого списка")));
+                    Ui.plain("#" + i).width(Dim.px(36)),
+                    Ui.text("luminatest.perf.row")));
         }
         ScrollPanel list = new ScrollPanel(rows).width(Dim.FILL).height(Dim.px(150));
 
         return Ui.page(
-                Ui.section("Время кадра", "Измеряется в самой отрисовке витрины", new FrameMeter()),
-                Ui.section("Анимированная сетка", WaveGrid.COLS * WaveGrid.ROWS + " фигур меняют размер и цвет каждый кадр",
-                        Ui.row(8, new Toggle(rounded), new Label("Скругления (SDF-шейдер); выкл. — прямоугольники одним батчем")),
+                Ui.section("luminatest.perf.frame", "luminatest.perf.frame.hint", new FrameMeter()),
+                Ui.sectionWith("luminatest.perf.grid", Ui.muted("luminatest.perf.grid.hint", WaveGrid.COLS * WaveGrid.ROWS),
+                        Ui.row(8, new Toggle(rounded), Ui.text("luminatest.perf.rounded")),
                         new WaveGrid(rounded)),
-                Ui.section("Большой список", ROWS + " строк: раскладка кэшируется, невидимые строки не обходятся", list));
+                Ui.sectionWith("luminatest.perf.list", Ui.muted("luminatest.perf.list.hint", ROWS), list));
     }
 }

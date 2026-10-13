@@ -25,7 +25,7 @@ final class LayoutPage {
         Panel justify = Ui.column(4).width(Dim.FILL);
         for (Justify j : Justify.values()) {
             justify.add(Ui.row(8,
-                    Ui.muted(j.name()).width(Dim.px(96)),
+                    Ui.plain(j.name()).width(Dim.px(96)),
                     Panel.box(FlexLayout.row().gap(4).justify(j).align(Align.CENTER))
                             .grow(1).height(Dim.px(18)).style(Ui.WELL)
                             .add(Ui.box(A, 18, 10), Ui.box(B, 18, 10), Ui.box(C, 18, 10)))
@@ -55,22 +55,22 @@ final class LayoutPage {
                         .set(Styles.TEXT_COLOR, 0xFF1A1A1A));
         Panel stack = Panel.box(new StackLayout(Align.CENTER, Align.CENTER))
                 .width(Dim.FILL).height(Dim.px(56)).style(Ui.WELL)
-                .add(new Label("По центру (StackLayout)"), badge);
+                .add(Ui.text("luminatest.layout.centered"), badge);
 
         Panel holyGrail = Panel.box(FlexLayout.column().gap(3)).width(Dim.FILL).height(Dim.px(96)).add(
-                part(A, "шапка").height(Dim.px(14)),
+                part(A, "luminatest.layout.header").height(Dim.px(14)),
                 Panel.box(FlexLayout.row().gap(3)).grow(1).add(
-                        part(B, "меню").width(Dim.px(56)),
-                        part(0xFF6B7280, "содержимое (grow)").grow(1),
-                        part(C, "панель").width(Dim.px(52))),
-                part(A, "подвал").height(Dim.px(12)));
+                        part(B, "luminatest.layout.menu").width(Dim.px(56)),
+                        part(0xFF6B7280, "luminatest.layout.content").grow(1),
+                        part(C, "luminatest.layout.side").width(Dim.px(52))),
+                part(A, "luminatest.layout.footer").height(Dim.px(12)));
 
         return Ui.page(
-                Ui.section("Justify", "Распределение по главной оси", justify),
-                Ui.section("Grow", "Свободное место делится в пропорции 1 : 2 : 3", grow),
-                Ui.section("Align", "Выравнивание по поперечной оси", align),
-                Ui.section("Слои и абсолютные позиции", null, stack),
-                Ui.section("Вложенные раскладки", "Классическая схема страницы из строк и колонок", holyGrail));
+                Ui.section("Justify", "luminatest.layout.justify.hint", justify),
+                Ui.section("Grow", "luminatest.layout.grow.hint", grow),
+                Ui.section("Align", "luminatest.layout.align.hint", align),
+                Ui.section("luminatest.layout.layers", null, stack),
+                Ui.section("luminatest.layout.nested", "luminatest.layout.nested.hint", holyGrail));
     }
 
     private static Panel growBox(int color, int grow) {

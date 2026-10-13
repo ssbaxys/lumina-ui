@@ -3,6 +3,7 @@ package io.github.ssbaxys.luminatest;
 import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.event.ScrollEvent;
 import io.github.ssbaxys.lumina.geom.Insets;
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.layout.Align;
 import io.github.ssbaxys.lumina.layout.Dim;
 import io.github.ssbaxys.lumina.layout.FlexLayout;
@@ -29,24 +30,24 @@ final class InputPage {
     static UiElement create() {
         Signal<Integer> clicks = Signal.of(0);
         Panel counter = Ui.row(8,
-                new Button("Клик", () -> clicks.update(c -> c + 1)),
-                new Button("Сброс", () -> clicks.set(0)),
-                Label.bound(clicks.map(c -> "Нажато: " + c)));
+                Button.tr("luminatest.input.click").onPress(() -> clicks.update(c -> c + 1)),
+                Button.tr("luminatest.input.reset").onPress(() -> clicks.set(0)),
+                Ui.text("luminatest.input.pressed", clicks));
 
-        Panel focus = Ui.row(8, new Button("Первая"), new Button("Вторая"), new Button("Третья"));
+        Panel focus = Ui.row(8, Button.tr("luminatest.input.first"), Button.tr("luminatest.input.second"), Button.tr("luminatest.input.third"));
 
         return Ui.page(
-                Ui.section("Клики", null, counter),
-                Ui.section("Перетаскивание", "Захват указателя: DRAG приходит тому, на ком нажали", dragArea()),
-                Ui.section("Фокус и клавиатура", "Tab / Shift+Tab переключают фокус, Enter или пробел нажимают кнопку",
+                Ui.section("luminatest.input.clicks", null, counter),
+                Ui.section("luminatest.input.drag", "luminatest.input.drag.hint", dragArea()),
+                Ui.section("luminatest.input.focus", "luminatest.input.focus.hint",
                         focus, new KeyEcho()),
-                Ui.section("Журнал событий", "Захват (родитель) срабатывает раньше всплытия (цель)", eventLog()));
+                Ui.section("luminatest.input.log", "luminatest.input.log.hint", eventLog()));
     }
 
     private static Panel dragArea() {
         Panel area = Panel.box(StackLayout.topLeft()).width(Dim.FILL).height(Dim.px(90)).style(Ui.WELL);
         area.setClipChildren(true);
-        Panel handle = Ui.centered(new Label("Тащи меня")).absolute(10, 10).style(b -> b
+        Panel handle = Ui.centered(Ui.text("luminatest.input.drag.handle")).absolute(10, 10).style(b -> b
                 .set(Styles.BACKGROUND, Brush.vertical(0xFF34C38F, 0xFF22A06B))
                 .set(Styles.RADIUS, Radii.all(6))
                 .set(Styles.PADDING, Insets.of(5, 9))
@@ -74,7 +75,7 @@ final class InputPage {
         Panel lines = Panel.box(FlexLayout.column().gap(1));
         ScrollPanel logView = new ScrollPanel(lines).width(Dim.FILL).height(Dim.px(84));
 
-        Panel zone = Ui.centered(new Label("Наведи, кликни, покрути колесо"))
+        Panel zone = Ui.centered(Ui.text("luminatest.input.zone"))
                 .width(Dim.FILL).height(Dim.px(40))
                 .style(b -> b
                         .set(Styles.BACKGROUND, Brush.solid(0x18808080))
@@ -85,14 +86,14 @@ final class InputPage {
                         .hovered(h -> h.set(Styles.BACKGROUND, Brush.solid(0x30808080))));
         Panel wrapper = Panel.box(FlexLayout.column().align(Align.STRETCH)).width(Dim.FILL).add(zone);
 
-        wrapper.onCapture(PointerEvent.CLICK, e -> log(lines, "capture  click  (родитель)"));
+        wrapper.onCapture(PointerEvent.CLICK, e -> log(lines, I18n.get("luminatest.input.log.capture")));
         zone.on(PointerEvent.ENTER, e -> log(lines, "enter"));
         zone.on(PointerEvent.LEAVE, e -> log(lines, "leave"));
-        zone.on(PointerEvent.PRESS, e -> log(lines, "press    кнопка " + e.button()));
-        zone.on(PointerEvent.RELEASE, e -> log(lines, "release  кнопка " + e.button()));
-        zone.on(PointerEvent.CLICK, e -> log(lines, "bubble   click  (цель)"));
+        zone.on(PointerEvent.PRESS, e -> log(lines, I18n.get("luminatest.input.log.press", e.button())));
+        zone.on(PointerEvent.RELEASE, e -> log(lines, I18n.get("luminatest.input.log.release", e.button())));
+        zone.on(PointerEvent.CLICK, e -> log(lines, I18n.get("luminatest.input.log.bubble")));
         zone.on(ScrollEvent.SCROLL, e -> {
-            log(lines, "scroll   " + (e.deltaY() > 0 ? "вверх" : "вниз"));
+            log(lines, I18n.get(e.deltaY() > 0 ? "luminatest.input.log.scroll.up" : "luminatest.input.log.scroll.down"));
             e.consume();
         });
 

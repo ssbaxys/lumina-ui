@@ -12,6 +12,7 @@ import io.github.ssbaxys.lumina.style.State;
 import io.github.ssbaxys.lumina.style.Styles;
 import io.github.ssbaxys.lumina.widget.Button;
 import io.github.ssbaxys.lumina.widget.Label;
+import io.github.ssbaxys.lumina.widget.LanguageButton;
 import io.github.ssbaxys.lumina.widget.Panel;
 import io.github.ssbaxys.lumina.widget.ScrollPanel;
 import io.github.ssbaxys.lumina.widget.Toggle;
@@ -24,47 +25,48 @@ import java.util.function.Supplier;
  * Весь код — только API ядра; загрузчики лишь открывают экран.
  */
 public final class Showcase {
-    private record PageDef(String title, Supplier<UiElement> factory) {
+    private record PageDef(String titleKey, Supplier<UiElement> factory) {
     }
 
     private Showcase() {
     }
 
     public static UiRoot create(Runnable onClose) {
+        ShowcaseLang.register();
         Signal<Boolean> light = Signal.of(false);
 
         List<PageDef> pages = List.of(
-                new PageDef("Обзор", OverviewPage::create),
-                new PageDef("Современный стиль", ModernPage::create),
-                new PageDef("Раскладка", LayoutPage::create),
-                new PageDef("Стили и темы", () -> StylePage.create(light)),
-                new PageDef("Цвета", ColorsPage::create),
-                new PageDef("Градиенты", GradientsPage::create),
-                new PageDef("Анимации", AnimationPage::create),
-                new PageDef("Эффекты", EffectsPage::create),
-                new PageDef("Markdown", MarkdownPage::create),
-                new PageDef("HTML и CSS", MarkupPage::create),
-                new PageDef("Блоки", BlocksPage::create),
-                new PageDef("3D-постройки", StructuresPage::create),
-                new PageDef("Предметы и мобы", ItemsPage::create),
-                new PageDef("HUD и данные игры", HudPage::create),
-                new PageDef("Поля ввода", FieldsPage::create),
-                new PageDef("Кнопки и флажки", ButtonsPage::create),
-                new PageDef("Компоненты", ComponentsPage::create),
-                new PageDef("Меню и подсказки", PopupsPage::create),
-                new PageDef("Списки, формы, книга", DataToolsPage::create),
-                new PageDef("Темы и доступность", ThemesPage::create),
-                new PageDef("Окна и обои", WindowsPage::create),
-                new PageDef("Карты, размытие, настройки", ToolsPage::create),
-                new PageDef("Ввод и события", InputPage::create),
-                new PageDef("Данные", DataPage::create),
-                new PageDef("Производительность", PerformancePage::create));
+                new PageDef("luminatest.nav.overview", OverviewPage::create),
+                new PageDef("luminatest.nav.modern", ModernPage::create),
+                new PageDef("luminatest.nav.layout", LayoutPage::create),
+                new PageDef("luminatest.nav.style", () -> StylePage.create(light)),
+                new PageDef("luminatest.nav.colors", ColorsPage::create),
+                new PageDef("luminatest.nav.gradients", GradientsPage::create),
+                new PageDef("luminatest.nav.anim", AnimationPage::create),
+                new PageDef("luminatest.nav.effects", EffectsPage::create),
+                new PageDef("luminatest.nav.markdown", MarkdownPage::create),
+                new PageDef("luminatest.nav.markup", MarkupPage::create),
+                new PageDef("luminatest.nav.blocks", BlocksPage::create),
+                new PageDef("luminatest.nav.structures", StructuresPage::create),
+                new PageDef("luminatest.nav.items", ItemsPage::create),
+                new PageDef("luminatest.nav.hud", HudPage::create),
+                new PageDef("luminatest.nav.fields", FieldsPage::create),
+                new PageDef("luminatest.nav.buttons", ButtonsPage::create),
+                new PageDef("luminatest.nav.components", ComponentsPage::create),
+                new PageDef("luminatest.nav.popups", PopupsPage::create),
+                new PageDef("luminatest.nav.datatools", DataToolsPage::create),
+                new PageDef("luminatest.nav.themes", ThemesPage::create),
+                new PageDef("luminatest.nav.windows", WindowsPage::create),
+                new PageDef("luminatest.nav.tools", ToolsPage::create),
+                new PageDef("luminatest.nav.input", InputPage::create),
+                new PageDef("luminatest.nav.data", DataPage::create),
+                new PageDef("luminatest.nav.perf", PerformancePage::create));
 
         Panel content = Panel.box(new StackLayout(Align.STRETCH, Align.STRETCH)).grow(1);
         content.setClipChildren(true);
 
         Panel nav = Panel.box(FlexLayout.column().gap(3)).width(Dim.px(124));
-        nav.add(new Label("Lumina UI").scale(1.4f), Ui.muted("витрина возможностей"), Ui.column(0).size(1, 6));
+        nav.add(new Label("Lumina UI").scale(1.4f), Ui.muted("luminatest.subtitle"), Ui.column(0).size(1, 6));
 
         // Разделов много: на маленьком экране список прокручивается, а кнопки внизу остаются на месте.
         Panel links = Panel.box(FlexLayout.column().gap(3).align(Align.STRETCH));
@@ -75,7 +77,7 @@ public final class Showcase {
         Button[] buttons = new Button[pages.size()];
         for (int i = 0; i < pages.size(); i++) {
             int index = i;
-            buttons[i] = new Button(pages.get(i).title())
+            buttons[i] = Button.tr(pages.get(i).titleKey())
                     .styleClass("nav")
                     .width(Dim.FILL)
                     .clickSound(false)
@@ -83,9 +85,11 @@ public final class Showcase {
             links.add(buttons[i]);
         }
         nav.add(Ui.column(0).size(1, 2),
-                Ui.row(6, new Toggle(light), new Label("Светлая тема")),
+                new LanguageButton().width(Dim.FILL),
+                Ui.column(0).size(1, 2),
+                Ui.row(6, new Toggle(light), Ui.text("luminatest.light_theme")),
                 Ui.column(0).size(1, 4),
-                new Button("Закрыть", onClose).width(Dim.FILL));
+                Button.tr("luminatest.close").onPress(onClose).width(Dim.FILL));
 
         Panel window = Panel.row().gap(12)
                 .width(Dim.percent(0.92f)).height(Dim.percent(0.9f))

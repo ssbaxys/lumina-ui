@@ -41,7 +41,7 @@ final class AnimationPage {
         addRunner(easings, eased, "OUT_EXPO", Easing.OUT_EXPO, null);
         addRunner(easings, eased, "OUT_BACK", Easing.OUT_BACK, null);
         addRunner(easings, eased, "EMPHASIZED", Easing.EMPHASIZED, null);
-        easings.add(new Button("Запустить", () -> eased.forEach(Runner::run)));
+        easings.add(Button.tr("luminatest.anim.run").onPress(() -> eased.forEach(Runner::run)));
 
         List<Runner> sprung = new ArrayList<>();
         Panel springs = Ui.column(5).width(Dim.FILL);
@@ -49,8 +49,8 @@ final class AnimationPage {
         addRunner(springs, sprung, "SNAPPY", null, Spring.SNAPPY);
         addRunner(springs, sprung, "BOUNCY", null, Spring.BOUNCY);
         springs.add(Ui.row(8,
-                new Button("Запустить", () -> sprung.forEach(Runner::run)),
-                Ui.muted("Пружину можно перенаправить на полпути — нажмите дважды")));
+                Button.tr("luminatest.anim.run").onPress(() -> sprung.forEach(Runner::run)),
+                Ui.muted("luminatest.anim.springs.tip")));
 
         Signal<Float> progress = Signal.of(0.3f);
         Panel progressDemo = Ui.column(6,
@@ -61,7 +61,7 @@ final class AnimationPage {
                         Label.bound(progress.map(p -> Math.round(p * 100) + "%"))))
                 .width(Dim.FILL);
 
-        Panel morph = Ui.centered(new Label("Стиль с переходом")).style(Style.builder()
+        Panel morph = Ui.centered(Ui.text("luminatest.anim.morph.label")).style(Style.builder()
                 .set(Styles.BACKGROUND, Brush.solid(0xFF5B8CFF))
                 .set(Styles.RADIUS, Radii.all(4))
                 .set(Styles.PADDING, Insets.of(6, 10))
@@ -73,7 +73,7 @@ final class AnimationPage {
                         .set(Styles.SHADOW, new Shadow(0, 6, 16, 0, 0x90A855F7)))
                 .build());
         Panel morphDemo = Ui.row(12,
-                new Button("Изменить", () -> morph.setState(State.CHECKED, !morph.hasState(State.CHECKED))),
+                Button.tr("luminatest.anim.morph.button").onPress(() -> morph.setState(State.CHECKED, !morph.hasState(State.CHECKED))),
                 morph);
 
         return Ui.page(
@@ -83,12 +83,12 @@ final class AnimationPage {
                         keyframes()),
                 Ui.section("Последовательности", "Motion.sequence / parallel / delay / call — как таймлайн",
                         sequence()),
-                Ui.section("Функции плавности", "Одинаковая длительность — разный характер движения", easings),
-                Ui.section("Пружины", "Физика: жёсткость и затухание вместо длительности", springs),
-                Ui.section("Плавный прогресс", null, progressDemo),
-                Ui.section("Переход стиля, влияющий на раскладку", "Отступы анимируются, соседи плавно сдвигаются", morphDemo),
-                Ui.section("Бесконечная анимация", "Своя Animation в аниматоре корня; останавливается сама при закрытии",
-                        Ui.row(14, new Pulse(), Ui.muted("Аниматор пуст, когда ничего не движется"))));
+                Ui.section("luminatest.anim.easing", "luminatest.anim.easing.hint", easings),
+                Ui.section("luminatest.anim.springs", "luminatest.anim.springs.hint", springs),
+                Ui.section("luminatest.anim.progress", null, progressDemo),
+                Ui.section("luminatest.anim.morph", "luminatest.anim.morph.hint", morphDemo),
+                Ui.section("luminatest.anim.endless", "luminatest.anim.endless.hint",
+                        Ui.row(14, new Pulse(), Ui.muted("luminatest.anim.idle"))));
     }
 
     private static Panel gallery() {
@@ -201,6 +201,6 @@ final class AnimationPage {
     private static void addRunner(Panel into, List<Runner> list, String name, Easing easing, Spring spring) {
         Runner r = new Runner(easing, spring);
         list.add(r);
-        into.add(Ui.row(8, Ui.muted(name).width(Dim.px(84)), r).width(Dim.FILL));
+        into.add(Ui.row(8, Ui.plain(name).width(Dim.px(84)), r).width(Dim.FILL));
     }
 }

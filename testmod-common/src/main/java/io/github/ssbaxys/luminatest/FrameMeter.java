@@ -1,7 +1,10 @@
 package io.github.ssbaxys.luminatest;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.render.Canvas;
 import io.github.ssbaxys.lumina.widget.Label;
+
+import java.util.Locale;
 
 /** Время кадра, измеренное прямо в отрисовке (сглаженное, обновляется 4 раза в секунду). */
 final class FrameMeter extends Label {
@@ -10,7 +13,7 @@ final class FrameMeter extends Label {
     private float sinceUpdate;
 
     FrameMeter() {
-        super("Кадр: —");
+        super(I18n.get("luminatest.perf.meter.empty"));
     }
 
     @Override
@@ -22,7 +25,7 @@ final class FrameMeter extends Label {
             sinceUpdate += ms;
             if (sinceUpdate >= 250f) {
                 sinceUpdate = 0f;
-                text(String.format("Кадр: %.2f мс  •  ~%d FPS", avgMs, Math.round(1000f / Math.max(avgMs, 0.01f))));
+                text(I18n.get("luminatest.perf.meter", String.format(Locale.ROOT, "%.2f", avgMs), Math.round(1000f / Math.max(avgMs, 0.01f))));
             }
         }
         last = now;

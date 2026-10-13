@@ -56,6 +56,29 @@ public interface Platform {
         return System.nanoTime();
     }
 
+    /** Код языка, выбранного в игре (например, {@code ru_ru}). */
+    default String gameLanguage() {
+        return "en_us";
+    }
+
+    /** Название языка для показа или {@code null}, если игра такого не знает. */
+    default String languageName(String language) {
+        return null;
+    }
+
+    /** Перевод ключа из lang-файлов игры на указанный язык (не обязательно текущий) или {@code null}. */
+    default String translate(String language, String key) {
+        return null;
+    }
+
+    /** Сохранённая настройка библиотеки или {@code null}. */
+    default String readSetting(String key) {
+        return null;
+    }
+
+    default void writeSetting(String key, String value) {
+    }
+
     // ================================================================ файлы
 
     /**

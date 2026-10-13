@@ -1,6 +1,7 @@
 package io.github.ssbaxys.lumina.widget;
 
 import io.github.ssbaxys.lumina.Lumina;
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.reactive.ReadableSignal;
 import io.github.ssbaxys.lumina.reactive.Subscription;
 import io.github.ssbaxys.lumina.render.Canvas;
@@ -29,6 +30,11 @@ public class Label extends Widget<Label> {
 
     public static Label bound(ReadableSignal<String> signal) {
         return new Label(signal.get()).bind(signal);
+    }
+
+    /** Переведённый текст: меняется сам при смене языка. Аргументы — как в {@link I18n#tr}. */
+    public static Label tr(String key, Object... args) {
+        return bound(I18n.tr(key, args));
     }
 
     public String text() {

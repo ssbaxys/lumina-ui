@@ -2,6 +2,7 @@ package io.github.ssbaxys.lumina.widget;
 
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.event.KeyEvent;
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.event.UiEvent;
 import io.github.ssbaxys.lumina.input.Keys;
@@ -28,6 +29,8 @@ public class Button extends Widget<Button> {
     private String text;
     private Runnable onPress;
     private boolean clickSound = true;
+    private ReadableSignal<String> binding;
+    private Subscription subscription;
     private TextureRef iconTexture;
     private String iconItem;
     private float iconSize;
@@ -47,6 +50,34 @@ public class Button extends Widget<Button> {
         this.onPress = onPress;
     }
 
+    /** Кнопка с переведённым текстом: меняется сама при смене языка. Аргументы — как в {@link I18n#tr}. */
+    public static Button tr(String key, Object... args) {
+        ReadableSignal<String> text = I18n.tr(key, args);
+        return new Button(text.get()).bind(text);
+    }
+
+    /** Привязать текст к сигналу: обновляется сам, отписывается при удалении из дерева. */
+    public Button bind(ReadableSignal<String> signal) {
+        unbind();
+        this.binding = signal;
+        if (root() != null) {
+            subscribe();
+        }
+        return this;
+    }
+
+    private void subscribe() {
+        text(binding.get());
+        subscription = binding.subscribe(this::text);
+    }
+
+    private void unbind() {
+        if (subscription != null) {
+            subscription.close();
+            subscription = null;
+        }
+    }
+
     /** Круглая кнопка-иконка с текстурой: {@code Button.round(TextureRef.vanilla("item/apple"), this::eat)}. */
     public static Button round(TextureRef icon, Runnable onPress) {
         return new Button("", onPress).icon(icon).styleClass("button icon");
@@ -62,8 +93,11 @@ public class Button extends Widget<Button> {
     }
 
     public Button text(String text) {
-        this.text = text == null ? "" : text;
-        invalidateLayout();
+        String t = text == null ? "" : text;
+        if (!t.equals(this.text)) {
+            this.text = t;
+            invalidateLayout();
+        }
         return this;
     }
 
@@ -185,11 +219,15 @@ public class Button extends Widget<Button> {
         if (loadingBinding != null && loadingSubscription == null) {
             subscribeLoading();
         }
+        if (binding != null && subscription == null) {
+            subscribe();
+        }
     }
 
     @Override
     protected void onDetach() {
         closeLoading();
+        unbind();
     }
 
     // ---------------------------------------------------------------- нажатие

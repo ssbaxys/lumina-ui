@@ -1,6 +1,7 @@
 package io.github.ssbaxys.luminatest;
 
 import io.github.ssbaxys.lumina.geom.Insets;
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.layout.Dim;
 import io.github.ssbaxys.lumina.layout.FlexLayout;
 import io.github.ssbaxys.lumina.node.UiElement;
@@ -25,7 +26,7 @@ final class DataPage {
         Signal<Float> volume = Signal.of(40f);
         Panel binding = Ui.column(6,
                 Ui.row(10, new Slider(volume, 0, 100).step(1).width(Dim.px(160)),
-                        Label.bound(volume.map(v -> "Громкость: " + Math.round(v) + "%"))),
+                        Label.bound(I18n.text(() -> I18n.get("luminatest.data.volume", Math.round(volume.get()))))),
                 new ProgressBar().bind(volume.map(v -> v / 100f)).width(Dim.px(260)))
                 .width(Dim.FILL);
 
@@ -39,15 +40,15 @@ final class DataPage {
                     Math.round(x), Math.round(y), Math.round(x + y), Math.sqrt(x * x + y * y));
         });
         Panel computed = Ui.column(6,
-                Ui.row(8, Ui.muted("a").width(Dim.px(12)), new Slider(a, 0, 10).step(1)),
-                Ui.row(8, Ui.muted("b").width(Dim.px(12)), new Slider(b, 0, 10).step(1)),
+                Ui.row(8, Ui.plain("a").width(Dim.px(12)), new Slider(a, 0, 10).step(1)),
+                Ui.row(8, Ui.plain("b").width(Dim.px(12)), new Slider(b, 0, 10).step(1)),
                 Label.bound(sum));
 
         // Сигнал управляет доступностью другого виджета.
         Signal<Boolean> enabled = Signal.of(true);
-        Button action = new Button("Действие");
+        Button action = Button.tr("luminatest.data.action");
         enabled.subscribe(action::setEnabled);
-        Panel gating = Ui.row(10, new Toggle(enabled), Label.bound(enabled.map(on -> on ? "Включено" : "Выключено")), action);
+        Panel gating = Ui.row(10, new Toggle(enabled), Label.bound(I18n.text(() -> I18n.get(enabled.get() ? "luminatest.data.on" : "luminatest.data.off"))), action);
 
         // Динамический список.
         Signal<Integer> count = Signal.of(0);
@@ -55,18 +56,18 @@ final class DataPage {
         Panel list = Ui.column(3).width(Dim.FILL);
         Panel todo = Ui.column(6,
                 Ui.row(10,
-                        new Button("Добавить задачу", () -> addTask(list, count, ++serial[0])),
-                        Label.bound(count.map(n -> "Задач: " + n))),
+                        Button.tr("luminatest.data.add").onPress(() -> addTask(list, count, ++serial[0])),
+                        Ui.text("luminatest.data.tasks", count)),
                 list).width(Dim.FILL);
         for (int i = 0; i < 3; i++) {
             addTask(list, count, ++serial[0]);
         }
 
         return Ui.page(
-                Ui.section("Привязка к сигналу", "Ползунок, текст и индикатор читают один Signal", binding),
-                Ui.section("Вычисляемые значения", "Computed сам находит, от каких сигналов зависит", computed),
-                Ui.section("Состояние виджетов", null, gating),
-                Ui.section("Динамический список", "Элементы добавляются и удаляются на лету", todo));
+                Ui.section("luminatest.data.binding", "luminatest.data.binding.hint", binding),
+                Ui.section("luminatest.data.computed", "luminatest.data.computed.hint", computed),
+                Ui.section("luminatest.data.state", null, gating),
+                Ui.section("luminatest.data.list", "luminatest.data.list.hint", todo));
     }
 
     private static void addTask(Panel list, Signal<Integer> count, int n) {
@@ -81,7 +82,7 @@ final class DataPage {
             list.removeChild(row);
             count.update(c -> c - 1);
         });
-        row.add(new Toggle(), new Label("Задача №" + n), Ui.spacer(), remove);
+        row.add(new Toggle(), Ui.text("luminatest.data.task", n), Ui.spacer(), remove);
         Ui.prepareFadeIn(row);
         list.add(row);
         Ui.playFadeIn(row);

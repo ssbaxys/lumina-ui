@@ -1,6 +1,7 @@
 package io.github.ssbaxys.luminatest;
 
 import io.github.ssbaxys.lumina.Lumina;
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.input.Keys;
 import io.github.ssbaxys.lumina.node.UiElement;
 import io.github.ssbaxys.lumina.node.UiRoot;
@@ -118,6 +119,38 @@ class ShowcaseSmokeTest {
         }
         for (UiElement c : e.children()) {
             collectText(c, out);
+        }
+    }
+
+    @Test
+    void languageSwitchRetranslatesOpenScreen() {
+        UiRoot root = Showcase.create(() -> { });
+        root.resize(854, 480);
+        CountingCanvas canvas = new CountingCanvas();
+        List<Button> nav = new ArrayList<>();
+        collectNav(root.content(), nav);
+        try {
+            I18n.setLanguage("en_us");
+            frame(root, canvas);
+            assertEquals("Overview", nav.get(0).text());
+            float englishWidth = nav.get(24).width();
+
+            I18n.setLanguage("ru_ru");
+            frame(root, canvas);
+            assertEquals("Обзор", nav.get(0).text());
+            assertEquals("Производительность", nav.get(24).text());
+            assertEquals(englishWidth, nav.get(24).width());
+
+            // Каждая страница открывается и рисуется на обоих языках, переключение — прямо на открытой.
+            for (Button b : nav) {
+                click(root, b);
+                frame(root, canvas);
+                I18n.nextLanguage();
+                frame(root, canvas);
+                assertTrue(canvas.draws > 0, "page " + b.text() + " drew nothing");
+            }
+        } finally {
+            I18n.followGameLanguage();
         }
     }
 

@@ -20,14 +20,18 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Бэкенд Canvas для 1.21.1. Простые прямоугольники и произвольные четырёхугольники копятся в один
@@ -41,6 +45,7 @@ final class McCanvas extends AbstractCanvas {
     private final Matrix4f gradColorsA = new Matrix4f();
     private final Matrix4f gradColorsB = new Matrix4f();
     private final Map<String, ResourceLocation> locations = new HashMap<>();
+    private final Map<String, Optional<ResourceLocation>> sprites = new HashMap<>();
     private final Map<String, ItemStack> items = new HashMap<>();
     /** После 3D-предмета или сущности в буфере глубины остались их пиксели (см. {@link #clearDepth()}). */
     private boolean depthDirty;
@@ -244,7 +249,34 @@ final class McCanvas extends AbstractCanvas {
             flushQuads();
             RenderSystem.setShaderTexture(0, frame.target().getColorTextureId());
         } else {
-            ResourceLocation location = location(texture);
+            ResourceLocation location = null;
+            TextureAtlasSprite sprite = atlasSprite(texture);
+            if (sprite != null) {
+                // Текстура из атласа блоков: кадр анимации выбирает сама игра, поэтому номер кадра полосы
+                // отбрасывается, а обрезка внутри кадра сохраняется.
+                int frames = (int) Math.max(1L, sprite.contents().getUniqueFrames().count());
+                float base = (float) Math.floor(Math.min(Math.min(v0, v1), Math.min(v2, v3)) * frames + 1e-3f);
+                float a0 = v0 * frames - base;
+                float a1 = v1 * frames - base;
+                float a2 = v2 * frames - base;
+                float a3 = v3 * frames - base;
+                if (inUnit(u0) && inUnit(u1) && inUnit(u2) && inUnit(u3) && inUnit(a0) && inUnit(a1) && inUnit(a2) && inUnit(a3)) {
+                    float su = sprite.getU1() - sprite.getU0();
+                    float sv = sprite.getV1() - sprite.getV0();
+                    u0 = sprite.getU0() + u0 * su;
+                    u1 = sprite.getU0() + u1 * su;
+                    u2 = sprite.getU0() + u2 * su;
+                    u3 = sprite.getU0() + u3 * su;
+                    v0 = sprite.getV0() + a0 * sv;
+                    v1 = sprite.getV0() + a1 * sv;
+                    v2 = sprite.getV0() + a2 * sv;
+                    v3 = sprite.getV0() + a3 * sv;
+                    location = InventoryMenu.BLOCK_ATLAS;
+                }
+            }
+            if (location == null) {
+                location = location(texture);
+            }
             if (location == null) {
                 return;
             }
@@ -261,6 +293,36 @@ final class McCanvas extends AbstractCanvas {
         bb.addVertex(m, x2, y2, 0f).setUv(u2, v2).setColor(tint);
         bb.addVertex(m, x3, y3, 0f).setUv(u3, v3).setColor(tint);
         draw(bb);
+    }
+
+    private static boolean inUnit(float v) {
+        return v >= -1e-3f && v <= 1.001f;
+    }
+
+    /**
+     * Спрайт атласа блоков для текстуры вида {@code мод:textures/block/имя.png} или {@code null}.
+     * Анимированные текстуры (огонь, вода, лава) как отдельный файл дают только полосу кадров; из атласа
+     * они приходят уже анимированными и с учётом ресурспаков.
+     */
+    private TextureAtlasSprite atlasSprite(TextureRef texture) {
+        Optional<ResourceLocation> name = sprites.computeIfAbsent(texture.id(), id -> {
+            int colon = id.indexOf(':');
+            int at = colon + 1;
+            if (colon <= 0 || !id.startsWith("textures/", at) || !id.endsWith(".png")) {
+                return Optional.empty();
+            }
+            try {
+                return Optional.ofNullable(ResourceLocation.tryBuild(id.substring(0, colon), id.substring(at + 9, id.length() - 4)));
+            } catch (RuntimeException e) {
+                return Optional.empty();
+            }
+        });
+        if (name.isEmpty()) {
+            return null;
+        }
+        TextureAtlasSprite sprite = Minecraft.getInstance().getModelManager().getAtlas(InventoryMenu.BLOCK_ATLAS)
+                .getSprite(name.get());
+        return sprite.contents().name().equals(MissingTextureAtlasSprite.getLocation()) ? null : sprite;
     }
 
     private ResourceLocation location(TextureRef texture) {

@@ -10,6 +10,7 @@ import io.github.ssbaxys.lumina.map.MapGridSampler;
 import io.github.ssbaxys.lumina.map.MapSample;
 import io.github.ssbaxys.lumina.platform.Platform;
 import io.github.ssbaxys.lumina.render.Images;
+import io.github.ssbaxys.lumina.platform.SettingsFile;
 import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.render.TextureRef;
 import net.minecraft.client.Minecraft;
@@ -17,6 +18,8 @@ import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.language.ClientLanguage;
+import net.minecraft.client.resources.language.LanguageInfo;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -25,10 +28,16 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.locale.Language;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.fml.loading.FMLPaths;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,6 +48,9 @@ import java.util.Optional;
 final class McPlatform implements Platform {
     private MapGridSampler mapSampler;
     private ClientLevel mapLevel;
+    private final SettingsFile settings = new SettingsFile(FMLPaths.CONFIGDIR.get().resolve(Lumina.MOD_ID + ".properties"));
+    /** Таблицы языков, отличных от выбранного в игре: загружаются по требованию, сбрасываются при перезагрузке ресурсов. */
+    private final Map<String, Language> languages = new HashMap<>();
     private final TextMetrics metrics = new TextMetrics() {
         @Override
         public float width(String text) {
@@ -132,6 +144,47 @@ final class McPlatform implements Platform {
         } catch (IOException e) {
             return null;
         }
+    }
+
+    @Override
+    public String gameLanguage() {
+        return Minecraft.getInstance().options.languageCode;
+    }
+
+    @Override
+    public String languageName(String language) {
+        LanguageInfo info = Minecraft.getInstance().getLanguageManager().getLanguage(language);
+        return info != null ? info.name() : null;
+    }
+
+    @Override
+    public String translate(String language, String key) {
+        Minecraft mc = Minecraft.getInstance();
+        Language table;
+        if (language.equals(mc.getLanguageManager().getSelected())) {
+            table = Language.getInstance();
+        } else {
+            table = languages.get(language);
+            if (table == null) {
+                table = ClientLanguage.loadFrom(mc.getResourceManager(), List.of(language), false);
+                languages.put(language, table);
+            }
+        }
+        return table.has(key) ? table.getOrDefault(key) : null;
+    }
+
+    void clearLanguages() {
+        languages.clear();
+    }
+
+    @Override
+    public String readSetting(String key) {
+        return settings.read(key);
+    }
+
+    @Override
+    public void writeSetting(String key, String value) {
+        settings.write(key, value);
     }
 
     /**

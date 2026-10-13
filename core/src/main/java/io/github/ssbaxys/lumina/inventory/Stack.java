@@ -21,7 +21,7 @@ import java.util.Objects;
  * {@link #maxStackSize()}: 64 по умолчанию и 1 у предметов с прочностью.
  */
 public final class Stack {
-    public static final Stack EMPTY = new Stack("", 0, null, List.of(), false, 0, 0, 0);
+    public static final Stack EMPTY = new Stack("", 0, null, List.of(), false, 0, 0, 0, null);
 
     private final String id;
     private final int count;
@@ -31,9 +31,10 @@ public final class Stack {
     private final int damage;
     private final int maxDamage;
     private final int maxStack;
+    private final Object platformStack;
 
     private Stack(String id, int count, String name, List<String> lore, boolean glint,
-                  int damage, int maxDamage, int maxStack) {
+                  int damage, int maxDamage, int maxStack, Object platformStack) {
         this.id = id;
         this.count = count;
         this.name = name;
@@ -42,6 +43,7 @@ public final class Stack {
         this.damage = damage;
         this.maxDamage = maxDamage;
         this.maxStack = maxStack;
+        this.platformStack = platformStack;
     }
 
     /** Один предмет. */
@@ -58,7 +60,7 @@ public final class Stack {
         if (id.indexOf(':') < 0) {
             id = "minecraft:" + id;
         }
-        return new Stack(id, count, null, List.of(), false, 0, 0, 0);
+        return new Stack(id, count, null, List.of(), false, 0, 0, 0, null);
     }
 
     /**
@@ -127,6 +129,11 @@ public final class Stack {
         return maxDamage;
     }
 
+    /** «Родная» стопка платформы ({@link #withPlatformStack}) или {@code null}. */
+    public Object platformStack() {
+        return platformStack;
+    }
+
     /** Есть ли у предмета прочность. */
     public boolean isDamageable() {
         return maxDamage > 0;
@@ -160,7 +167,7 @@ public final class Stack {
         if (count == this.count || isEmpty()) {
             return this;
         }
-        return new Stack(id, count, name, lore, glint, damage, maxDamage, maxStack);
+        return new Stack(id, count, name, lore, glint, damage, maxDamage, maxStack, platformStack);
     }
 
     /** Больше на {@code delta} (меньше при отрицательном). */
@@ -173,7 +180,7 @@ public final class Stack {
             return this;
         }
         String n = name == null || name.isEmpty() ? null : name;
-        return new Stack(id, count, n, lore, glint, damage, maxDamage, maxStack);
+        return new Stack(id, count, n, lore, glint, damage, maxDamage, maxStack, null);
     }
 
     public Stack withLore(String... lines) {
@@ -184,14 +191,15 @@ public final class Stack {
         if (isEmpty()) {
             return this;
         }
-        return new Stack(id, count, name, lines == null ? List.of() : List.copyOf(lines), glint, damage, maxDamage, maxStack);
+        return new Stack(id, count, name, lines == null ? List.of() : List.copyOf(lines), glint, damage, maxDamage, maxStack,
+                null);
     }
 
     public Stack withGlint(boolean glint) {
         if (isEmpty() || glint == this.glint) {
             return this;
         }
-        return new Stack(id, count, name, lore, glint, damage, maxDamage, maxStack);
+        return new Stack(id, count, name, lore, glint, damage, maxDamage, maxStack, null);
     }
 
     /** Прочность: {@code damage} из {@code maxDamage} израсходовано. */
@@ -200,7 +208,7 @@ public final class Stack {
             return this;
         }
         int max = Math.max(0, maxDamage);
-        return new Stack(id, count, name, lore, glint, Math.max(0, Math.min(damage, max)), max, maxStack);
+        return new Stack(id, count, name, lore, glint, Math.max(0, Math.min(damage, max)), max, maxStack, null);
     }
 
     /** Свой предел стопки (1..99; 16 у жемчуга эндера и т. п.). */
@@ -208,7 +216,19 @@ public final class Stack {
         if (isEmpty()) {
             return this;
         }
-        return new Stack(id, count, name, lore, glint, damage, maxDamage, Math.max(1, Math.min(99, maxStackSize)));
+        return new Stack(id, count, name, lore, glint, damage, maxDamage, Math.max(1, Math.min(99, maxStackSize)), null);
+    }
+
+    /**
+     * Та же стопка с «родной» стопкой платформы ({@code ItemStack} игры), из которой она получена. По ней бэкенд
+     * рисует предмет точно (цвет зелья, голова игрока, крашеная броня), а не только по id. В сравнении стопок не
+     * участвует; переживает {@link #withCount}, остальные {@code with}-методы её сбрасывают (вид мог измениться).
+     */
+    public Stack withPlatformStack(Object platformStack) {
+        if (isEmpty() || platformStack == this.platformStack) {
+            return this;
+        }
+        return new Stack(id, count, name, lore, glint, damage, maxDamage, maxStack, platformStack);
     }
 
     /** Складываются ли стопки: совпадает всё, кроме количества. Пустые ни с чем не складываются. */

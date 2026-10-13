@@ -242,6 +242,14 @@ public interface Canvas {
     }
 
     /**
+     * Предмет по «родной» стопке платформы ({@code ItemStack} игры, см. {@code Stack.platformStack()}): бэкенд,
+     * который её понимает, рисует предмет точно (цвет зелья, голова игрока); иначе — как {@link #drawItem} по id.
+     */
+    default void drawPlatformItem(Object platformStack, String itemId, float x, float y, float size, boolean glint) {
+        drawItem(itemId, x, y, size, glint);
+    }
+
+    /**
      * Предмет в 3D, повёрнутый вокруг своего центра: {@code yaw} — вокруг вертикали, {@code pitch} — наклон к
      * зрителю (градусы). Вписан в квадрат {@code size × size} с левым верхним углом в (x, y). По умолчанию —
      * плоская иконка без поворота.

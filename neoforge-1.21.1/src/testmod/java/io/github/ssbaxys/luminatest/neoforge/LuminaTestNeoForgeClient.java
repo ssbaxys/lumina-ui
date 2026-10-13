@@ -1,6 +1,8 @@
 package io.github.ssbaxys.luminatest.neoforge;
 
+import io.github.ssbaxys.lumina.neoforge.LuminaMenuScreen;
 import io.github.ssbaxys.lumina.neoforge.LuminaScreen;
+import io.github.ssbaxys.luminatest.ChestDemo;
 import io.github.ssbaxys.luminatest.Showcase;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -14,11 +16,15 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 
-/** Все точки входа в витрину: клавиша, команда и кнопки в главном меню и меню паузы. */
+/**
+ * Все точки входа в витрину: клавиша, команда и кнопки в главном меню и меню паузы; окно «Сундука Lumina»
+ * ({@code /luminatest chest}).
+ */
 final class LuminaTestNeoForgeClient {
     private static final KeyMapping OPEN = new KeyMapping("key.luminatest.open", GLFW.GLFW_KEY_K, "key.categories.luminatest");
 
@@ -27,6 +33,7 @@ final class LuminaTestNeoForgeClient {
 
     static void init(IEventBus modBus) {
         modBus.addListener(LuminaTestNeoForgeClient::registerKeys);
+        modBus.addListener(LuminaTestNeoForgeClient::registerScreens);
         NeoForge.EVENT_BUS.addListener(LuminaTestNeoForgeClient::onClientTick);
         NeoForge.EVENT_BUS.addListener(LuminaTestNeoForgeClient::registerCommands);
         NeoForge.EVENT_BUS.addListener(LuminaTestNeoForgeClient::onScreenInit);
@@ -35,6 +42,10 @@ final class LuminaTestNeoForgeClient {
     static void open(Screen parent) {
         Minecraft.getInstance().setScreen(new LuminaScreen(Component.literal("Lumina UI Showcase"),
                 screen -> Showcase.create(screen::onClose)).parent(parent).pauseGame(parent instanceof PauseScreen));
+    }
+
+    private static void registerScreens(RegisterMenuScreensEvent event) {
+        LuminaMenuScreen.register(event, ChestDemoNeoForge.CHEST, ChestDemo::create);
     }
 
     private static void registerKeys(RegisterKeyMappingsEvent event) {

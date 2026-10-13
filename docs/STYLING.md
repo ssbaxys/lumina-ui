@@ -300,8 +300,8 @@ Slot.paintStack(canvas, stack, x, y, 16);                         // стопк�
 ```
 
 `InventoryPanel.chest` строит окно сундука: сетка 9 в ряд, «Инвентарь», рюкзак (ячейки игрока 9..35) и хотбар
-(0..8), Shift+клик ходит между сундуком и игроком. Инвентарь игрока в ядре — обычная модель на 36 ячеек: связать
-её с настоящим инвентарём (и сервером) — дело мода.
+(0..8), Shift+клик ходит между сундуком и игроком. Инвентарь игрока в ядре — обычная модель на 36 ячеек; с
+настоящим инвентарём и сервером её связывают окна-контейнеры (ниже).
 
 ### Перетаскивание (`SlotGroup`)
 
@@ -326,6 +326,46 @@ group.beginDrag(slot, false); group.dropOn(otherSlot);                  // то 
 ```
 
 Без своей группы слоты в общей `SlotGroup.shared()`: перетаскивать можно между любыми слотами.
+
+### Окна-контейнеры с сервером (`menu.MenuSpec`, `menu.RemoteMenu`)
+
+Окно сундука, печи или своей машины, которым владеет сервер, как ванильным сундуком. `MenuSpec` — описание,
+общее для сервера и клиента (обычно константа): разделы ячеек и синхронизируемые числа. На загрузчике
+`LuminaMenu` — обычное `AbstractContainerMenu` с ванильными слотами (содержимое и курсор рассылает
+`broadcastChanges`, Shift+клик по умолчанию — как у сундука), значения идут `DataSlot` (целое — двумя 16-битными
+частями), окно — `LuminaMenuScreen` с `UiRoot` из вашей фабрики.
+
+```java
+// общий код
+static final MenuSpec SPEC = MenuSpec.builder()
+        .container("chest", 27).playerInventory()        // слоты меню: 0..26, затем рюкзак и хотбар
+        .intValue("progress").boolValue("burning").build();
+static final LuminaMenuType CHEST = new LuminaMenuType(SPEC);
+MENUS.register("chest", CHEST::create);                   // DeferredRegister<MenuType<?>>
+
+// сервер
+CHEST.open(player, Component.literal("Сундук"), container, index -> progress, (p, action, value) -> sort());
+
+// клиент: Forge — FMLClientSetupEvent.enqueueWork, NeoForge — RegisterMenuScreensEvent
+LuminaMenuScreen.register(CHEST, menu -> new UiRoot(InventoryPanel.chest(menu.title(),
+        menu.inventory("chest"), menu.playerInventory(), Slot.Look.MODERN), ModernTheme.dark()));
+new ProgressBar().bind(menu.intValue("progress").map(p -> p / 100f));
+new Button("Сортировать", () -> menu.sendAction(SORT, 0));
+```
+
+`RemoteMenu` даёт на каждый раздел обычный `Inventory`, но удалённый (`Inventory.remote`): слоты и сетки
+выглядят и перетаскиваются как всегда, а при сбросе отправляют ванильные щелчки через
+`handleInventoryMouseClick` — сервер проверяет, игра сразу предсказывает результат. Перенос — «взять» (всё или
+половину), «положить» и, если что-то осталось на курсоре, «вернуть»; Shift+клик — быстрый перенос (маршрут решает
+сервер, `Slot.quickMoveTo` не нужен); мимо слотов — выброс, если `onDropOutside` вернул `true`; клавиши 1–9 и F над
+слотом — обмен с хотбаром и второй рукой, Q — выбросить (с Ctrl — стопку). Без `remote` инвентарь локальный,
+как раньше; смешивать удалённые и локальные ячейки в одном переносе нельзя.
+
+Содержимое слотов окно сверяет каждый кадр (ссылка и количество, полностью — раз в тик) и строит `Stack` только
+для изменившихся: название, строки подсказки игры (с цветами), прочность, предел стопки и сама стопка игры
+(`Stack.platformStack()`), чтобы зелья и головы рисовались точно. Значения — сигналы `intValue`/`boolValue`,
+обновляются разом раз в кадр. Свои кнопки — `sendAction(id, число)`: пара кодируется нажатиями кнопки меню
+(`clickMenuButton`, 7 бит на нажатие, обычно два), свой сетевой канал не нужен. Демо — `/luminatest chest`.
 
 ### Сущности и предметы в 3D (`preview.EntityView`, `preview.ItemView`)
 

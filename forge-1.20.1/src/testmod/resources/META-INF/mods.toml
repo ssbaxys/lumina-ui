@@ -14,7 +14,7 @@ modId = "${lumina_id}"
 mandatory = true
 versionRange = "[${mod_version},)"
 ordering = "AFTER"
-side = "CLIENT"
+side = "BOTH"
 
 [[dependencies.luminatest]]
 modId = "minecraft"

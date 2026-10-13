@@ -1,6 +1,8 @@
 package io.github.ssbaxys.luminatest.forge;
 
+import io.github.ssbaxys.lumina.forge.LuminaMenuScreen;
 import io.github.ssbaxys.lumina.forge.LuminaScreen;
+import io.github.ssbaxys.luminatest.ChestDemo;
 import io.github.ssbaxys.luminatest.Showcase;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -16,9 +18,13 @@ import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.lwjgl.glfw.GLFW;
 
-/** Все точки входа в витрину: клавиша, команда и кнопки в главном меню и меню паузы. */
+/**
+ * Все точки входа в витрину: клавиша, команда и кнопки в главном меню и меню паузы; окно «Сундука Lumina»
+ * ({@code /luminatest chest}).
+ */
 final class LuminaTestForgeClient {
     private static final KeyMapping OPEN = new KeyMapping("key.luminatest.open", GLFW.GLFW_KEY_K, "key.categories.luminatest");
 
@@ -27,6 +33,7 @@ final class LuminaTestForgeClient {
 
     static void init(IEventBus modBus) {
         modBus.addListener(LuminaTestForgeClient::registerKeys);
+        modBus.addListener(LuminaTestForgeClient::clientSetup);
         MinecraftForge.EVENT_BUS.addListener(LuminaTestForgeClient::onClientTick);
         MinecraftForge.EVENT_BUS.addListener(LuminaTestForgeClient::registerCommands);
         MinecraftForge.EVENT_BUS.addListener(LuminaTestForgeClient::onScreenInit);
@@ -35,6 +42,10 @@ final class LuminaTestForgeClient {
     static void open(Screen parent) {
         Minecraft.getInstance().setScreen(new LuminaScreen(Component.literal("Lumina UI Showcase"),
                 screen -> Showcase.create(screen::onClose)).parent(parent).pauseGame(parent instanceof PauseScreen));
+    }
+
+    private static void clientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> LuminaMenuScreen.register(ChestDemoForge.CHEST, ChestDemo::create));
     }
 
     private static void registerKeys(RegisterKeyMappingsEvent event) {

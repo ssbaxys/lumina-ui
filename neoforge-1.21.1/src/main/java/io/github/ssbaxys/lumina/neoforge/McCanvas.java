@@ -288,6 +288,16 @@ final class McCanvas extends AbstractCanvas {
         renderStack(McModels.stack(itemId, true), x, y, size);
     }
 
+    /** Настоящая стопка из меню: модель по компонентам (зелья, головы, крашеная броня) и перелив — как у игры. */
+    @Override
+    protected void drawPlatformItemImpl(Object platformStack, String itemId, float x, float y, float size, boolean glint) {
+        if (platformStack instanceof ItemStack stack) {
+            renderStack(stack, x, y, size);
+        } else {
+            super.drawPlatformItemImpl(platformStack, itemId, x, y, size, glint);
+        }
+    }
+
     private void renderStack(ItemStack stack, float x, float y, float size) {
         if (stack.isEmpty()) {
             return;

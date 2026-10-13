@@ -48,15 +48,15 @@ final class StructuresPage {
         BlockStructure[] presets = {house(), tree(), portal(), pyramid(), pool()};
         BlockModel model = new BlockModel(presets[0]).autoRotate(true).size(380, 250);
         return Ui.page(
-                Ui.section("Постройки в 3D",
-                        "Тяните мышью, чтобы вращать (с инерцией), колесо — приближение. Невидимые грани не рисуются.",
+                Ui.section(Tr.r("Постройки в 3D"),
+                        Tr.r("Тяните мышью, чтобы вращать (с инерцией), колесо — приближение. Невидимые грани не рисуются."),
                         gallery(model, presets)),
-                Ui.section("Редактор по слоям",
-                        "Слева — выбранный слой сверху (ЛКМ — поставить, ПКМ — сломать), справа — живой предпросмотр.",
+                Ui.section(Tr.r("Редактор по слоям"),
+                        Tr.r("Слева — выбранный слой сверху (ЛКМ — поставить, ПКМ — сломать), справа — живой предпросмотр."),
                         editor(model)),
-                Ui.section("Превью мира",
-                        "Блоки вокруг игрока читаются из мира порциями по кадрам и перечитываются раз в 2 с; коробка "
-                                + "идёт за игроком. В главном меню мира нет — показан выдуманный, игрок гуляет по кругу.",
+                Ui.section(Tr.r("Превью мира"),
+                        Tr.r("Блоки вокруг игрока читаются из мира порциями по кадрам и перечитываются раз в 2 с; коробка ")
+                                + Tr.r("идёт за игроком. В главном меню мира нет — показан выдуманный, игрок гуляет по кругу."),
                         worldPreview(model)));
     }
 
@@ -66,14 +66,14 @@ final class StructuresPage {
         StructurePreview preview = new StructurePreview().radius(10).height(5, 9).fallback(new DemoWorld(7));
         preview.perspective(0.4f).size(380, 250).id("world-preview");
 
-        Label status = Ui.muted("Читаем мир…");
-        Label layers = Ui.muted("Все слои");
+        Label status = Ui.muted(Tr.r("Читаем мир…"));
+        Label layers = Ui.muted(Tr.r("Все слои"));
         Runnable showStatus = () -> {
             BlockStructure.Bounds box = preview.capture().worldBox();
-            String where = preview.hasWorld() ? "мир" : "демо-мир";
+            String where = preview.hasWorld() ? Tr.r("мир") : Tr.r("демо-мир");
             status.text(box == null ? where : where + " · " + box.sizeX() + "×" + box.sizeY() + "×" + box.sizeZ()
-                    + " · блоков: " + preview.structure().size()
-                    + (preview.capture().unloadedCount() > 0 ? " · не загружено: " + preview.capture().unloadedCount() : ""));
+                    + Tr.r(" · блоков: ") + preview.structure().size()
+                    + (preview.capture().unloadedCount() > 0 ? Tr.r(" · не загружено: ") + preview.capture().unloadedCount() : ""));
         };
         preview.onRefresh(showStatus);
 
@@ -82,8 +82,8 @@ final class StructuresPage {
         Signal<Boolean> perspective = Signal.of(true);
         perspective.subscribe(on -> preview.perspective(on ? 0.4f : 0f));
         Signal<Boolean> head = Signal.of(false);
-        Runnable showLayers = () -> layers.text(preview.cutsAtPlayer() ? "Срез по игроку"
-                : preview.peel() == 0 ? "Все слои" : "Снято слоёв: " + preview.peel());
+        Runnable showLayers = () -> layers.text(preview.cutsAtPlayer() ? Tr.r("Срез по игроку")
+                : preview.peel() == 0 ? Tr.r("Все слои") : Tr.r("Снято слоёв: ") + preview.peel());
         head.subscribe(on -> {
             preview.cutAtPlayer(on);
             showLayers.run();
@@ -96,31 +96,31 @@ final class StructuresPage {
         return Ui.column(6,
                 stage(preview),
                 Ui.row(6,
-                        new Button("Обновить", preview::refresh).id("world-refresh"),
-                        new Button("Снять слой", () -> {
+                        new Button(Tr.r("Обновить"), preview::refresh).id("world-refresh"),
+                        new Button(Tr.r("Снять слой"), () -> {
                             preview.peel(Math.min(preview.below() + preview.above(), preview.peel() + 1));
                             peel.run();
                         }).id("world-peel").styleClass("button ghost"),
-                        new Button("Вернуть слой", () -> {
+                        new Button(Tr.r("Вернуть слой"), () -> {
                             preview.peel(Math.max(0, preview.peel() - 1));
                             peel.run();
                         }).id("world-unpeel").styleClass("button ghost"),
-                        new Button("Все слои", () -> {
+                        new Button(Tr.r("Все слои"), () -> {
                             preview.peel(0);
                             peel.run();
                         }).styleClass("button ghost"),
                         layers),
                 Ui.row(8,
-                        new Toggle(follow), new Label("За игроком"),
-                        new Toggle(perspective), new Label("Перспектива"),
-                        new Toggle(head), new Label("Срез по игроку")),
+                        new Toggle(follow), new Label(Tr.r("За игроком")),
+                        new Toggle(perspective), new Label(Tr.r("Перспектива")),
+                        new Toggle(head), new Label(Tr.r("Срез по игроку"))),
                 Ui.row(6,
-                        new Button("В галерею", () -> gallery.structure(preview.snapshot())).id("world-to-gallery")
+                        new Button(Tr.r("В галерею"), () -> gallery.structure(preview.snapshot())).id("world-to-gallery")
                                 .styleClass("button ghost"),
-                        new Button("Копировать текстом", () -> {
+                        new Button(Tr.r("Копировать текстом"), () -> {
                             String text = preview.snapshot().encode();
                             Lumina.platform().setClipboard(text);
-                            status.text("Скопировано: " + text.length() + " символов (BlockStructure.decode вернёт постройку)");
+                            status.text(Tr.r("Скопировано: ") + text.length() + Tr.r(" символов (BlockStructure.decode вернёт постройку)"));
                         }).id("world-copy").styleClass("button ghost"),
                         status));
     }
@@ -131,7 +131,7 @@ final class StructuresPage {
         Button[] buttons = new Button[presets.length];
         for (int i = 0; i < presets.length; i++) {
             int index = i;
-            buttons[i] = new Button(NAMES[i], () -> {
+            buttons[i] = new Button(Tr.r(NAMES[i]), () -> {
                 model.structure(presets[index]);
                 for (int j = 0; j < buttons.length; j++) {
                     buttons[j].setState(State.CHECKED, j == index);
@@ -149,11 +149,11 @@ final class StructuresPage {
                 Ui.row(6, buttons),
                 stage(model),
                 Ui.row(8,
-                        new Toggle(spin), new Label("Автовращение"),
-                        new Toggle(perspective), new Label("Перспектива"),
-                        new Button("Изометрия", () -> model.camera(45f, 30f).zoom(1f)).styleClass("button ghost"),
-                        new Button("Сверху", () -> model.camera(model.yaw(), 89f)).styleClass("button ghost"),
-                        Ui.muted("Перетащите модель мышью")));
+                        new Toggle(spin), new Label(Tr.r("Автовращение")),
+                        new Toggle(perspective), new Label(Tr.r("Перспектива")),
+                        new Button(Tr.r("Изометрия"), () -> model.camera(45f, 30f).zoom(1f)).styleClass("button ghost"),
+                        new Button(Tr.r("Сверху"), () -> model.camera(model.yaw(), 89f)).styleClass("button ghost"),
+                        Ui.muted(Tr.r("Перетащите модель мышью"))));
     }
 
     private static Panel stage(UiElement content) {
@@ -239,26 +239,26 @@ final class StructuresPage {
         slots[2].setState(State.CHECKED, true);
 
         Panel layerControls = Ui.row(6,
-                new Button("Ниже", () -> layer.set((float) Math.max(0, current[0] - 1))).styleClass("button ghost"),
+                new Button(Tr.r("Ниже"), () -> layer.set((float) Math.max(0, current[0] - 1))).styleClass("button ghost"),
                 new Slider(layer, 0, EH - 1).step(1).width(Dim.px(120)),
-                new Button("Выше", () -> layer.set((float) Math.min(EH - 1, current[0] + 1))).styleClass("button ghost"),
-                Label.bound(layer.map(v -> "Слой y = " + Math.round(v))));
+                new Button(Tr.r("Выше"), () -> layer.set((float) Math.min(EH - 1, current[0] + 1))).styleClass("button ghost"),
+                Label.bound(layer.map(v -> Tr.r("Слой y = ") + Math.round(v))));
 
         return Ui.column(6,
                 Ui.grid(9, 4, slots),
                 layerControls,
-                Ui.row(10, Ui.column(6, mapBox, Ui.row(6, new Toggle(sliceOn), Ui.muted("Срез по слою"))),
+                Ui.row(10, Ui.column(6, mapBox, Ui.row(6, new Toggle(sliceOn), Ui.muted(Tr.r("Срез по слою")))),
                         stage(preview)),
                 Ui.row(6,
-                        new Button("Очистить", () -> {
+                        new Button(Tr.r("Очистить"), () -> {
                             edit.clear().fill(0, 0, 0, EW - 1, 0, ED - 1, "minecraft:grass_block");
                             load.run();
                         }),
-                        new Button("Взять из галереи", () -> {
+                        new Button(Tr.r("Взять из галереи"), () -> {
                             copyInto(gallery.structure(), edit);
                             load.run();
                         }).styleClass("button ghost"),
-                        Label.bound(brush.map(id -> "Блок: " + id)).style(Ui.MUTED)));
+                        Label.bound(brush.map(id -> Tr.r("Блок: ") + id)).style(Ui.MUTED)));
     }
 
     /** Скопировать постройку в редактор (сдвинув к началу координат и обрезав по его размеру). */

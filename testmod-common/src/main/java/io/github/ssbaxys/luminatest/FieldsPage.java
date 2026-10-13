@@ -34,15 +34,15 @@ import java.util.Locale;
 final class FieldsPage {
     private static final String[][] ITEMS = {
             {"minecraft:diamond", "Алмаз"},
-            {"minecraft:diamond_sword", "Алмазный меч"},
-            {"minecraft:golden_apple", "Золотое яблоко"},
-            {"minecraft:tnt", "Динамит"},
-            {"minecraft:flint_and_steel", "Огниво"},
-            {"minecraft:blaze_rod", "Стержень ифрита"},
-            {"minecraft:emerald", "Изумруд"},
-            {"minecraft:iron_ingot", "Железный слиток"},
-            {"minecraft:netherite_ingot", "Незеритовый слиток"},
-            {"minecraft:lapis_lazuli", "Лазурит"},
+            {"minecraft:diamond_sword", Tr.r("Алмазный меч")},
+            {"minecraft:golden_apple", Tr.r("Золотое яблоко")},
+            {"minecraft:tnt", Tr.r("Динамит")},
+            {"minecraft:flint_and_steel", Tr.r("Огниво")},
+            {"minecraft:blaze_rod", Tr.r("Стержень ифрита")},
+            {"minecraft:emerald", Tr.r("Изумруд")},
+            {"minecraft:iron_ingot", Tr.r("Железный слиток")},
+            {"minecraft:netherite_ingot", Tr.r("Незеритовый слиток")},
+            {"minecraft:lapis_lazuli", Tr.r("Лазурит")},
     };
 
     private static final String MARKUP = """

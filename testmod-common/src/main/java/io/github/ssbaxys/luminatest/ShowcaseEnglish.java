@@ -1969,6 +1969,73 @@ Text **bold**, *italic*, `code` and ![](item:minecraft:diamond) icons.
 </column>""");
     }
 
+    private static void part7() {
+        TEXT.put("Разложен",
+                "Sorted");
+        TEXT.put("Не разложен",
+                "Not sorted");
+        TEXT.put("Сундук Lumina",
+                "Lumina Chest");
+        TEXT.put("Цикл сервера: ",
+                "Server cycle: ");
+        TEXT.put("Предметов: ",
+                "Items: ");
+        TEXT.put("Тик мира: ",
+                "World tick: ");
+        TEXT.put("По имени",
+                "By name");
+        TEXT.put("По количеству",
+                "By count");
+        TEXT.put("Наполнить",
+                "Fill");
+        TEXT.put("Закрыть",
+                "Close");
+        TEXT.put("Shift — быстро, 1–9 и F — в хотбар,",
+                "Shift — quick move, 1–9 and F — to the hotbar,");
+        TEXT.put("Q — выбросить. Всё проверяет сервер.",
+                "Q — drop. The server checks everything.");
+        TEXT.put("Превью мира",
+                "World preview");
+        TEXT.put("Блоки вокруг игрока читаются из мира порциями по кадрам и перечитываются раз в 2 с; коробка ",
+                "Blocks around the player are read from the world in portions per frame and re-read every 2 s; the box ");
+        TEXT.put("идёт за игроком. В главном меню мира нет — показан выдуманный, игрок гуляет по кругу.",
+                "follows the player. There is no world in the main menu — a made-up one is shown and the player walks in a circle.");
+        TEXT.put("Читаем мир…",
+                "Reading the world…");
+        TEXT.put("Все слои",
+                "All layers");
+        TEXT.put("мир",
+                "world");
+        TEXT.put("демо-мир",
+                "demo world");
+        TEXT.put(" · блоков: ",
+                " · blocks: ");
+        TEXT.put(" · не загружено: ",
+                " · not loaded: ");
+        TEXT.put("Срез по игроку",
+                "Slice at the player");
+        TEXT.put("Снято слоёв: ",
+                "Layers removed: ");
+        TEXT.put("Обновить",
+                "Refresh");
+        TEXT.put("Снять слой",
+                "Remove layer");
+        TEXT.put("Вернуть слой",
+                "Restore layer");
+        TEXT.put("За игроком",
+                "Follow the player");
+        TEXT.put("Перспектива",
+                "Perspective");
+        TEXT.put("В галерею",
+                "To the gallery");
+        TEXT.put("Копировать текстом",
+                "Copy as text");
+        TEXT.put("Скопировано: ",
+                "Copied: ");
+        TEXT.put(" символов (BlockStructure.decode вернёт постройку)",
+                " characters (BlockStructure.decode will return the build)");
+    }
+
     static {
         part0();
         part1();
@@ -1977,5 +2044,6 @@ Text **bold**, *italic*, `code` and ![](item:minecraft:diamond) icons.
         part4();
         part5();
         part6();
+        part7();
     }
 }

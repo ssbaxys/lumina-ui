@@ -27,17 +27,17 @@ import java.util.List;
 final class ItemsPage {
     private static final String[][] MOBS = {
             {"minecraft:zombie", "Зомби"},
-            {"minecraft:creeper", "Крипер"},
-            {"minecraft:villager", "Житель"},
-            {"minecraft:skeleton", "Скелет"},
-            {"minecraft:enderman", "Эндермен"},
-            {"minecraft:iron_golem", "Железный голем"},
-            {"minecraft:pig", "Свинья"},
-            {"minecraft:sheep", "Овца"},
-            {"minecraft:wolf", "Волк"},
-            {"minecraft:chicken", "Курица"},
-            {"minecraft:spider", "Паук"},
-            {"minecraft:fox", "Лиса"},
+            {"minecraft:creeper", Tr.r("Крипер")},
+            {"minecraft:villager", Tr.r("Житель")},
+            {"minecraft:skeleton", Tr.r("Скелет")},
+            {"minecraft:enderman", Tr.r("Эндермен")},
+            {"minecraft:iron_golem", Tr.r("Железный голем")},
+            {"minecraft:pig", Tr.r("Свинья")},
+            {"minecraft:sheep", Tr.r("Овца")},
+            {"minecraft:wolf", Tr.r("Волк")},
+            {"minecraft:chicken", Tr.r("Курица")},
+            {"minecraft:spider", Tr.r("Паук")},
+            {"minecraft:fox", Tr.r("Лиса")},
     };
 
     private ItemsPage() {

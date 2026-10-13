@@ -61,25 +61,25 @@ public final class ChestDemo {
         SlotGroup group = new SlotGroup();
         InventoryPanel window = new InventoryPanel(Slot.Look.MODERN);
 
-        Label sorted = Label.bound(menu.boolValue(SORTED).map(s -> s ? "Разложен" : "Не разложен")).style(Ui.MUTED);
-        Panel header = Ui.row(8, Ui.heading(menu.title().isEmpty() ? "Сундук Lumina" : menu.title()), Ui.spacer(),
+        Label sorted = Label.bound(menu.boolValue(SORTED).map(s -> s ? Tr.r("Разложен") : Tr.r("Не разложен"))).style(Ui.MUTED);
+        Panel header = Ui.row(8, Ui.heading(menu.title().isEmpty() ? Tr.r("Сундук Lumina") : menu.title()), Ui.spacer(),
                 sorted);
         header.width(Dim.FILL);
 
         SlotGrid chest = new SlotGrid(menu.inventory("chest"), 9).look(Slot.Look.MODERN).slotSize(SLOT).group(group);
 
         ProgressBar progress = new ProgressBar().bind(menu.intValue(PROGRESS).map(p -> p / (float) CYCLE));
-        Label cycle = Label.bound(menu.intValue(PROGRESS).map(p -> "Цикл сервера: " + (p * 100 / CYCLE) + "%"));
-        Label stats = Label.bound(menu.intValue(ITEMS).map(n -> "Предметов: " + n)).style(Ui.MUTED);
-        Label time = Label.bound(menu.intValue(TIME).map(t -> "Тик мира: " + t)).style(Ui.MUTED);
+        Label cycle = Label.bound(menu.intValue(PROGRESS).map(p -> Tr.r("Цикл сервера: ") + (p * 100 / CYCLE) + "%"));
+        Label stats = Label.bound(menu.intValue(ITEMS).map(n -> Tr.r("Предметов: ") + n)).style(Ui.MUTED);
+        Label time = Label.bound(menu.intValue(TIME).map(t -> Tr.r("Тик мира: ") + t)).style(Ui.MUTED);
 
         Panel sortRow = Ui.row(6,
-                new Button("По имени", () -> menu.sendAction(SORT, BY_NAME)).styleClass("button primary"),
-                new Button("По количеству", () -> menu.sendAction(SORT, BY_COUNT)));
+                new Button(Tr.r("По имени"), () -> menu.sendAction(SORT, BY_NAME)).styleClass("button primary"),
+                new Button(Tr.r("По количеству"), () -> menu.sendAction(SORT, BY_COUNT)));
         Panel moreRow = Ui.row(6,
-                new Button("Наполнить", () -> menu.sendAction(FILL)).styleClass("button ghost"),
+                new Button(Tr.r("Наполнить"), () -> menu.sendAction(FILL)).styleClass("button ghost"),
                 Ui.spacer(),
-                new Button("Закрыть", menu::close).styleClass("button ghost"));
+                new Button(Tr.r("Закрыть"), menu::close).styleClass("button ghost"));
         moreRow.width(Dim.FILL);
 
         SlotGrid main = new SlotGrid(menu.playerInventory(), 9, 27, 9).look(Slot.Look.MODERN).slotSize(SLOT)
@@ -90,9 +90,9 @@ public final class ChestDemo {
         window.add(header, chest)
                 .add(Ui.column(3, cycle, progress, Ui.row(10, stats, time)).width(Dim.FILL), 4f)
                 .add(Ui.column(4, sortRow, moreRow).width(Dim.FILL), 4f)
-                .add(Ui.column(1, Ui.muted("Shift — быстро, 1–9 и F — в хотбар,"),
-                        Ui.muted("Q — выбросить. Всё проверяет сервер.")), 2f)
-                .title("Инвентарь")
+                .add(Ui.column(1, Ui.muted(Tr.r("Shift — быстро, 1–9 и F — в хотбар,")),
+                        Ui.muted(Tr.r("Q — выбросить. Всё проверяет сервер."))), 2f)
+                .title(Tr.r("Инвентарь"))
                 .add(main)
                 .add(hotbar, 3f);
         // Ширина по сетке: 9 слотов, 8 зазоров по 2 и поля панели по 12.

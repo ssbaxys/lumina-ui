@@ -72,7 +72,7 @@ final class ChestDemoNeoForge {
         ServerPlayer player = source.getPlayerOrException();
         SimpleContainer chest = CHESTS.computeIfAbsent(player.getUUID(), id -> new SimpleContainer(SIZE));
         MenuData data = index -> value(player, chest, index);
-        CHEST.open(player, Component.literal("Сундук Lumina"), chest, data, (p, action, value) -> {
+        CHEST.open(player, Component.translatable("luminatest.chest.title"), chest, data, (p, action, value) -> {
             if (action == ChestDemo.SORT) {
                 sort(chest, value == ChestDemo.BY_COUNT);
             } else if (action == ChestDemo.FILL) {

@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.AnimatedFloat;
 import io.github.ssbaxys.lumina.anim.Easing;
@@ -321,7 +322,7 @@ public class CalendarView extends Widget<CalendarView> {
         float gl = gridLeft();
         float wy = top + HEADER + (WEEK_ROW - lh) / 2f;
         for (int i = 0; i < 7; i++) {
-            String w = WEEKDAYS[i];
+            String w = I18n.ru(WEEKDAYS[i]);
             int c = Color.mulAlpha(text, i >= 5 ? 0.45f : 0.6f);
             canvas.drawText(w, gl + i * CELL_W + (CELL_W - m.width(w)) / 2f, wy, c, false);
         }
@@ -375,7 +376,7 @@ public class CalendarView extends Widget<CalendarView> {
         gridToday = today;
         gridMin = min;
         gridMax = max;
-        gridTitle = MONTHS[month.getMonthValue() - 1] + " " + month.getYear();
+        gridTitle = I18n.ru(MONTHS[month.getMonthValue() - 1]) + " " + month.getYear();
         LocalDate start = gridStart();
         gridStartEpoch = start.toEpochDay();
         selectedCell = -1;

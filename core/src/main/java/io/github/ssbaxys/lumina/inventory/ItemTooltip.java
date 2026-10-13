@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.inventory;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.node.UiElement;
 import io.github.ssbaxys.lumina.render.Canvas;
@@ -36,7 +37,7 @@ public class ItemTooltip extends UiElement {
             add(l, LORE_COLOR);
         }
         if (s.isDamaged()) {
-            add("Прочность: " + (s.maxDamage() - s.damage()) + " / " + s.maxDamage(), LORE_COLOR);
+            add(I18n.ru("Прочность: ") + (s.maxDamage() - s.damage()) + " / " + s.maxDamage(), LORE_COLOR);
         }
     }
 

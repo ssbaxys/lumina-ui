@@ -306,6 +306,22 @@ public final class I18n {
         }
     }
 
+    /**
+     * Встроенный текст библиотеки, написанный в коде по-русски: для русского языка возвращается как есть,
+     * для остальных — английский вариант (если его нет — исходная строка). Язык берётся в момент вызова.
+     */
+    public static String ru(String russian) {
+        if (russian == null || !Lumina.isInitialized()) {
+            return russian;
+        }
+        String code = current();
+        if (code != null && code.startsWith("ru")) {
+            return russian;
+        }
+        String english = BuiltinEnglish.TEXT.get(russian);
+        return english != null ? english : russian;
+    }
+
     /** Сбросить выбор языка, таблицы и источники к начальному состоянию (для тестов). */
     public static void reset() {
         tables.clear();

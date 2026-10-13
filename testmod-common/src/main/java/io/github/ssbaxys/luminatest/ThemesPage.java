@@ -148,12 +148,12 @@ final class ThemesPage {
 
         void showBreakpoint(Breakpoint bp) {
             String name = switch (bp) {
-                case COMPACT -> "узкий";
-                case MEDIUM -> "средний";
-                case WIDE -> "широкий";
+                case COMPACT -> Tr.r("узкий");
+                case MEDIUM -> Tr.r("средний");
+                case WIDE -> Tr.r("широкий");
             };
-            breakpointLabel.text("Ширина интерфейса: " + (root == null ? 0 : Math.round(root.width()))
-                    + " — класс «" + name + "»");
+            breakpointLabel.text(Tr.r("Ширина интерфейса: ") + (root == null ? 0 : Math.round(root.width()))
+                    + Tr.r(" — класс «") + name + "»");
         }
 
         void stopSchedule() {
@@ -171,14 +171,14 @@ final class ThemesPage {
             switch (mode.peek()) {
                 case "time" -> {
                     schedule = byTime.attach(root);
-                    scheduleLabel.text("Тема выбирается по ползунку времени; на закате и рассвете цвета смешиваются");
+                    scheduleLabel.text(Tr.r("Тема выбирается по ползунку времени; на закате и рассвете цвета смешиваются"));
                 }
                 case "biome" -> {
                     schedule = byBiome.attach(root);
-                    scheduleLabel.text("Тема выбирается по биому");
+                    scheduleLabel.text(Tr.r("Тема выбирается по биому"));
                 }
                 default -> {
-                    scheduleLabel.text("Автосмена выключена");
+                    scheduleLabel.text(Tr.r("Автосмена выключена"));
                     beforeContrast = null;
                     ThemeTransition.to(root, decorate(previous.copy()), 0.5f);
                 }
@@ -242,8 +242,8 @@ final class ThemesPage {
                 soundSection(c), responsiveSection(c));
 
         c.mode.subscribe(v -> c.applyMode());
-        c.time.subscribe(v -> c.timeLabel.text("Время: " + WorldInfo.formatTime(v) + " (" + Math.round(v) + " тиков)"));
-        c.timeLabel.text("Время: " + WorldInfo.formatTime(c.time.peek()) + " (" + Math.round(c.time.peek()) + " тиков)");
+        c.time.subscribe(v -> c.timeLabel.text(Tr.r("Время: ") + WorldInfo.formatTime(v) + " (" + Math.round(v) + Tr.r(" тиков)")));
+        c.timeLabel.text(Tr.r("Время: ") + WorldInfo.formatTime(c.time.peek()) + " (" + Math.round(c.time.peek()) + Tr.r(" тиков)"));
         c.sound.subscribe(v -> c.redecorate());
         c.highContrast.subscribe(v -> c.redecorate());
         c.largeText.subscribe(v -> c.applyAccessibility());
@@ -263,8 +263,8 @@ final class ThemesPage {
     // ---------------------------------------------------------------- разделы
 
     private static Panel editorSection() {
-        return Ui.section("Редактор темы",
-                "Цвета, скругление и скорость меняют тему всей витрины на лету",
+        return Ui.section(Tr.r("Редактор темы"),
+                Tr.r("Цвета, скругление и скорость меняют тему всей витрины на лету"),
                 new ThemeEditor().fileName("showcase.css").baseName("dark").id("editor").width(Dim.FILL));
     }
 
@@ -272,7 +272,7 @@ final class ThemesPage {
         Markdown code = new Markdown("").width(Dim.FILL);
         code.setVisible(false);
         Label check = Ui.muted("");
-        Button show = new Button("Показать CSS", () -> {
+        Button show = new Button(Tr.r("Показать CSS"), () -> {
             if (c.root == null) {
                 return;
             }
@@ -283,12 +283,12 @@ final class ThemesPage {
                 sb.append(lines[i]).append('\n');
             }
             if (lines.length > 18) {
-                sb.append("/* … ещё ").append(lines.length - 18).append(" строк */\n");
+                sb.append(Tr.r("/* … ещё ")).append(lines.length - 18).append(Tr.r(" строк */\n"));
             }
             code.text("```css\n" + sb + "```");
             code.setVisible(true);
         }).id("show-css");
-        Button roundTrip = new Button("Проверить: экспорт → импорт", () -> {
+        Button roundTrip = new Button(Tr.r("Проверить: экспорт → импорт"), () -> {
             if (c.root == null) {
                 return;
             }
@@ -296,84 +296,84 @@ final class ThemesPage {
             Theme back = ThemeCss.load(ThemeCss.export(theme, "dark"));
             boolean same = back.get(Tokens.ACCENT).equals(theme.get(Tokens.ACCENT))
                     && back.get(Tokens.CORNER).equals(theme.get(Tokens.CORNER));
-            check.text(same ? "Тема прочитана обратно без потерь" : "Токены отличаются");
+            check.text(same ? Tr.r("Тема прочитана обратно без потерь") : Tr.r("Токены отличаются"));
         }).styleClass("button outline").id("round-trip");
-        return Ui.section("Экспорт и импорт",
-                "Тема сохраняется в CSS: токены в :root, стили классов — обычными правилами",
+        return Ui.section(Tr.r("Экспорт и импорт"),
+                Tr.r("Тема сохраняется в CSS: токены в :root, стили классов — обычными правилами"),
                 Ui.row(8, show, roundTrip), check, code);
     }
 
     private static Panel scheduleSection(Controller c) {
         RadioGroup<String> mode = RadioGroup.of(c.mode, "off", "time", "biome")
                 .labels(v -> switch (v) {
-                    case "time" -> "По времени суток";
-                    case "biome" -> "По биому";
-                    default -> "Выключено";
+                    case "time" -> Tr.r("По времени суток");
+                    case "biome" -> Tr.r("По биому");
+                    default -> Tr.r("Выключено");
                 })
                 .horizontal();
         Slider time = new Slider(c.time, 0f, 24000f).step(250f).width(Dim.px(220)).id("time-slider");
         RadioGroup<String> biome = RadioGroup.of(c.biome, "minecraft:plains", "minecraft:desert",
                         "minecraft:snowy_plains", "minecraft:nether_wastes")
-                .labels(BIOME_NAMES::get)
+                .labels(k -> Tr.r(BIOME_NAMES.get(k)))
                 .horizontal();
-        return Ui.section("Автосмена темы",
-                "В игре время и биом берутся из мира (WorldInfo); здесь их заменяют ползунок и переключатель",
+        return Ui.section(Tr.r("Автосмена темы"),
+                Tr.r("В игре время и биом берутся из мира (WorldInfo); здесь их заменяют ползунок и переключатель"),
                 mode, Ui.row(8, time, c.timeLabel), biome, c.scheduleLabel);
     }
 
     private static Panel accessibilitySection(Controller c) {
         RadioGroup<ColorVision> vision = RadioGroup.of(c.vision, ColorVision.values())
-                .labels(VISION_NAMES::get)
+                .labels(k -> Tr.r(VISION_NAMES.get(k)))
                 .horizontal();
         Panel swatches = Ui.row(6,
                 swatch(0xFFE5484D), swatch(0xFF34C38F), swatch(0xFF3D6DF2), swatch(0xFFF5A524), swatch(0xFFA855F7));
-        return Ui.section("Доступность",
-                "Действует на весь интерфейс поверх любой темы",
+        return Ui.section(Tr.r("Доступность"),
+                Tr.r("Действует на весь интерфейс поверх любой темы"),
                 Ui.grid(2, 8,
-                        toggle("Высокий контраст", c.highContrast),
-                        toggle("Крупный текст", c.largeText),
-                        toggle("Без анимаций", c.reducedMotion),
-                        toggle("Рамка фокуса всегда", c.focusRing),
-                        toggle("Озвучивать фокус", c.narration),
-                        toggle("Симуляция вместо коррекции", c.simulate)),
-                Ui.muted("Цветовое зрение:"), vision, swatches,
-                Ui.muted("Озвучка идёт через Platform.narrate: загрузчик передаёт текст диктору игры"));
+                        toggle(Tr.r("Высокий контраст"), c.highContrast),
+                        toggle(Tr.r("Крупный текст"), c.largeText),
+                        toggle(Tr.r("Без анимаций"), c.reducedMotion),
+                        toggle(Tr.r("Рамка фокуса всегда"), c.focusRing),
+                        toggle(Tr.r("Озвучивать фокус"), c.narration),
+                        toggle(Tr.r("Симуляция вместо коррекции"), c.simulate)),
+                Ui.muted(Tr.r("Цветовое зрение:")), vision, swatches,
+                Ui.muted(Tr.r("Озвучка идёт через Platform.narrate: загрузчик передаёт текст диктору игры")));
     }
 
     private static Panel soundSection(Controller c) {
         RadioGroup<String> sounds = RadioGroup.of(c.sound, "vanilla", "soft", "retro", "none")
-                .labels(SOUND_NAMES::get)
+                .labels(k -> Tr.r(SOUND_NAMES.get(k)))
                 .horizontal();
-        return Ui.section("Звуки интерфейса",
-                "Звук наведения играет при входе мыши в кнопку и не чаще раза в 70 мс",
+        return Ui.section(Tr.r("Звуки интерфейса"),
+                Tr.r("Звук наведения играет при входе мыши в кнопку и не чаще раза в 70 мс"),
                 sounds,
-                Ui.row(8, new Button("Наведи"), new Button("И сюда").styleClass("button outline"),
-                        new Toggle(Signal.of(false)), new Checkbox("Флажок", Signal.of(true))));
+                Ui.row(8, new Button(Tr.r("Наведи")), new Button(Tr.r("И сюда")).styleClass("button outline"),
+                        new Toggle(Signal.of(false)), new Checkbox(Tr.r("Флажок"), Signal.of(true))));
     }
 
     private static Panel responsiveSection(Controller c) {
         ResponsivePanel rowOrColumn = ResponsivePanel.rowFrom(Breakpoint.MEDIUM, 8)
-                .add(card("Меню", 0xFF5B8CFF).grow(1), card("Содержимое", 0xFF34C38F).grow(2), card("Детали", 0xFFF5A524).grow(1))
+                .add(card(Tr.r("Меню"), 0xFF5B8CFF).grow(1), card(Tr.r("Содержимое"), 0xFF34C38F).grow(2), card(Tr.r("Детали"), 0xFFF5A524).grow(1))
                 .id("row-or-column");
         rowOrColumn.width(Dim.FILL);
         ResponsivePanel grid = ResponsivePanel.columns(1, 2, 3, 6).id("grid");
         for (int i = 1; i <= 6; i++) {
-            grid.add(card("Карточка " + i, i % 2 == 0 ? 0xFFA855F7 : 0xFF22D3EE));
+            grid.add(card(Tr.r("Карточка ") + i, i % 2 == 0 ? 0xFFA855F7 : 0xFF22D3EE));
         }
         grid.width(Dim.FILL);
         ResponsivePanel own = ResponsivePanel.columns(1, 2, 3, 4).byContainerWidth(true).id("own-width");
         for (int i = 1; i <= 3; i++) {
-            own.add(card("По своей ширине " + i, 0xFFF0506E));
+            own.add(card(Tr.r("По своей ширине ") + i, 0xFFF0506E));
         }
         own.width(Dim.FILL);
         Panel narrow = Panel.box(FlexLayout.column()).width(Dim.px(220)).add(own);
         RadioGroup<Float> scale = RadioGroup.of(c.scale, 0.75f, 1f, 1.25f, 1.5f)
                 .labels(v -> v + "×")
                 .horizontal();
-        return Ui.section("Адаптивная раскладка",
-                "Строка на широком экране и колонка на узком; сетка 1/2/3 колонки; масштаб всего интерфейса",
-                c.breakpointLabel, rowOrColumn, grid, Ui.muted("Узкий блок (220 пикселей) — раскладка по своей ширине:"),
-                narrow, Ui.row(8, Ui.muted("Масштаб интерфейса:"), scale));
+        return Ui.section(Tr.r("Адаптивная раскладка"),
+                Tr.r("Строка на широком экране и колонка на узком; сетка 1/2/3 колонки; масштаб всего интерфейса"),
+                c.breakpointLabel, rowOrColumn, grid, Ui.muted(Tr.r("Узкий блок (220 пикселей) — раскладка по своей ширине:")),
+                narrow, Ui.row(8, Ui.muted(Tr.r("Масштаб интерфейса:")), scale));
     }
 
     // ---------------------------------------------------------------- мелочи

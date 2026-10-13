@@ -22,6 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Страница полей ввода: рисуется, печатает, открывает контекстные меню — без исключений. */
 class FieldsPageTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     private static final TextMetrics METRICS = new TextMetrics() {
         @Override
         public float width(String text) {

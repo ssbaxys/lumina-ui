@@ -50,16 +50,16 @@ final class HudDemo {
                 hud.remove(e);
             }
             ELEMENTS.clear();
-            hud.feed().post("Демо-HUD выключен");
+            hud.feed().post(Tr.r("Демо-HUD выключен"));
             return;
         }
 
         // Левый верхний угол: где я и когда.
         Panel info = new Panel("hud-panel", FlexLayout.column().gap(2)).add(
                 live(GameData.position(), p -> "XYZ: " + p),
-                live(GameData.facing(), f -> "Взгляд: " + facing(f)),
-                live(GameData.biome(), b -> "Биом: " + shortId(b)),
-                live(GameData.clock(), t -> "Время: " + t),
+                live(GameData.facing(), f -> Tr.r("Взгляд: ") + facing(f)),
+                live(GameData.biome(), b -> Tr.r("Биом: ") + shortId(b)),
+                live(GameData.clock(), t -> Tr.r("Время: ") + t),
                 live(GameData.fps(), f -> "FPS: " + f));
         add(hud, info, HudAnchor.TOP_LEFT, 4, 4, HudVisibility.DEFAULT);
 
@@ -70,21 +70,21 @@ final class HudDemo {
         add(hud, bars, HudAnchor.BOTTOM_CENTER, 0, 52, HudVisibility.GAMEPLAY);
 
         // Опыт боссбаром сверху, под ним — таймер, если запущен.
-        BossBar xp = new BossBar("Опыт").colors(0xFF7ED957, 0xFFC6F35E).notches(10).bind(GameData.xpProgress());
+        BossBar xp = new BossBar(Tr.r("Опыт")).colors(0xFF7ED957, 0xFFC6F35E).notches(10).bind(GameData.xpProgress());
         add(hud, xp, HudAnchor.TOP_CENTER, 0, 4, HudVisibility.DEFAULT);
-        TimerDisplay timer = new TimerDisplay(TIMER).label("Таймер").tenthsBelow(5f);
+        TimerDisplay timer = new TimerDisplay(TIMER).label(Tr.r("Таймер")).tenthsBelow(5f);
         add(hud, timer, HudAnchor.TOP_CENTER, 0, 24,
                 HudVisibility.DEFAULT.when(() -> TIMER.isRunning() || TIMER.isFinished()));
 
         // Воздух — только когда он убывает.
-        RadialGauge air = new RadialGauge("воздух").max(300).percent(true).lowBelow(0.3f)
+        RadialGauge air = new RadialGauge(Tr.r("воздух")).max(300).percent(true).lowBelow(0.3f)
                 .colors(0xFF4DC3FF, 0xFFB4ECFF).bind(GameData.air());
         add(hud, air, HudAnchor.CENTER_RIGHT, 8, 0,
                 HudVisibility.GAMEPLAY.when(() -> GameData.air().get() < GameData.maxAir().get()));
 
-        hud.toasts().show(Toast.success("Демо-HUD включён", "Закройте витрину, чтобы увидеть его поверх игры")
+        hud.toasts().show(Toast.success(Tr.r("Демо-HUD включён"), Tr.r("Закройте витрину, чтобы увидеть его поверх игры"))
                 .icon("minecraft:spyglass"));
-        hud.feed().post("minecraft:compass", "Демо-HUD включён", Toast.SUCCESS);
+        hud.feed().post("minecraft:compass", Tr.r("Демо-HUD включён"), Toast.SUCCESS);
     }
 
     private static void add(Hud hud, UiElement e, HudAnchor anchor, float dx, float dy, HudVisibility visibility) {
@@ -107,10 +107,10 @@ final class HudDemo {
 
     static String facing(String f) {
         return switch (f) {
-            case "north" -> "север";
-            case "south" -> "юг";
-            case "west" -> "запад";
-            case "east" -> "восток";
+            case "north" -> Tr.r("север");
+            case "south" -> Tr.r("юг");
+            case "west" -> Tr.r("запад");
+            case "east" -> Tr.r("восток");
             default -> f;
         };
     }

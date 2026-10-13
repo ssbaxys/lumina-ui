@@ -42,6 +42,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Страница тем: редактор, экспорт, расписание, доступность, звуки и адаптивность работают из интерфейса. */
 class ThemesPageTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     private static final TextMetrics METRICS = new TextMetrics() {
         @Override
         public float width(String text) {

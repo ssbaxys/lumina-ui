@@ -54,11 +54,11 @@ final class ModernPage {
     static UiElement create() {
         Signal<Integer> section = Signal.of(1);
         SideNav nav = new SideNav(section)
-                .item("Главная", "minecraft:oak_door")
-                .item("Настройки", "minecraft:comparator")
-                .item("Дополнительно", "minecraft:command_block")
-                .item("Музыка", "minecraft:jukebox")
-                .item("Разработка", "minecraft:redstone")
+                .item(Tr.r("Главная"), "minecraft:oak_door")
+                .item(Tr.r("Настройки"), "minecraft:comparator")
+                .item(Tr.r("Дополнительно"), "minecraft:command_block")
+                .item(Tr.r("Музыка"), "minecraft:jukebox")
+                .item(Tr.r("Разработка"), "minecraft:redstone")
                 .item("Markdown", "minecraft:writable_book");
         nav.width(Dim.px(132));
         Pages pages = new Pages(section).effect(Pages.Effect.SLIDE_UP)
@@ -98,21 +98,21 @@ final class ModernPage {
 
     private static UiElement home() {
         return scroll(
-                new FancyText("Добро пожаловать").scale(2f).gradient(TOP, BOTTOM).flow(0.3f),
-                Ui.muted("Это экран настроек, собранный из виджетов Lumina в современной теме."),
+                new FancyText(Tr.r("Добро пожаловать")).scale(2f).gradient(TOP, BOTTOM).flow(0.3f),
+                Ui.muted(Tr.r("Это экран настроек, собранный из виджетов Lumina в современной теме.")),
                 Ui.row(8,
-                        card("minecraft:comparator", "Настройки", "Рамки, цвета, анимации"),
-                        card("minecraft:jukebox", "Музыка", "Громкость по категориям"),
-                        card("minecraft:redstone", "Разработка", "Инспектор и отладка")),
+                        card("minecraft:comparator", Tr.r("Настройки"), Tr.r("Рамки, цвета, анимации")),
+                        card("minecraft:jukebox", Tr.r("Музыка"), Tr.r("Громкость по категориям")),
+                        card("minecraft:redstone", Tr.r("Разработка"), Tr.r("Инспектор и отладка"))),
                 Ui.row(6,
-                        new Button("Начать").styleClass("button primary"),
-                        new Button("Документация").item("minecraft:book").styleClass("button outline"),
+                        new Button(Tr.r("Начать")).styleClass("button primary"),
+                        new Button(Tr.r("Документация")).item("minecraft:book").styleClass("button outline"),
                         new Button("GitHub").styleClass("button ghost")));
     }
 
     private static UiElement settings() {
         Signal<Integer> tab = Signal.of(1);
-        Tabs tabs = new Tabs(tab, "Экран", "Вид", "Шрифт", "Расширения", "Текст").stretch(true);
+        Tabs tabs = new Tabs(tab, Tr.r("Экран"), Tr.r("Вид"), Tr.r("Шрифт"), Tr.r("Расширения"), Tr.r("Текст")).stretch(true);
         tabs.width(Dim.FILL);
         Pages inner = new Pages(tab).effect(Pages.Effect.SLIDE)
                 .page(ModernPage::screenTab)
@@ -127,24 +127,24 @@ final class ModernPage {
     }
 
     private static UiElement advanced() {
-        Signal<String> quality = Signal.of("Высокое");
+        Signal<String> quality = Signal.of(Tr.r("Высокое"));
         return scroll(
-                new Collapsible("Графика",
-                        row("Качество", RadioGroup.of(quality, "Низкое", "Среднее", "Высокое", "Ультра")
+                new Collapsible(Tr.r("Графика"),
+                        row(Tr.r("Качество"), RadioGroup.of(quality, Tr.r("Низкое"), Tr.r("Среднее"), Tr.r("Высокое"), Tr.r("Ультра"))
                                 .horizontal().gap(10)),
-                        toggleRow("Плавное освещение", true),
-                        toggleRow("Облака", false),
-                        row("Дальность прорисовки", new SliderField(Signal.of(12f), 2, 32).step(1).decimals(0)
+                        toggleRow(Tr.r("Плавное освещение"), true),
+                        toggleRow(Tr.r("Облака"), false),
+                        row(Tr.r("Дальность прорисовки"), new SliderField(Signal.of(12f), 2, 32).step(1).decimals(0)
                                 .width(Dim.px(190)))),
-                new Collapsible("Флажки",
+                new Collapsible(Tr.r("Флажки"),
                         Ui.row(10,
-                                new Checkbox("Галочка", Signal.of(true)).kind(Checkbox.Kind.CHECK),
-                                new Checkbox("Крестик", Signal.of(true)).kind(Checkbox.Kind.CROSS),
-                                new Checkbox("Заливка", Signal.of(false)).kind(Checkbox.Kind.FILL)),
+                                new Checkbox(Tr.r("Галочка"), Signal.of(true)).kind(Checkbox.Kind.CHECK),
+                                new Checkbox(Tr.r("Крестик"), Signal.of(true)).kind(Checkbox.Kind.CROSS),
+                                new Checkbox(Tr.r("Заливка"), Signal.of(false)).kind(Checkbox.Kind.FILL)),
                         Ui.row(10,
-                                new Checkbox("Сердце", Signal.of(true)).kind(Checkbox.Kind.HEART),
-                                new Checkbox("Звезда", Signal.of(false)).kind(Checkbox.Kind.STAR),
-                                new Checkbox("Точка", Signal.of(true)).kind(Checkbox.Kind.SWITCH_DOT))));
+                                new Checkbox(Tr.r("Сердце"), Signal.of(true)).kind(Checkbox.Kind.HEART),
+                                new Checkbox(Tr.r("Звезда"), Signal.of(false)).kind(Checkbox.Kind.STAR),
+                                new Checkbox(Tr.r("Точка"), Signal.of(true)).kind(Checkbox.Kind.SWITCH_DOT))));
     }
 
     private static UiElement music() {
@@ -154,42 +154,42 @@ final class ModernPage {
         visual.setClipChildren(true);
         visual.style(b -> b.set(Styles.RADIUS, Radii.all(RADIUS)));
         return scroll(visual,
-                new Collapsible("Громкость",
-                        slider("Общая", 100), slider("Музыка", 60), slider("Погода", 80),
-                        slider("Блоки", 100), slider("Враждебные", 90), slider("Голос", 100)));
+                new Collapsible(Tr.r("Громкость"),
+                        slider(Tr.r("Общая"), 100), slider(Tr.r("Музыка"), 60), slider(Tr.r("Погода"), 80),
+                        slider(Tr.r("Блоки"), 100), slider(Tr.r("Враждебные"), 90), slider(Tr.r("Голос"), 100)));
     }
 
     private static UiElement dev() {
-        TextField command = new TextField(Signal.of("")).placeholder("/команда").icon(FieldBase.SEARCH).clearButton(true);
+        TextField command = new TextField(Signal.of("")).placeholder(Tr.r("/команда")).icon(FieldBase.SEARCH).clearButton(true);
         command.width(Dim.FILL);
         return scroll(
-                new Collapsible("Отладка",
-                        toggleRow("Показывать границы элементов", false),
-                        toggleRow("Счётчик кадров", true),
-                        toggleRow("Логировать события", false),
-                        row("Масштаб интерфейса", new NumberField(Signal.of(1f), 0.5f, 3f).step(0.25f).decimals(2)
+                new Collapsible(Tr.r("Отладка"),
+                        toggleRow(Tr.r("Показывать границы элементов"), false),
+                        toggleRow(Tr.r("Счётчик кадров"), true),
+                        toggleRow(Tr.r("Логировать события"), false),
+                        row(Tr.r("Масштаб интерфейса"), new NumberField(Signal.of(1f), 0.5f, 3f).step(0.25f).decimals(2)
                                 .defaultValue(1f).width(Dim.px(70)))),
-                new Collapsible("Консоль", command));
+                new Collapsible(Tr.r("Консоль"), command));
     }
 
     private static UiElement markdown() {
-        return scroll(new Markdown("""
+        return scroll(new Markdown(Tr.r("""
                 # Markdown
                 Текст **жирный**, *курсив*, `код` и ![](item:minecraft:diamond) иконки.
 
                 - [x] Современная тема
                 - [x] Вкладки и боковое меню
                 - [ ] Ваш экран настроек
-                """));
+                """)));
     }
 
     // ---------------------------------------------------------------- вкладки «Настроек»
 
     private static UiElement screenTab() {
-        return scroll(new Collapsible("Окно",
-                toggleRow("Полноэкранный режим", false),
-                toggleRow("Вертикальная синхронизация", true),
-                row("Ограничение FPS", new NumberField(Signal.of(120f), 10, 260).step(10).decimals(0)
+        return scroll(new Collapsible(Tr.r("Окно"),
+                toggleRow(Tr.r("Полноэкранный режим"), false),
+                toggleRow(Tr.r("Вертикальная синхронизация"), true),
+                row(Tr.r("Ограничение FPS"), new NumberField(Signal.of(120f), 10, 260).step(10).decimals(0)
                         .defaultValue(120f).width(Dim.px(70)))));
     }
 
@@ -206,7 +206,7 @@ final class ModernPage {
         Signal<Float> motion = Signal.of(1f);
 
         Panel preview = Ui.centered(Panel.box(FlexLayout.column().gap(3).align(Align.CENTER))
-                .add(new Label("Предпросмотр"), Ui.muted("ПКМ — меню")));
+                .add(new Label(Tr.r("Предпросмотр")), Ui.muted(Tr.r("ПКМ — меню"))));
         preview.size(150, 70);
         Runnable restyle = () -> preview.style(b -> {
             b.set(Styles.BACKGROUND, Brush.solid(0x22FFFFFF))
@@ -239,15 +239,15 @@ final class ModernPage {
         preview.on(PointerEvent.PRESS, e -> {
             if (e.button() == Keys.MOUSE_RIGHT && preview.root() != null) {
                 new ContextMenu()
-                        .item("Острые углы", () -> rounded.set(false))
-                        .item("Без тени", () -> shadow.set(false))
-                        .item("Поменять цвета местами", () -> {
+                        .item(Tr.r("Острые углы"), () -> rounded.set(false))
+                        .item(Tr.r("Без тени"), () -> shadow.set(false))
+                        .item(Tr.r("Поменять цвета местами"), () -> {
                             int t = top.peek();
                             top.set(bottom.peek());
                             bottom.set(t);
                         })
                         .separator()
-                        .item("Сбросить по умолчанию", reset)
+                        .item(Tr.r("Сбросить по умолчанию"), reset)
                         .show(preview.root(), e.x(), e.y());
                 e.consume();
             }
@@ -262,22 +262,22 @@ final class ModernPage {
         bottom.subscribe(v -> paintBar.run());
 
         Panel presets = Ui.row(6,
-                preset("Мягкий", () -> {
+                preset(Tr.r("Мягкий"), () -> {
                     rounded.set(true);
                     radius.set(14f);
                     width.set(1f);
                 }),
-                preset("Острый", () -> {
+                preset(Tr.r("Острый"), () -> {
                     rounded.set(false);
                     width.set(1.5f);
                 }),
-                preset("Неон", () -> {
+                preset(Tr.r("Неон"), () -> {
                     radius.set(8f);
                     width.set(2f);
                     top.set(0xFFFF4FD8);
                     bottom.set(0xFF4FE3FF);
                 }),
-                preset("Стекло", () -> {
+                preset(Tr.r("Стекло"), () -> {
                     radius.set(16f);
                     width.set(0.5f);
                     top.set(0xC0FFFFFF);
@@ -297,22 +297,22 @@ final class ModernPage {
             }
         });
 
-        Collapsible border = new Collapsible("Стиль рамки",
+        Collapsible border = new Collapsible(Tr.r("Стиль рамки"),
                 Ui.row(14,
                         Ui.column(6,
-                                toggleRow("Скруглённые углы", rounded),
-                                toggleRow("Тень", shadow),
-                                toggleRow("Градиентная рамка", gradient)).grow(1),
+                                toggleRow(Tr.r("Скруглённые углы"), rounded),
+                                toggleRow(Tr.r("Тень"), shadow),
+                                toggleRow(Tr.r("Градиентная рамка"), gradient)).grow(1),
                         preview),
-                row("Радиус", new SliderField(radius, 0, 24).step(1).decimals(0).suffix(" px").width(Dim.px(210))),
-                row("Толщина", new SliderField(width, 0, 4).step(0.5f).decimals(1).suffix(" px").width(Dim.px(210))),
-                row("Пресеты", presets),
-                row("Цвет сверху", color(top, TOP)),
-                row("Цвет снизу", color(bottom, BOTTOM)),
+                row(Tr.r("Радиус"), new SliderField(radius, 0, 24).step(1).decimals(0).suffix(" px").width(Dim.px(210))),
+                row(Tr.r("Толщина"), new SliderField(width, 0, 4).step(0.5f).decimals(1).suffix(" px").width(Dim.px(210))),
+                row(Tr.r("Пресеты"), presets),
+                row(Tr.r("Цвет сверху"), color(top, TOP)),
+                row(Tr.r("Цвет снизу"), color(bottom, BOTTOM)),
                 gradientBar);
-        Collapsible theme = new Collapsible("Тема",
-                row("Акцент", accentField),
-                row("Скорость анимаций", new SliderField(motion, 0.25f, 2f).step(0.05f).decimals(2).suffix("×")
+        Collapsible theme = new Collapsible(Tr.r("Тема"),
+                row(Tr.r("Акцент"), accentField),
+                row(Tr.r("Скорость анимаций"), new SliderField(motion, 0.25f, 2f).step(0.05f).decimals(2).suffix("×")
                         .width(Dim.px(210))));
         restyle.run();
         paintBar.run();
@@ -321,21 +321,21 @@ final class ModernPage {
 
     private static UiElement fontTab() {
         Signal<Float> size = Signal.of(1f);
-        Signal<String> family = Signal.of("Обычный");
-        FancyText sample = new FancyText("Съешь же ещё этих мягких булок").gradient(TOP, BOTTOM);
+        Signal<String> family = Signal.of(Tr.r("Обычный"));
+        FancyText sample = new FancyText(Tr.r("Съешь же ещё этих мягких булок")).gradient(TOP, BOTTOM);
         size.subscribe(sample::scale);
-        return scroll(new Collapsible("Шрифт",
-                row("Размер", new SliderField(size, 0.5f, 2.5f).step(0.1f).decimals(1).suffix("×").width(Dim.px(210))),
-                row("Начертание", RadioGroup.of(family, "Обычный", "Жирный", "Моно").horizontal().gap(10)),
+        return scroll(new Collapsible(Tr.r("Шрифт"),
+                row(Tr.r("Размер"), new SliderField(size, 0.5f, 2.5f).step(0.1f).decimals(1).suffix("×").width(Dim.px(210))),
+                row(Tr.r("Начертание"), RadioGroup.of(family, Tr.r("Обычный"), Tr.r("Жирный"), Tr.r("Моно")).horizontal().gap(10)),
                 sample));
     }
 
     private static UiElement extensionsTab() {
         Panel list = Ui.column(4);
         String[][] mods = {
-                {"minecraft:map", "Мини-карта"}, {"minecraft:clock", "Часы на экране"},
-                {"minecraft:compass", "Координаты"}, {"minecraft:spyglass", "Приближение"},
-                {"minecraft:chest", "Сортировка сундуков"}};
+                {"minecraft:map", Tr.r("Мини-карта")}, {"minecraft:clock", Tr.r("Часы на экране")},
+                {"minecraft:compass", Tr.r("Координаты")}, {"minecraft:spyglass", Tr.r("Приближение")},
+                {"minecraft:chest", Tr.r("Сортировка сундуков")}};
         for (int i = 0; i < mods.length; i++) {
             Panel r = Panel.box(FlexLayout.row().gap(8).align(Align.CENTER))
                     .add(io.github.ssbaxys.lumina.widget.Icon.item(mods[i][0], 16),
@@ -345,23 +345,23 @@ final class ModernPage {
             list.add(r);
         }
         list.width(Dim.FILL);
-        return scroll(new Collapsible("Расширения", list));
+        return scroll(new Collapsible(Tr.r("Расширения"), list));
     }
 
     private static UiElement textTab() {
         Signal<String> name = Signal.of("Steve");
-        TextField outlined = new TextField(name).placeholder("Имя").defaultValue("Steve");
-        TextField filled = new TextField(Signal.of("")).placeholder("Заполненное").variant("filled");
-        TextField underline = new TextField(Signal.of("")).placeholder("С подчёркиванием").variant("underline");
-        TextField pill = new TextField(Signal.of("")).placeholder("Поиск").variant("pill").icon(FieldBase.SEARCH)
+        TextField outlined = new TextField(name).placeholder(Tr.r("Имя")).defaultValue("Steve");
+        TextField filled = new TextField(Signal.of("")).placeholder(Tr.r("Заполненное")).variant("filled");
+        TextField underline = new TextField(Signal.of("")).placeholder(Tr.r("С подчёркиванием")).variant("underline");
+        TextField pill = new TextField(Signal.of("")).placeholder(Tr.r("Поиск")).variant("pill").icon(FieldBase.SEARCH)
                 .clearButton(true);
         for (TextField f : new TextField[]{outlined, filled, underline, pill}) {
             f.width(Dim.px(200));
         }
-        return scroll(new Collapsible("Поля ввода",
-                row("Обычное", outlined), row("Заполненное", filled),
-                row("Линия", underline), row("Пилюля", pill),
-                Label.bound(name.map(n -> "Привет, " + (n.isBlank() ? "незнакомец" : n) + "!")).style(Ui.MUTED)));
+        return scroll(new Collapsible(Tr.r("Поля ввода"),
+                row(Tr.r("Обычное"), outlined), row(Tr.r("Заполненное"), filled),
+                row(Tr.r("Линия"), underline), row(Tr.r("Пилюля"), pill),
+                Label.bound(name.map(n -> Tr.r("Привет, ") + (n.isBlank() ? Tr.r("незнакомец") : n) + "!")).style(Ui.MUTED)));
     }
 
     // ---------------------------------------------------------------- строительные блоки

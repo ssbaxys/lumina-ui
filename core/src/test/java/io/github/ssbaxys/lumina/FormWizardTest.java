@@ -35,6 +35,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Проверка ввода, формы, индикатор шагов и мастер настройки. */
 class FormWizardTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     @BeforeAll
     static void init() {
         TestSupport.init();

@@ -41,6 +41,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Тема → CSS → тема: токены и стили классов возвращаются без потерь; файлы через платформу. */
 class ThemeCssTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     private CapturePlatform platform;
 
     @BeforeEach

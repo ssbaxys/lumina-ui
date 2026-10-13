@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.AnimatedFloat;
 import io.github.ssbaxys.lumina.anim.Spring;
@@ -113,7 +114,7 @@ public class VirtualList<T> extends Widget<VirtualList<T>> {
     private int hoverIndex = -1;
     private int visibleRows = 10;
     private boolean zebra = true;
-    private String emptyText = "Пусто";
+    private String emptyText = I18n.ru("Пусто");
     private Consumer<T> onActivate;
     private final RowState rowState = new RowState();
 

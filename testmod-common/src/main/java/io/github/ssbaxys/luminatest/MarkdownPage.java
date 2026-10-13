@@ -71,10 +71,10 @@ final class MarkdownPage {
 
     static UiElement create() {
         Signal<String> lastLink = Signal.of("—");
-        Signal<String> text = Signal.of(GUIDE);
+        Signal<String> text = Signal.of(Tr.r(GUIDE));
         Markdown md = Markdown.bound(text)
                 .onLink(lastLink::set)
-                .onTaskToggle((item, done) -> lastLink.set(done ? "задача отмечена" : "отметка снята"));
+                .onTaskToggle((item, done) -> lastLink.set(done ? Tr.r("задача отмечена") : Tr.r("отметка снята")));
         Panel card = Ui.column(0, md).width(Dim.FILL);
         card.style(b -> b
                 .set(Styles.BACKGROUND, Brush.solid(0x14808080))
@@ -83,9 +83,9 @@ final class MarkdownPage {
 
         return Ui.page(
                 Ui.row(6,
-                        new Button("Полный пример", () -> text.set(GUIDE)),
-                        new Button("Короткая заметка", () -> text.set(SHORT)).styleClass("button ghost"),
-                        Ui.muted("Последнее действие:"),
+                        new Button(Tr.r("Полный пример"), () -> text.set(Tr.r(GUIDE))),
+                        new Button(Tr.r("Короткая заметка"), () -> text.set(Tr.r(SHORT))).styleClass("button ghost"),
+                        Ui.muted(Tr.r("Последнее действие:")),
                         Label.bound(lastLink)),
                 card);
     }

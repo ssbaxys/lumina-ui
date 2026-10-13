@@ -77,11 +77,11 @@ final class AnimationPage {
                 morph);
 
         return Ui.page(
-                Ui.section("Галерея кривых", "Все 23 встроенные кривые; есть ещё steps(n), spring(), cubicBezier()",
+                Ui.section(Tr.r("Галерея кривых"), Tr.r("Все 23 встроенные кривые; есть ещё steps(n), spring(), cubicBezier()"),
                         gallery()),
-                Ui.section("Ключевые кадры", "animate(key).keyframe(...).loop().yoyo() — любое свойство стиля",
+                Ui.section(Tr.r("Ключевые кадры"), Tr.r("animate(key).keyframe(...).loop().yoyo() — любое свойство стиля"),
                         keyframes()),
-                Ui.section("Последовательности", "Motion.sequence / parallel / delay / call — как таймлайн",
+                Ui.section(Tr.r("Последовательности"), Tr.r("Motion.sequence / parallel / delay / call — как таймлайн"),
                         sequence()),
                 Ui.section("luminatest.anim.easing", "luminatest.anim.easing.hint", easings),
                 Ui.section("luminatest.anim.springs", "luminatest.anim.springs.hint", springs),
@@ -157,7 +157,7 @@ final class AnimationPage {
 
         Panel track = Panel.box(new StackLayout(Align.START, Align.CENTER)).width(Dim.px(190)).height(Dim.px(26))
                 .add(bouncer);
-        return Ui.row(20, track, Ui.labeled(breathing, "дыхание"), Ui.labeled(squash, "сжатие"));
+        return Ui.row(20, track, Ui.labeled(breathing, Tr.r("дыхание")), Ui.labeled(squash, Tr.r("сжатие")));
     }
 
     private static Panel sequence() {
@@ -169,7 +169,7 @@ final class AnimationPage {
             boxes[i].style(b -> b.set(Styles.RADIUS, Radii.all(6)));
             row.add(boxes[i]);
         }
-        Label status = Ui.muted("готово");
+        Label status = Ui.muted(Tr.r("готово"));
         Runnable run = () -> {
             Motion[] drops = new Motion[boxes.length];
             for (int i = 0; i < boxes.length; i++) {
@@ -183,19 +183,19 @@ final class AnimationPage {
                             .duration(0.4f).motion());
             row.play(Motion.sequence(
                     Motion.call(() -> {
-                        status.text("падают по очереди…");
+                        status.text(Tr.r("падают по очереди…"));
                         for (Panel b : boxes) {
                             b.setAnimatedStyle(Styles.OPACITY, 0f);
                         }
                     }),
                     Motion.parallel(drops[0], drops[1].delayed(0.15f), drops[2].delayed(0.3f), drops[3].delayed(0.45f)),
-                    Motion.call(() -> status.text("крайние вместе")),
+                    Motion.call(() -> status.text(Tr.r("крайние вместе"))),
                     pulse,
                     Motion.delay(0.2f),
                     VanillaFx.shake(row, 3f, 0.35f),
-                    Motion.call(() -> status.text("готово"))));
+                    Motion.call(() -> status.text(Tr.r("готово")))));
         };
-        return Ui.row(14, new Button("Запустить", run), row, status);
+        return Ui.row(14, new Button(Tr.r("Запустить"), run), row, status);
     }
 
     private static void addRunner(Panel into, List<Runner> list, String name, Easing easing, Spring spring) {

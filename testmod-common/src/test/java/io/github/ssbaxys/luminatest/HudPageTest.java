@@ -36,6 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Страница HUD: живые данные, тосты, таймер, лента и демо-HUD работают из интерфейса. */
 class HudPageTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     private static final TextMetrics METRICS = new TextMetrics() {
         @Override
         public float width(String text) {

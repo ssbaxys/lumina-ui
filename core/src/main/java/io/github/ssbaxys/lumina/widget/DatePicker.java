@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.AnimatedFloat;
 import io.github.ssbaxys.lumina.anim.Easing;
@@ -39,7 +40,7 @@ public class DatePicker extends Widget<DatePicker> {
 
     private final Signal<LocalDate> value;
     private DateTimeFormatter format = DEFAULT_FORMAT;
-    private String placeholder = "дд.мм.гггг";
+    private String placeholder = I18n.ru("дд.мм.гггг");
     private LocalDate min;
     private LocalDate max;
     private LocalDate today;

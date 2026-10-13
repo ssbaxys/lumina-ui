@@ -57,53 +57,53 @@ final class EffectsPage {
         Effect[] fountain = {null};
 
         Panel controls = Ui.row(6,
-                new Button("Огонь", () -> fire[0] = toggle(fx, fire[0],
+                new Button(Tr.r("Огонь"), () -> fire[0] = toggle(fx, fire[0],
                         () -> VanillaFx.fire(stage.width() * 0.2f - 16f, FLOOR - 32f, 32f, 32f))).clickSound(false),
-                new Button("Огонь душ", () -> soul[0] = toggle(fx, soul[0],
+                new Button(Tr.r("Огонь душ"), () -> soul[0] = toggle(fx, soul[0],
                         () -> VanillaFx.soulFire(stage.width() * 0.8f - 16f, FLOOR - 32f, 32f, 32f))).clickSound(false),
-                new Button("Уронить TNT", () -> dropTnt(fx, stage, random)).clickSound(false),
-                new Button("Взрыв", () -> {
+                new Button(Tr.r("Уронить TNT"), () -> dropTnt(fx, stage, random)).clickSound(false),
+                new Button(Tr.r("Взрыв"), () -> {
                     fx.spawn(VanillaFx.explosion(40f + random.nextFloat() * (stage.width() - 80f),
                             40f + random.nextFloat() * (FLOOR - 60f), 1f));
                     stage.play(VanillaFx.shake(stage, 5f, 0.45f));
                 }).clickSound(false));
         Panel controls2 = Ui.row(6,
-                new Button("Ливень TNT", () -> {
+                new Button(Tr.r("Ливень TNT"), () -> {
                     for (int i = 0; i < 5; i++) {
                         dropTnt(fx, stage, random);
                     }
                 }).clickSound(false),
-                new Button("Пламя", () -> fountain[0] = toggle(fx, fountain[0],
+                new Button(Tr.r("Пламя"), () -> fountain[0] = toggle(fx, fountain[0],
                         () -> VanillaFx.flames(stage.width() / 2f, FLOOR, 24f))).clickSound(false),
-                new Button("Лава", () -> fx.spawn(VanillaFx.lavaPop(stage.width() * (0.3f + random.nextFloat() * 0.4f),
+                new Button(Tr.r("Лава"), () -> fx.spawn(VanillaFx.lavaPop(stage.width() * (0.3f + random.nextFloat() * 0.4f),
                         FLOOR, 14))).clickSound(false),
-                new Button("Дым", () -> fx.spawn(VanillaFx.smokePuff(stage.width() / 2f, FLOOR - 30f, 24f)))
+                new Button(Tr.r("Дым"), () -> fx.spawn(VanillaFx.smokePuff(stage.width() / 2f, FLOOR - 30f, 24f)))
                         .clickSound(false),
-                new Button("Погасить", fx::clear).styleClass("button ghost").clickSound(false));
+                new Button(Tr.r("Погасить"), fx::clear).styleClass("button ghost").clickSound(false));
 
         Effect[] weather = {null, null, null, null};
         Panel weatherRow = Ui.grid(3, 6,
-                small("Снег", () -> weather[0] = toggle(fx, weather[0], () -> VanillaFx.snow(0, 0, stage.width(), FLOOR))),
-                small("Дождь", () -> weather[1] = toggle(fx, weather[1], () -> VanillaFx.rain(0, 0, stage.width(), FLOOR))),
-                small("Лепестки вишни", () -> weather[2] = toggle(fx, weather[2],
+                small(Tr.r("Снег"), () -> weather[0] = toggle(fx, weather[0], () -> VanillaFx.snow(0, 0, stage.width(), FLOOR))),
+                small(Tr.r("Дождь"), () -> weather[1] = toggle(fx, weather[1], () -> VanillaFx.rain(0, 0, stage.width(), FLOOR))),
+                small(Tr.r("Лепестки вишни"), () -> weather[2] = toggle(fx, weather[2],
                         () -> VanillaFx.cherryLeaves(0, 0, stage.width(), FLOOR))),
-                small("Капли", () -> weather[3] = toggle(fx, weather[3],
+                small(Tr.r("Капли"), () -> weather[3] = toggle(fx, weather[3],
                         () -> VanillaFx.drips(stage.width() / 2f, 0, stage.width() * 0.8f, FLOOR, random.nextBoolean()))),
-                small("Пузыри", () -> burst(fx, fx.spawn(VanillaFx.bubbles(stage.width() * 0.3f, FLOOR, 40f, 20f)), 3f)));
+                small(Tr.r("Пузыри"), () -> burst(fx, fx.spawn(VanillaFx.bubbles(stage.width() * 0.3f, FLOOR, 40f, 20f)), 3f)));
         int[] notePitch = {0};
         // Зачарование: руны стягиваются к столу зачарования.
         Effect[] enchant = {null};
         Panel mobRow = Ui.grid(4, 6,
-                small("Сердечки", () -> fx.spawn(VanillaFx.hearts(randX(stage, random), FLOOR - 40f, 7))),
-                small("Злой житель", () -> fx.spawn(VanillaFx.angry(randX(stage, random), FLOOR - 40f, 5))),
-                small("Довольный", () -> fx.spawn(VanillaFx.happy(randX(stage, random), FLOOR - 30f, 20f, 14))),
-                small("Нота", () -> {
+                small(Tr.r("Сердечки"), () -> fx.spawn(VanillaFx.hearts(randX(stage, random), FLOOR - 40f, 7))),
+                small(Tr.r("Злой житель"), () -> fx.spawn(VanillaFx.angry(randX(stage, random), FLOOR - 40f, 5))),
+                small(Tr.r("Довольный"), () -> fx.spawn(VanillaFx.happy(randX(stage, random), FLOOR - 30f, 20f, 14))),
+                small(Tr.r("Нота"), () -> {
                     notePitch[0] = (notePitch[0] + 2) % 25;
                     fx.spawn(VanillaFx.note(stage.width() * (0.1f + 0.8f * notePitch[0] / 24f), FLOOR - 20f, notePitch[0]));
                 }),
-                small("Крит", () -> fx.spawn(VanillaFx.crit(randX(stage, random), FLOOR - 50f, random.nextBoolean()))),
-                small("Тотем", () -> fx.spawn(VanillaFx.totem(stage.width() / 2f, FLOOR - 40f))),
-                small("Зачарование", () -> enchant[0] = toggle(fx, enchant[0],
+                small(Tr.r("Крит"), () -> fx.spawn(VanillaFx.crit(randX(stage, random), FLOOR - 50f, random.nextBoolean()))),
+                small(Tr.r("Тотем"), () -> fx.spawn(VanillaFx.totem(stage.width() / 2f, FLOOR - 40f))),
+                small(Tr.r("Зачарование"), () -> enchant[0] = toggle(fx, enchant[0],
                         () -> Effect.group(VanillaFx.enchant(stage.width() / 2f, FLOOR - 30f, 70f),
                                 Effect.of((dt, t, l) -> true, (c, t) -> c.drawItem("minecraft:enchanting_table",
                                         stage.width() / 2f - 12f, FLOOR - 24f, 24f))))));
@@ -120,12 +120,12 @@ final class EffectsPage {
         });
         Panel custom = Ui.row(6,
                 small("luminatest:confetti", () -> fx.spawn("luminatest:confetti", 0, 0, stage.width(), FLOOR)),
-                small("Случайный из реестра", () -> {
+                small(Tr.r("Случайный из реестра"), () -> {
                     String[] ids = FxRegistry.ids().toArray(new String[0]);
                     String id = ids[random.nextInt(ids.length)];
                     burst(fx, fx.spawn(id, stage.width() * 0.25f, 20f, stage.width() * 0.5f, FLOOR - 20f), 4f);
                 }),
-                Ui.muted(FxRegistry.ids().size() + " эффектов в реестре"));
+                Ui.muted(FxRegistry.ids().size() + Tr.r(" эффектов в реестре")));
 
         Panel sprites = Ui.row(16,
                 Ui.labeled(spriteLoop(VanillaFx.FIRE_0, 32), "fire_0"),
@@ -135,7 +135,7 @@ final class EffectsPage {
                 Ui.labeled(spriteLoop(VanillaFx.SPARK, 32), "spark"),
                 Ui.labeled(new Sketch(40, 40, (c, w, h, t) ->
                         VanillaFx.drawBlock(c, VanillaFx.TNT_TOP, VanillaFx.TNT_SIDE, w / 2f, 4f + (float) Math.sin(t * 3) * 2f,
-                                30f, Color.WHITE)), "блок"));
+                                30f, Color.WHITE)), Tr.r("блок")));
 
         Panel items = Ui.row(10);
         for (String id : new String[]{"minecraft:tnt", "minecraft:flint_and_steel", "minecraft:fire_charge",
@@ -149,17 +149,17 @@ final class EffectsPage {
         }
 
         return Ui.page(
-                Ui.section("Сцена", "Кликните по сцене — будет взрыв. TNT падает, отскакивает, мигает и взрывается, "
-                        + "окно трясётся", stage, controls, controls2),
-                Ui.section("Погода", "Ванильные текстуры дождя и снега двумя слоями, брызги, хлопья, лепестки, капли",
+                Ui.section(Tr.r("Сцена"), Tr.r("Кликните по сцене — будет взрыв. TNT падает, отскакивает, мигает и взрывается, ")
+                        + Tr.r("окно трясётся"), stage, controls, controls2),
+                Ui.section(Tr.r("Погода"), Tr.r("Ванильные текстуры дождя и снега двумя слоями, брызги, хлопья, лепестки, капли"),
                         weatherRow),
-                Ui.section("Частицы мобов и предметов", "Сердечки, жители, ноты (цвет по высоте), криты, тотем, "
-                        + "руны зачарования", mobRow),
-                Ui.section("Свои эффекты", "FxRegistry.register(\"мод:имя\", (x, y, w, h) -> эффект) — и "
-                        + "fx.spawn(\"мод:имя\", ...). Частицы собираются из готовых деталей", custom),
-                Ui.section("Анимированные спрайты", "SpriteSheet: полосы кадров как у ванильных текстур и "
-                        + "наборы отдельных кадров частиц", sprites),
-                Ui.section("Предметы", "canvas.drawItem(\"minecraft:tnt\", x, y, size) — как в инвентаре", items));
+                Ui.section(Tr.r("Частицы мобов и предметов"), Tr.r("Сердечки, жители, ноты (цвет по высоте), криты, тотем, ")
+                        + Tr.r("руны зачарования"), mobRow),
+                Ui.section(Tr.r("Свои эффекты"), Tr.r("FxRegistry.register(\"мод:имя\", (x, y, w, h) -> эффект) — и ")
+                        + Tr.r("fx.spawn(\"мод:имя\", ...). Частицы собираются из готовых деталей"), custom),
+                Ui.section(Tr.r("Анимированные спрайты"), Tr.r("SpriteSheet: полосы кадров как у ванильных текстур и ")
+                        + Tr.r("наборы отдельных кадров частиц"), sprites),
+                Ui.section(Tr.r("Предметы"), Tr.r("canvas.drawItem(\"minecraft:tnt\", x, y, size) — как в инвентаре"), items));
     }
 
     private static Button small(String text, Runnable action) {

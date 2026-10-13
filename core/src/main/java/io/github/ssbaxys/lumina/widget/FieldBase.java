@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.AnimatedFloat;
 import io.github.ssbaxys.lumina.anim.Easing;
@@ -277,7 +278,7 @@ public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
 
     /** Пункт "Сбросить по умолчанию": доступен, когда текст отличается от умолчания. */
     protected final S resetItem(Supplier<String> defaultText) {
-        return menuItem(ContextMenu.Item.of("Сбросить по умолчанию", () -> {
+        return menuItem(ContextMenu.Item.of(I18n.ru("Сбросить по умолчанию"), () -> {
             replace(0, text.length(), defaultText.get(), EDIT_OTHER);
             commit();
         }).enabledWhen(() -> isEditable() && !text.equals(defaultText.get())));
@@ -954,17 +955,17 @@ public abstract class FieldBase<S extends FieldBase<S>> extends Widget<S> {
         if (standardMenu) {
             boolean editable = isEditable();
             String clip = Lumina.isInitialized() ? Lumina.platform().getClipboard() : null;
-            menu.add(ContextMenu.Item.of("Отменить", this::undo).shortcut("Ctrl+Z").enabled(editable && canUndo()))
-                    .add(ContextMenu.Item.of("Повторить", this::redo).shortcut("Ctrl+Y").enabled(editable && canRedo()))
+            menu.add(ContextMenu.Item.of(I18n.ru("Отменить"), this::undo).shortcut("Ctrl+Z").enabled(editable && canUndo()))
+                    .add(ContextMenu.Item.of(I18n.ru("Повторить"), this::redo).shortcut("Ctrl+Y").enabled(editable && canRedo()))
                     .separator()
-                    .add(ContextMenu.Item.of("Вырезать", this::cut).shortcut("Ctrl+X")
+                    .add(ContextMenu.Item.of(I18n.ru("Вырезать"), this::cut).shortcut("Ctrl+X")
                             .enabled(editable && hasSelection() && !password))
-                    .add(ContextMenu.Item.of("Копировать", this::copy).shortcut("Ctrl+C")
+                    .add(ContextMenu.Item.of(I18n.ru("Копировать"), this::copy).shortcut("Ctrl+C")
                             .enabled(hasSelection() && !password))
-                    .add(ContextMenu.Item.of("Вставить", this::paste).shortcut("Ctrl+V")
+                    .add(ContextMenu.Item.of(I18n.ru("Вставить"), this::paste).shortcut("Ctrl+V")
                             .enabled(editable && clip != null && !clip.isEmpty()))
                     .separator()
-                    .add(ContextMenu.Item.of("Выделить всё", this::selectAll).shortcut("Ctrl+A").enabled(!text.isEmpty()));
+                    .add(ContextMenu.Item.of(I18n.ru("Выделить всё"), this::selectAll).shortcut("Ctrl+A").enabled(!text.isEmpty()));
         }
         if (!menuItems.isEmpty()) {
             menu.separator();

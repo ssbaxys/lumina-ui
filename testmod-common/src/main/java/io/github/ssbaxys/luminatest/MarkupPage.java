@@ -39,10 +39,10 @@ final class MarkupPage {
                         source.root().theme().set(Tokens.ACCENT, accent.peek());
                     }
                 });
-        Signal<String> generation = Signal.of("сборка 1");
-        view[0] = MarkupView.resource(HTML, bindings)
+        Signal<String> generation = Signal.of(Tr.r("сборка 1"));
+        view[0] = MarkupView.resource(html(), bindings)
                 .watch(1f)
-                .onBuild(v -> generation.set("сборка " + v.generation()));
+                .onBuild(v -> generation.set(Tr.r("сборка ") + v.generation()));
 
         Signal<String> code = Signal.of("");
         Markdown source = Markdown.bound(code);
@@ -54,22 +54,27 @@ final class MarkupPage {
         sourceCard.setVisible(false);
 
         return Ui.page(
-                Ui.section("HTML и CSS",
-                        "Экран ниже загружен из файлов мода; правка в ресурспаке + F3+T обновляет его на лету.",
+                Ui.section(Tr.r("HTML и CSS"),
+                        Tr.r("Экран ниже загружен из файлов мода; правка в ресурспаке + F3+T обновляет его на лету."),
                         view[0]),
-                Ui.section("Исходники", null,
+                Ui.section(Tr.r("Исходники"), null,
                         Ui.row(6,
-                                new Button("HTML", () -> showSource(code, sourceCard, HTML, "html")),
+                                new Button("HTML", () -> showSource(code, sourceCard, html(), "html")),
                                 new Button("CSS", () -> showSource(code, sourceCard, CSS, "css")).styleClass("button ghost"),
-                                new Button("Скрыть", () -> sourceCard.setVisible(false)).styleClass("button ghost"),
-                                new Button("Пересобрать", () -> view[0].reload()).styleClass("button ghost"),
+                                new Button(Tr.r("Скрыть"), () -> sourceCard.setVisible(false)).styleClass("button ghost"),
+                                new Button(Tr.r("Пересобрать"), () -> view[0].reload()).styleClass("button ghost"),
                                 Label.bound(generation).style(Ui.MUTED)),
                         sourceCard));
     }
 
+    /** Разметка демо-экрана на текущем языке витрины. */
+    private static String html() {
+        return Tr.russian() ? HTML : "luminatest:ui/markup_demo_en.html";
+    }
+
     private static void showSource(Signal<String> code, Panel card, String id, String lang) {
         String text = Lumina.isInitialized() ? Lumina.platform().readResource(id) : null;
-        code.set(text == null ? "Ресурс `" + id + "` не найден." : "```" + lang + "\n" + text.strip() + "\n```");
+        code.set(text == null ? Tr.r("Ресурс `") + id + Tr.r("` не найден.") : "```" + lang + "\n" + text.strip() + "\n```");
         card.setVisible(true);
     }
 }

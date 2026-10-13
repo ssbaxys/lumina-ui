@@ -75,13 +75,17 @@ public final class Showcase {
         nav.add(linkScroll);
 
         Button[] buttons = new Button[pages.size()];
+        int[] current = {0};
         for (int i = 0; i < pages.size(); i++) {
             int index = i;
             buttons[i] = Button.tr(pages.get(i).titleKey())
                     .styleClass("nav")
                     .width(Dim.FILL)
                     .clickSound(false)
-                    .onPress(() -> select(index, pages, buttons, content));
+                    .onPress(() -> {
+                        current[0] = index;
+                        select(index, pages, buttons, content);
+                    });
             links.add(buttons[i]);
         }
         nav.add(Ui.column(0).size(1, 2),
@@ -99,7 +103,9 @@ public final class Showcase {
         Panel screen = Panel.box(new StackLayout(Align.CENTER, Align.CENTER))
                 .fill()
                 .style(b -> b.set(Styles.BACKGROUND, Brush.vertical(0x50000000, 0xA0000000)))
-                .add(window);
+                .add(window)
+                // Тексты страниц переводятся при сборке: при смене языка открытая страница собирается заново.
+                .add(new LanguageWatch(() -> select(current[0], pages, buttons, content)));
 
         UiRoot root = new UiRoot(screen, ShowcaseTheme.dark());
         light.subscribe(on -> root.setTheme(ShowcaseTheme.carryTokens(

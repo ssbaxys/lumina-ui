@@ -64,7 +64,7 @@ final class ToolsPage {
                 .set(Styles.BORDER_WIDTH, 1f)
                 .set(Styles.RADIUS, Radii.all(12))
                 .set(Styles.PADDING, Insets.all(8)));
-        card.add(new Label("Матовое стекло"), Ui.muted("за ним — живой фон"));
+        card.add(new Label(Tr.r("Матовое стекло")), Ui.muted(Tr.r("за ним — живой фон")));
         blur.subscribe(v -> {
             card.style(b -> b.set(Styles.BACKDROP_BLUR, v));
             value.text("backdrop-blur: " + Math.round(v));
@@ -78,9 +78,9 @@ final class ToolsPage {
 
         Slider slider = new Slider(blur, 0f, 24f).step(1f);
         slider.id("blur-slider").width(Dim.px(160));
-        return Ui.section("Размытие фона",
-                "Стиль backdrop-blur размывает то, что уже нарисовано под элементом. В игре — ванильный шейдер "
-                        + "размытия; где его нет, рисуется матовая подложка",
+        return Ui.section(Tr.r("Размытие фона"),
+                Tr.r("Стиль backdrop-blur размывает то, что уже нарисовано под элементом. В игре — ванильный шейдер ")
+                        + Tr.r("размытия; где его нет, рисуется матовая подложка"),
                 stage, Ui.row(8, slider, value));
     }
 
@@ -92,7 +92,7 @@ final class ToolsPage {
         for (int i = 0; i < 14; i++) {
             Panel row = Panel.box(FlexLayout.row().gap(6).align(Align.CENTER)).width(Dim.FILL);
             row.style(b -> b.set(Styles.PADDING, Insets.of(3, 6)));
-            row.add(Ui.box(colors[i % colors.length], 10, 10), new Label("Строка " + (i + 1)));
+            row.add(Ui.box(colors[i % colors.length], 10, 10), new Label(Tr.r("Строка ") + (i + 1)));
             row.style(b -> b.set(Styles.BACKGROUND, Brush.solid(0x22FFFFFF)));
             list.add(row);
         }
@@ -105,15 +105,15 @@ final class ToolsPage {
         UiElement picture;
         TextureRef checker = Images.upload("luminatest/tools/checker", checker(64, 64));
         if (checker == null) {
-            picture = Ui.muted("Текстуры недоступны");
+            picture = Ui.muted(Tr.r("Текстуры недоступны"));
         } else {
             picture = new Image(checker).size(110, 110).id("rounded-image").style(b -> b
                     .set(Styles.RADIUS, Radii.all(28))
                     .set(Styles.CLIP_ROUNDED, true));
         }
-        return Ui.section("Скруглённая обрезка",
-                "clip-rounded: true обрезает детей по radius. Бэкенд закрашивает углы снимком фона; без снимков "
-                        + "обрезка прямоугольная",
+        return Ui.section(Tr.r("Скруглённая обрезка"),
+                Tr.r("clip-rounded: true обрезает детей по radius. Бэкенд закрашивает углы снимком фона; без снимков ")
+                        + Tr.r("обрезка прямоугольная"),
                 Ui.row(16, Ui.labeled(scroll, "ScrollPanel"), Ui.labeled(picture, "Image")));
     }
 
@@ -143,26 +143,26 @@ final class ToolsPage {
             // кодировщик GIF недоступен — покажем подпись
         }
         if (spinner == null) {
-            return Ui.section("Анимированный GIF", null, Ui.muted("Текстуры недоступны"));
+            return Ui.section(Tr.r("Анимированный GIF"), null, Ui.muted(Tr.r("Текстуры недоступны")));
         }
         Image plain = new Image(spinner).size(48, 48).id("gif-image");
         AnimatedImage controlled = AnimatedImage.of(spinner).size(48, 48).id("gif-animated");
-        Label frame = Ui.muted("кадр 1");
-        controlled.onFrame(i -> frame.text("кадр " + (i + 1)));
-        Button pause = new Button("Пауза").id("gif-pause");
+        Label frame = Ui.muted(Tr.r("кадр 1"));
+        controlled.onFrame(i -> frame.text(Tr.r("кадр ") + (i + 1)));
+        Button pause = new Button(Tr.r("Пауза")).id("gif-pause");
         pause.onPress(() -> {
             if (controlled.isPlaying()) {
                 controlled.pause();
-                pause.text("Играть");
+                pause.text(Tr.r("Играть"));
             } else {
                 controlled.play();
-                pause.text("Пауза");
+                pause.text(Tr.r("Пауза"));
             }
         });
         Button fast = new Button("×2", () -> controlled.speed(controlled.speed() == 1f ? 2f : 1f)).id("gif-speed");
-        return Ui.section("Анимированный GIF",
-                "Кадры читает javax.imageio, каждый кадр — своя текстура; задержки и число повторов берутся из файла. "
-                        + "Этот GIF собран в коде через Gif.encode",
+        return Ui.section(Tr.r("Анимированный GIF"),
+                Tr.r("Кадры читает javax.imageio, каждый кадр — своя текстура; задержки и число повторов берутся из файла. ")
+                        + Tr.r("Этот GIF собран в коде через Gif.encode"),
                 Ui.row(16, Ui.labeled(plain, "Image"), Ui.labeled(controlled, "AnimatedImage"),
                         Ui.column(4, Ui.row(6, pause, fast), frame)));
     }
@@ -202,26 +202,26 @@ final class ToolsPage {
         DemoMap demo = new DemoMap(42).walk(48f, 0.03f);
         MapSource source = MapSource.platform().or(demo);
         MiniMap round = new MiniMap().source(source).size(120, 120).zoom(1.5f).id("minimap-round")
-                .marker("home", 0, 0, 0xFFFFE08A, "Дом")
-                .marker("portal", 60, -40, 0xFFB46CFF, "Портал");
+                .marker("home", 0, 0, 0xFFFFE08A, Tr.r("Дом"))
+                .marker("portal", 60, -40, 0xFFB46CFF, Tr.r("Портал"));
         MiniMap square = new MiniMap().source(source).shape(MiniMap.Shape.SQUARE).rotate(false)
                 .size(120, 120).zoom(1f).showCoordinates(true).id("minimap-square")
-                .marker("home", 0, 0, 0xFFFFE08A, "Дом");
+                .marker("home", 0, 0, 0xFFFFE08A, Tr.r("Дом"));
         WorldMap world = new WorldMap(demo, 0, 0, 256).size(200, 120).zoom(1f).id("world-map")
-                .marker(0, 0, 0xFFFFE08A, "Дом")
-                .marker(60, -40, 0xFFB46CFF, "Портал");
-        return Ui.section("Мини-карта",
-                "В мире цвета верхних блоков читает загрузчик (по кусочку за кадр); без мира — демо-ландшафт. "
-                        + "Колесо — масштаб, у карты мира — перетаскивание",
-                Ui.row(12, Ui.labeled(round, "круглая, по взгляду"), Ui.labeled(square, "квадратная, север вверху"),
-                        Ui.labeled(world, "карта мира")));
+                .marker(0, 0, 0xFFFFE08A, Tr.r("Дом"))
+                .marker(60, -40, 0xFFB46CFF, Tr.r("Портал"));
+        return Ui.section(Tr.r("Мини-карта"),
+                Tr.r("В мире цвета верхних блоков читает загрузчик (по кусочку за кадр); без мира — демо-ландшафт. ")
+                        + Tr.r("Колесо — масштаб, у карты мира — перетаскивание"),
+                Ui.row(12, Ui.labeled(round, Tr.r("круглая, по взгляду")), Ui.labeled(square, Tr.r("квадратная, север вверху")),
+                        Ui.labeled(world, Tr.r("карта мира"))));
     }
 
     // ---------------------------------------------------------------- частицы
 
     private static Panel particlesSection() {
         Panel row = Ui.row(10);
-        String[] names = {"Искры", "Снег", "Пыль"};
+        String[] names = {Tr.r("Искры"), Tr.r("Снег"), Tr.r("Пыль")};
         Backdrop.ParticleStyle[] styles = Backdrop.ParticleStyle.values();
         for (int i = 0; i < styles.length; i++) {
             Panel box = Panel.box(new StackLayout(Align.CENTER, Align.CENTER)).size(150, 90);
@@ -232,8 +232,8 @@ final class ToolsPage {
             box.add(particles, new Label(names[i]));
             row.add(box);
         }
-        return Ui.section("Частицы за меню",
-                "Backdrop.Kind.PARTICLES: искры, снег или пыль. Частицы разлетаются от курсора", row);
+        return Ui.section(Tr.r("Частицы за меню"),
+                Tr.r("Backdrop.Kind.PARTICLES: искры, снег или пыль. Частицы разлетаются от курсора"), row);
     }
 
     // ---------------------------------------------------------------- инспектор и геймпад
@@ -243,7 +243,7 @@ final class ToolsPage {
         Signal<Boolean> f8 = Signal.of(false);
         Toggle key = new Toggle(f8);
         key.id("inspector-key");
-        Button open = new Button("Открыть инспектор", () -> {
+        Button open = new Button(Tr.r("Открыть инспектор"), () -> {
             f8.set(true);
             UiRoot r = key.root();
             if (r != null) {
@@ -265,44 +265,44 @@ final class ToolsPage {
                 r.gamepad().enabled(v);
             }
         });
-        return Ui.section("Инспектор и геймпад",
-                "Инспектор показывает границы, отступы, классы и вычисленный стиль; клик выбирает элемент, стрелки "
-                        + "ходят по дереву, Esc закрывает",
-                Ui.row(10, open, key, new Label("Клавиша F8")),
-                Ui.row(10, padToggle, new Label("Геймпад: A — нажать, B — назад, крестовина и стик — фокус, "
-                        + "бамперы — вкладки")));
+        return Ui.section(Tr.r("Инспектор и геймпад"),
+                Tr.r("Инспектор показывает границы, отступы, классы и вычисленный стиль; клик выбирает элемент, стрелки ")
+                        + Tr.r("ходят по дереву, Esc закрывает"),
+                Ui.row(10, open, key, new Label(Tr.r("Клавиша F8"))),
+                Ui.row(10, padToggle, new Label(Tr.r("Геймпад: A — нажать, B — назад, крестовина и стик — фокус, ")
+                        + Tr.r("бамперы — вкладки"))));
     }
 
     // ---------------------------------------------------------------- настройки
 
     static ConfigSpec spec() {
         return ConfigSpec.builder("luminatest/tools.toml")
-                .header("Настройки витрины Lumina")
-                .category("hud", "Интерфейс").icon("minecraft:compass")
-                .bool("showMinimap", "Мини-карта", true).comment("Показывать в углу экрана")
-                .integer("minimapSize", "Размер карты", 96, 48, 192).step(8)
-                .number("opacity", "Прозрачность", 0.85f, 0.2f, 1f).step(0.05f)
-                .key("zoomKey", "Приблизить карту", Keys.Z)
-                .category("look", "Внешний вид").icon("minecraft:painting")
-                .choice("quality", "Качество частиц", Quality.MEDIUM, Quality.values())
+                .header(Tr.r("Настройки витрины Lumina"))
+                .category("hud", Tr.r("Интерфейс")).icon("minecraft:compass")
+                .bool("showMinimap", Tr.r("Мини-карта"), true).comment(Tr.r("Показывать в углу экрана"))
+                .integer("minimapSize", Tr.r("Размер карты"), 96, 48, 192).step(8)
+                .number("opacity", Tr.r("Прозрачность"), 0.85f, 0.2f, 1f).step(0.05f)
+                .key("zoomKey", Tr.r("Приблизить карту"), Keys.Z)
+                .category("look", Tr.r("Внешний вид")).icon("minecraft:painting")
+                .choice("quality", Tr.r("Качество частиц"), Quality.MEDIUM, Quality.values())
                 .labels(q -> switch ((Quality) q) {
-                    case LOW -> "Низкое";
-                    case MEDIUM -> "Среднее";
-                    case HIGH -> "Высокое";
+                    case LOW -> Tr.r("Низкое");
+                    case MEDIUM -> Tr.r("Среднее");
+                    case HIGH -> Tr.r("Высокое");
                 })
-                .color("accent", "Акцент", 0xFF5B8CFF).alpha(false)
-                .string("greeting", "Приветствие", "Привет!").maxLength(24)
+                .color("accent", Tr.r("Акцент"), 0xFF5B8CFF).alpha(false)
+                .string("greeting", Tr.r("Приветствие"), Tr.r("Привет!")).maxLength(24)
                 .build();
     }
 
     private static Panel configSection() {
         ConfigSpec spec = spec();
         spec.load();
-        ConfigScreen screen = new ConfigScreen(spec).title("Настройки витрины").id("config");
+        ConfigScreen screen = new ConfigScreen(spec).title(Tr.r("Настройки витрины")).id("config");
         screen.width(Dim.FILL).height(Dim.px(250));
-        return Ui.section("Экран настроек из описания",
-                "ConfigSpec описывает настройки без рефлексии; ConfigScreen сам строит строки, поиск, сброс и "
-                        + "сохранение в TOML",
+        return Ui.section(Tr.r("Экран настроек из описания"),
+                Tr.r("ConfigSpec описывает настройки без рефлексии; ConfigScreen сам строит строки, поиск, сброс и ")
+                        + Tr.r("сохранение в TOML"),
                 screen);
     }
 }

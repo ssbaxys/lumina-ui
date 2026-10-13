@@ -26,6 +26,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Страница кнопок без игры: рисуется, реагирует на мышь, клики и клавиатуру без исключений. */
 class ButtonsPageSmokeTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     private static final TextMetrics METRICS = new TextMetrics() {
         @Override
         public float width(String text) {

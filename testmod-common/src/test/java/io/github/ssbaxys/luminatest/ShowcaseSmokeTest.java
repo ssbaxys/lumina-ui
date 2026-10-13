@@ -13,6 +13,7 @@ import io.github.ssbaxys.lumina.render.TextMetrics;
 import io.github.ssbaxys.lumina.render.TextureRef;
 import io.github.ssbaxys.lumina.style.State;
 import io.github.ssbaxys.lumina.widget.Button;
+import io.github.ssbaxys.lumina.widget.Label;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Открывает каждую страницу витрины, рисует кадры и водит мышью: ловит исключения без запуска игры. */
 class ShowcaseSmokeTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     private static final TextMetrics METRICS = new TextMetrics() {
         @Override
         public float width(String text) {
@@ -175,6 +181,43 @@ class ShowcaseSmokeTest {
         }
         for (UiElement c : e.children()) {
             collectNav(c, out);
+        }
+    }
+
+    @Test
+    void englishHasNoRussianText() {
+        I18n.setLanguage("en_us");
+        try {
+            UiRoot root = Showcase.create(() -> { });
+            root.resize(854, 480);
+            CountingCanvas canvas = new CountingCanvas();
+            List<Button> nav = new ArrayList<>();
+            collectNav(root.content(), nav);
+            java.util.regex.Pattern cyrillic = java.util.regex.Pattern.compile("[А-Яа-яЁё]");
+            for (Button b : nav) {
+                b.press();
+                for (int i = 0; i < 20; i++) {
+                    frame(root, canvas);
+                }
+                List<String> texts = new ArrayList<>();
+                collectTexts(root.content(), texts);
+                for (String t : texts) {
+                    assertTrue(t.equals("Русский") || !cyrillic.matcher(t).find(), "page " + b.text() + " is not translated: " + t);
+                }
+            }
+        } finally {
+            I18n.setLanguage("ru_ru");
+        }
+    }
+
+    private static void collectTexts(UiElement e, List<String> out) {
+        if (e instanceof Label l) {
+            out.add(l.text());
+        } else if (e instanceof Button b) {
+            out.add(b.text());
+        }
+        for (UiElement c : e.children()) {
+            collectTexts(c, out);
         }
     }
 

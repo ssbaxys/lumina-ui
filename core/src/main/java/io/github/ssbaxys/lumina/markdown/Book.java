@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.markdown;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.AnimatedFloat;
 import io.github.ssbaxys.lumina.anim.Easing;
@@ -79,7 +80,7 @@ public class Book extends Widget<Book> {
     private Look look = Look.VANILLA;
     private Boolean spread;
     private boolean tableOfContents;
-    private String tocTitle = "Содержание";
+    private String tocTitle = I18n.ru("Содержание");
     private int tocLevel = 2;
     private Consumer<String> onLink;
 
@@ -852,7 +853,7 @@ public class Book extends Widget<Book> {
             float innerH = height() - padding().vertical();
             float bx = padding().left() + (innerW - VANILLA_SIZE) / 2f;
             float by = padding().top() + (innerH - VANILLA_SIZE) / 2f;
-            String counter = "Страница " + (cur + 1) + " из " + total;
+            String counter = I18n.ru("Страница ") + (cur + 1) + I18n.ru(" из ") + total;
             float right = bx + VANILLA_SIZE - 44f;
             canvas.drawText(counter, right - m.width(counter), by + 16f, VANILLA_TEXT, false);
             if (canNext()) {

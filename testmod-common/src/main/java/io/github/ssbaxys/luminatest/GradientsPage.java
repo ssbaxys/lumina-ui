@@ -30,14 +30,14 @@ final class GradientsPage {
 
     static UiElement create() {
         Panel kinds = Ui.row(12,
-                tile("линейный", Brush.linear(135, 0xFFF0506E, 0xFFF5A524, 0xFF34C38F)),
-                tile("радиальный", Brush.radial(0xFFFFFFFF, 0xFF22D3EE, 0xFF2E3192)),
-                tile("эллипс", Brush.radial(0xFFFFE070, 0xFFF0506E, 0x00F0506E).withRadius(0.7f, 0.35f)),
-                tile("конический", Brush.rainbowWheel()),
-                tile("полосы", Brush.linear(45, ColorStops.builder()
+                tile(Tr.r("линейный"), Brush.linear(135, 0xFFF0506E, 0xFFF5A524, 0xFF34C38F)),
+                tile(Tr.r("радиальный"), Brush.radial(0xFFFFFFFF, 0xFF22D3EE, 0xFF2E3192)),
+                tile(Tr.r("эллипс"), Brush.radial(0xFFFFE070, 0xFFF0506E, 0x00F0506E).withRadius(0.7f, 0.35f)),
+                tile(Tr.r("конический"), Brush.rainbowWheel()),
+                tile(Tr.r("полосы"), Brush.linear(45, ColorStops.builder()
                         .add(0f, 0xFFF5A524).hard(0.1f, 0xFFF5A524, 0xFF1D2330).add(0.2f, 0xFF1D2330).build())
                         .withRepeating(true)),
-                tile("кольца", Brush.radial(ColorStops.of(new float[]{0f, 0.15f, 0.3f},
+                tile(Tr.r("кольца"), Brush.radial(ColorStops.of(new float[]{0f, 0.15f, 0.3f},
                         new int[]{0xFF5B8CFF, 0xFFA855F7, 0xFF5B8CFF})).withRepeating(true)));
 
         Panel angles = Ui.row(12);
@@ -58,11 +58,11 @@ final class GradientsPage {
         }
 
         Panel animated = Ui.row(16,
-                Ui.labeled(rotatingBorder(), "бегущая рамка"),
-                Ui.labeled(flowing(), "течёт"),
-                Ui.labeled(spinner(), "конус-спиннер"),
-                Ui.labeled(morphing(), "смена кистей"),
-                Ui.labeled(hoverGlow(), "наведи"));
+                Ui.labeled(rotatingBorder(), Tr.r("бегущая рамка")),
+                Ui.labeled(flowing(), Tr.r("течёт")),
+                Ui.labeled(spinner(), Tr.r("конус-спиннер")),
+                Ui.labeled(morphing(), Tr.r("смена кистей")),
+                Ui.labeled(hoverGlow(), Tr.r("наведи")));
 
         Panel blends = Ui.row(16,
                 Ui.labeled(blendDemo(BlendMode.NORMAL), "NORMAL"),
@@ -72,22 +72,22 @@ final class GradientsPage {
 
         Panel outlines = Ui.row(16,
                 Ui.labeled(styled(b -> b.set(Styles.BORDER_WIDTH, 2f)
-                        .set(Styles.BORDER_BRUSH, Gradients.NEON)), "рамка-градиент"),
+                        .set(Styles.BORDER_BRUSH, Gradients.NEON)), Tr.r("рамка-градиент")),
                 Ui.labeled(styled(b -> b.set(Styles.OUTLINE, new Outline(1.5f, 3f, 0xFF22D3EE))), "outline"),
-                Ui.labeled(styled(b -> b.set(Styles.GLOW, new Shadow(0, 0, 14, 2, 0xC0A855F7))), "свечение"),
+                Ui.labeled(styled(b -> b.set(Styles.GLOW, new Shadow(0, 0, 14, 2, 0xC0A855F7))), Tr.r("свечение")),
                 Ui.labeled(styled(b -> b.set(Styles.FOREGROUND, Brush.vertical(0x00000000, 0xA0000000))),
-                        "передний слой"));
+                        Tr.r("передний слой")));
 
         return Ui.page(
-                Ui.section("Виды градиентов", "Считаются в шейдере попиксельно: до 8 цветов, жёсткие переходы, повтор",
+                Ui.section(Tr.r("Виды градиентов"), Tr.r("Считаются в шейдере попиксельно: до 8 цветов, жёсткие переходы, повтор"),
                         kinds),
-                Ui.section("Любой угол", "Угол как в CSS: 0° — вверх, 90° — вправо", angles),
-                Ui.section("Пространства цвета", "Пространство смешивания задаётся у каждой кисти", spaces()),
-                Ui.section("Готовые градиенты", "Класс Gradients", presets),
-                Ui.section("Анимированные", "Кисти тоже анимируются: поворот, сдвиг, плавная смена", animated),
-                Ui.section("Рамки, контур, свечение", "Новые свойства стиля: BORDER_BRUSH, OUTLINE, GLOW, FOREGROUND",
+                Ui.section(Tr.r("Любой угол"), Tr.r("Угол как в CSS: 0° — вверх, 90° — вправо"), angles),
+                Ui.section(Tr.r("Пространства цвета"), Tr.r("Пространство смешивания задаётся у каждой кисти"), spaces()),
+                Ui.section(Tr.r("Готовые градиенты"), Tr.r("Класс Gradients"), presets),
+                Ui.section(Tr.r("Анимированные"), Tr.r("Кисти тоже анимируются: поворот, сдвиг, плавная смена"), animated),
+                Ui.section(Tr.r("Рамки, контур, свечение"), Tr.r("Новые свойства стиля: BORDER_BRUSH, OUTLINE, GLOW, FOREGROUND"),
                         outlines),
-                Ui.section("Режимы смешивания", "ADD — для света и огня, MULTIPLY — для теней и тонировки", blends));
+                Ui.section(Tr.r("Режимы смешивания"), Tr.r("ADD — для света и огня, MULTIPLY — для теней и тонировки"), blends));
     }
 
     private static Panel tile(String caption, Brush brush) {

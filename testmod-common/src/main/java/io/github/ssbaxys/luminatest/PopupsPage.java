@@ -94,73 +94,73 @@ final class PopupsPage {
     // ================================================================ выпадающие списки
 
     private static Panel selects() {
-        Signal<String> difficulty = Signal.of("Нормальный");
-        Select<String> simple = Select.of(difficulty, "Мирный", "Лёгкий", "Нормальный", "Сложный", "Хардкор")
+        Signal<String> difficulty = Signal.of(Tr.r("Нормальный"));
+        Select<String> simple = Select.of(difficulty, Tr.r("Мирный"), Tr.r("Лёгкий"), Tr.r("Нормальный"), Tr.r("Сложный"), Tr.r("Хардкор"))
                 .width(Dim.px(130));
 
         Signal<String> item = Signal.of("minecraft:diamond");
         Select<String> items = new Select<>(item, new ArrayList<>(ITEMS.keySet()))
-                .labels(ITEMS::get)
+                .labels(id -> Tr.r(ITEMS.get(id)))
                 .icons(id -> id)
                 .searchable(true)
                 .maxRows(7)
                 .width(Dim.px(190));
 
         Signal<String> biome = Signal.of(null);
-        Select<String> empty = Select.of(biome, "Равнины", "Лес", "Пустыня", "Тайга", "Джунгли", "Саванна", "Болото")
-                .placeholder("Выберите биом")
+        Select<String> empty = Select.of(biome, Tr.r("Равнины"), Tr.r("Лес"), Tr.r("Пустыня"), Tr.r("Тайга"), Tr.r("Джунгли"), Tr.r("Саванна"), Tr.r("Болото"))
+                .placeholder(Tr.r("Выберите биом"))
                 .width(Dim.px(140));
 
-        Label summary = Label.bound(difficulty.map(d -> "Сложность: " + d));
-        Label chosen = Label.bound(item.map(id -> "Предмет: " + (id == null ? "—" : ITEMS.get(id))));
-        Label picked = Label.bound(biome.map(b -> "Биом: " + (b == null ? "не выбран" : b)));
-        return Ui.section("Выпадающие списки",
-                "Список открывается под полем (у нижнего края — над ним), стрелки и Enter, буква прыгает к варианту, "
-                        + "колесо прокручивает длинный список, поиск отбирает варианты по подстроке.",
+        Label summary = Label.bound(difficulty.map(d -> Tr.r("Сложность: ") + d));
+        Label chosen = Label.bound(item.map(id -> Tr.r("Предмет: ") + (id == null ? "—" : Tr.r(ITEMS.get(id)))));
+        Label picked = Label.bound(biome.map(b -> Tr.r("Биом: ") + (b == null ? Tr.r("не выбран") : b)));
+        return Ui.section(Tr.r("Выпадающие списки"),
+                Tr.r("Список открывается под полем (у нижнего края — над ним), стрелки и Enter, буква прыгает к варианту, ")
+                        + Tr.r("колесо прокручивает длинный список, поиск отбирает варианты по подстроке."),
                 Ui.row(12,
-                        Ui.labeled(simple, "простой"),
-                        Ui.labeled(items, "иконки и поиск"),
-                        Ui.labeled(empty, "с подсказкой")),
+                        Ui.labeled(simple, Tr.r("простой")),
+                        Ui.labeled(items, Tr.r("иконки и поиск")),
+                        Ui.labeled(empty, Tr.r("с подсказкой"))),
                 Ui.row(16, summary.style(Ui.MUTED), chosen.style(Ui.MUTED), picked.style(Ui.MUTED)));
     }
 
     // ================================================================ подсказки
 
     private static Panel tooltips() {
-        Button vanilla = new Button("Алмазный меч").item("minecraft:diamond_sword")
-                .tooltip("Алмазный меч\nПри ударе:\n 7 ед. урона\n 1,6 скорости атаки");
-        Button modern = new Button("Современная").styleClass("button outline")
-                .tooltip(Tooltip.Kind.MODERN, "Карточка темы со скруглением,\nрамкой и мягким появлением");
+        Button vanilla = new Button(Tr.r("Алмазный меч")).item("minecraft:diamond_sword")
+                .tooltip(Tr.r("Алмазный меч\nПри ударе:\n 7 ед. урона\n 1,6 скорости атаки"));
+        Button modern = new Button(Tr.r("Современная")).styleClass("button outline")
+                .tooltip(Tooltip.Kind.MODERN, Tr.r("Карточка темы со скруглением,\nрамкой и мягким появлением"));
         Button markdown = new Button("Markdown").styleClass("button ghost")
-                .tooltipMarkdown("**Жемчуг Края** ![](item:minecraft:ender_pearl)\n\n"
-                        + "- телепортирует при броске\n- стакается до *16*");
+                .tooltipMarkdown(Tr.r("**Жемчуг Края** ![](item:minecraft:ender_pearl)\n\n")
+                        + Tr.r("- телепортирует при броске\n- стакается до *16*"));
         Tooltips.of(markdown).kind(Tooltip.Kind.MODERN).maxWidth(170);
 
         Icon slot = Icon.item("minecraft:golden_apple", 24);
         Tooltips.attach(slot, PopupsPage::appleCard).kind(Tooltip.Kind.MODERN).follow(false).delay(0.2f);
 
         Signal<Integer> clicks = Signal.of(0);
-        Button counter = new Button("Счётчик", () -> clicks.update(c -> c + 1));
-        Tooltip live = Tooltips.attach(counter, "Нажатий: 0");
-        clicks.subscribe(c -> live.text("Нажатий: " + c));
+        Button counter = new Button(Tr.r("Счётчик"), () -> clicks.update(c -> c + 1));
+        Tooltip live = Tooltips.attach(counter, Tr.r("Нажатий: 0"));
+        clicks.subscribe(c -> live.text(Tr.r("Нажатий: ") + c));
 
-        return Ui.section("Подсказки",
-                "Появляются после задержки наведения, следуют за мышью и не выходят за экран. Нажатие прячет подсказку.",
+        return Ui.section(Tr.r("Подсказки"),
+                Tr.r("Появляются после задержки наведения, следуют за мышью и не выходят за экран. Нажатие прячет подсказку."),
                 Ui.row(10,
-                        Ui.labeled(vanilla, "как в игре"),
-                        Ui.labeled(modern, "современная"),
+                        Ui.labeled(vanilla, Tr.r("как в игре")),
+                        Ui.labeled(modern, Tr.r("современная")),
                         Ui.labeled(markdown, "Markdown"),
-                        Ui.labeled(slot, "свой элемент"),
-                        Ui.labeled(counter, "живой текст")));
+                        Ui.labeled(slot, Tr.r("свой элемент")),
+                        Ui.labeled(counter, Tr.r("живой текст"))));
     }
 
     /** Карточка предмета для подсказки: создаётся заново при каждом показе. */
     private static UiElement appleCard() {
         return Ui.column(4,
-                Ui.row(6, Icon.item("minecraft:golden_apple", 16), new Label("Золотое яблоко").scale(1.1f)),
-                Ui.muted("Поглощение II (2:00)"),
-                Ui.muted("Регенерация II (0:05)"),
-                new Label("Редкость: необычная").style(b -> b.set(Styles.TEXT_COLOR, 0xFFFFFF55)));
+                Ui.row(6, Icon.item("minecraft:golden_apple", 16), new Label(Tr.r("Золотое яблоко")).scale(1.1f)),
+                Ui.muted(Tr.r("Поглощение II (2:00)")),
+                Ui.muted(Tr.r("Регенерация II (0:05)")),
+                new Label(Tr.r("Редкость: необычная")).style(b -> b.set(Styles.TEXT_COLOR, 0xFFFFFF55)));
     }
 
     // ================================================================ радиальное меню
@@ -168,45 +168,45 @@ final class PopupsPage {
     private static Panel radial() {
         Signal<String> last = Signal.of("—");
         Panel pad = Ui.centered(Ui.column(4,
-                        new Label("Щёлкните сюда, затем зажмите R").alignSelf(Align.CENTER),
-                        Ui.muted("или нажмите правую кнопку мыши").alignSelf(Align.CENTER)))
+                        new Label(Tr.r("Щёлкните сюда, затем зажмите R")).alignSelf(Align.CENTER),
+                        Ui.muted(Tr.r("или нажмите правую кнопку мыши")).alignSelf(Align.CENTER)))
                 .width(Dim.FILL).height(Dim.px(70)).style(Ui.WELL)
                 .with(p -> p.setFocusable(true))
                 .style(b -> b.set(Styles.BORDER_WIDTH, 1f).set(Styles.BORDER_COLOR, 0x30808080));
         RadialMenu.bindKey(pad, Keys.R, () -> wheel(last));
         RadialMenu.bindRightClick(pad, () -> wheel(last));
-        return Ui.section("Радиальное меню",
-                "Сектор выбирается направлением мыши; отпустите R — пункт сработает. Стрелки и цифры тоже работают, "
-                        + "правая кнопка или клик в центре — назад из вложенного меню.",
-                pad, Ui.row(6, Ui.muted("Последнее действие:"), Label.bound(last)));
+        return Ui.section(Tr.r("Радиальное меню"),
+                Tr.r("Сектор выбирается направлением мыши; отпустите R — пункт сработает. Стрелки и цифры тоже работают, ")
+                        + Tr.r("правая кнопка или клик в центре — назад из вложенного меню."),
+                pad, Ui.row(6, Ui.muted(Tr.r("Последнее действие:")), Label.bound(last)));
     }
 
     private static RadialMenu wheel(Signal<String> last) {
         return new RadialMenu()
-                .title("Действия")
-                .item("Меч", "minecraft:diamond_sword", () -> last.set("Меч"))
-                .item("Кирка", "minecraft:diamond_pickaxe", () -> last.set("Кирка"))
-                .item("Лук", "minecraft:bow", () -> last.set("Лук"))
-                .submenu("Еда", "minecraft:cooked_beef",
-                        RadialMenu.Item.of("Стейк", () -> last.set("Стейк")).icon("minecraft:cooked_beef"),
-                        RadialMenu.Item.of("Хлеб", () -> last.set("Хлеб")).icon("minecraft:bread"),
-                        RadialMenu.Item.of("Яблоко", () -> last.set("Яблоко")).icon("minecraft:apple"),
-                        RadialMenu.Item.of("Торт", () -> last.set("Торт")).icon("minecraft:cake").enabled(false))
-                .item("Факел", "minecraft:torch", () -> last.set("Факел"))
-                .item("Щит", "minecraft:shield", () -> last.set("Щит"))
-                .submenu("Блоки", "minecraft:grass_block",
-                        RadialMenu.Item.of("Камень", () -> last.set("Камень")).icon("minecraft:stone"),
-                        RadialMenu.Item.of("Доски", () -> last.set("Доски")).icon("minecraft:oak_planks"),
-                        RadialMenu.Item.of("Стекло", () -> last.set("Стекло")).icon("minecraft:glass"))
-                .item("Компас", "minecraft:compass", () -> last.set("Компас"));
+                .title(Tr.r("Действия"))
+                .item(Tr.r("Меч"), "minecraft:diamond_sword", () -> last.set(Tr.r("Меч")))
+                .item(Tr.r("Кирка"), "minecraft:diamond_pickaxe", () -> last.set(Tr.r("Кирка")))
+                .item(Tr.r("Лук"), "minecraft:bow", () -> last.set(Tr.r("Лук")))
+                .submenu(Tr.r("Еда"), "minecraft:cooked_beef",
+                        RadialMenu.Item.of(Tr.r("Стейк"), () -> last.set(Tr.r("Стейк"))).icon("minecraft:cooked_beef"),
+                        RadialMenu.Item.of(Tr.r("Хлеб"), () -> last.set(Tr.r("Хлеб"))).icon("minecraft:bread"),
+                        RadialMenu.Item.of(Tr.r("Яблоко"), () -> last.set(Tr.r("Яблоко"))).icon("minecraft:apple"),
+                        RadialMenu.Item.of(Tr.r("Торт"), () -> last.set(Tr.r("Торт"))).icon("minecraft:cake").enabled(false))
+                .item(Tr.r("Факел"), "minecraft:torch", () -> last.set(Tr.r("Факел")))
+                .item(Tr.r("Щит"), "minecraft:shield", () -> last.set(Tr.r("Щит")))
+                .submenu(Tr.r("Блоки"), "minecraft:grass_block",
+                        RadialMenu.Item.of(Tr.r("Камень"), () -> last.set(Tr.r("Камень"))).icon("minecraft:stone"),
+                        RadialMenu.Item.of(Tr.r("Доски"), () -> last.set(Tr.r("Доски"))).icon("minecraft:oak_planks"),
+                        RadialMenu.Item.of(Tr.r("Стекло"), () -> last.set(Tr.r("Стекло"))).icon("minecraft:glass"))
+                .item(Tr.r("Компас"), "minecraft:compass", () -> last.set(Tr.r("Компас")));
     }
 
     // ================================================================ клавиши
 
     private static Panel keybinds() {
         String[][] actions = {
-                {"Прыжок", "32"}, {"Инвентарь", String.valueOf(Keys.E)}, {"Выбросить", String.valueOf(Keys.Q)},
-                {"Красться", "340"}, {"Чат", String.valueOf(Keys.T)}, {"Скриншот", "291"},
+                {Tr.r("Прыжок"), "32"}, {Tr.r("Инвентарь"), String.valueOf(Keys.E)}, {Tr.r("Выбросить"), String.valueOf(Keys.Q)},
+                {Tr.r("Красться"), "340"}, {Tr.r("Чат"), String.valueOf(Keys.T)}, {Tr.r("Скриншот"), "291"},
         };
         List<UiElement> rows = new ArrayList<>();
         for (String[] a : actions) {
@@ -216,8 +216,8 @@ final class PopupsPage {
             rows.add(Ui.row(8, new Label(a[0]).width(Dim.px(80)), field));
         }
         Panel grid = Ui.grid(2, 8, rows.toArray(new UiElement[0]));
-        return Ui.section("Назначение клавиш",
-                "Щелчок — поле ждёт клавишу; Escape отменяет, правая кнопка или Delete — вернуть по умолчанию.",
+        return Ui.section(Tr.r("Назначение клавиш"),
+                Tr.r("Щелчок — поле ждёт клавишу; Escape отменяет, правая кнопка или Delete — вернуть по умолчанию."),
                 grid);
     }
 
@@ -229,25 +229,25 @@ final class PopupsPage {
         DatePicker picker = new DatePicker(date).width(Dim.px(120));
         Signal<LocalDate> trip = Signal.of(today.plusDays(7));
         DatePicker future = new DatePicker(trip).range(today, today.plusMonths(3)).width(Dim.px(120))
-                .tooltip("Только ближайшие три месяца");
+                .tooltip(Tr.r("Только ближайшие три месяца"));
         CalendarView inline = new CalendarView(date).style(Ui.WELL).style(b -> b.set(Styles.PADDING, Insets.all(6)));
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.forLanguageTag("ru"));
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.forLanguageTag(Tr.russian() ? "ru" : "en"));
         Label info = Label.bound(date.map(d -> d == null ? "—"
-                : fmt.format(d) + " — через " + ChronoUnit.DAYS.between(today, d) + " дн."));
-        return Ui.section("Дата",
-                "Календарь во всплывающем окне: стрелки — дни, PageUp/PageDown и колесо — месяцы, Enter — выбрать.",
+                : fmt.format(d) + Tr.r(" — через ") + ChronoUnit.DAYS.between(today, d) + Tr.r(" дн.")));
+        return Ui.section(Tr.r("Дата"),
+                Tr.r("Календарь во всплывающем окне: стрелки — дни, PageUp/PageDown и колесо — месяцы, Enter — выбрать."),
                 Ui.row(16,
                         Ui.column(8,
-                                Ui.labeled(picker, "общий сигнал с календарём"),
-                                Ui.labeled(future, "с ограничением"),
+                                Ui.labeled(picker, Tr.r("общий сигнал с календарём")),
+                                Ui.labeled(future, Tr.r("с ограничением")),
                                 info.style(Ui.MUTED)),
                         inline).align(Align.START));
     }
 
     private static Panel markup() {
-        Markup.Built built = Markup.build(MARKUP, new Bindings());
-        Markdown source = new Markdown("```html\n" + MARKUP + "\n```").width(Dim.FILL);
-        return Ui.section("В разметке", "Теги <select>, <keybind>, <date-picker> и атрибут tooltip.",
+        Markup.Built built = Markup.build(Tr.r(MARKUP), new Bindings());
+        Markdown source = new Markdown("```html\n" + Tr.r(MARKUP) + "\n```").width(Dim.FILL);
+        return Ui.section(Tr.r("В разметке"), Tr.r("Теги <select>, <keybind>, <date-picker> и атрибут tooltip."),
                 built.root(), source);
     }
 }

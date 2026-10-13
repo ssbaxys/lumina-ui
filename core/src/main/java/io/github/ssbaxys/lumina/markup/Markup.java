@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.markup;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.Easing;
 import io.github.ssbaxys.lumina.blocks.BlockMap;
@@ -656,7 +657,7 @@ public final class Markup {
         }
         String pattern = n.attr("pattern");
         if (pattern != null && !pattern.isEmpty()) {
-            checks.add(Validator.pattern(pattern, n.attr("title") != null ? n.attr("title") : "Неверный формат"));
+            checks.add(Validator.pattern(pattern, n.attr("title") != null ? n.attr("title") : I18n.ru("Неверный формат")));
         }
         if (n.tag.equals("input") && (n.attr("min") != null || n.attr("max") != null)) {
             float min = n.attr("min") != null ? n.floatAttr("min", 0f) : -Float.MAX_VALUE;

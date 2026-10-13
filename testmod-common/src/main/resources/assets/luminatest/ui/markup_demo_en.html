@@ -1,0 +1,82 @@
+<!-- A demo page written entirely in markup. Logic: <state> + built-in actions + handlers from Java
+     (shake, applyAccent). See docs/MARKUP.md. -->
+<link rel="stylesheet" href="luminatest:ui/markup_demo.css">
+
+<state name="tab" value="1"/>
+<state name="coins" value="120"/>
+<state name="owned" value="0"/>
+<state name="music" value="true"/>
+<state name="volume" value="60"/>
+
+<column class="page">
+  <stack class="hero">
+    <column class="hero-text">
+      <h2>Lumina Market</h2>
+      <label class="sub">This screen is written in HTML and CSS</label>
+    </column>
+    <fx effect="minecraft:snow"></fx>
+  </stack>
+
+  <row class="tabs">
+    <button class="tab" on-click="set:tab=1" sound="false">Shop</button>
+    <button class="tab" on-click="set:tab=2" sound="false">Settings</button>
+    <button class="tab" on-click="set:tab=3" sound="false">About markup</button>
+    <spacer/>
+    <row class="coins"><item item="minecraft:gold_ingot" size="12"/><label>{{coins}}</label></row>
+  </row>
+
+  <!-- Tab 1: shop -->
+  <column if="tab==1" gap="8">
+    <row class="shop">
+      <column class="card">
+        <item item="minecraft:diamond_sword" size="28"/>
+        <label>Sword</label>
+        <label class="price">40</label>
+        <button class="buy" on-click="dec:coins=40; inc:owned; sound:minecraft:entity.experience_orb.pickup">Buy</button>
+      </column>
+      <column class="card">
+        <item item="minecraft:totem_of_undying" size="28"/>
+        <row gap="4"><label>Totem</label><label class="badge">NEW</label></row>
+        <label class="price">75</label>
+        <button class="buy" on-click="dec:coins=75; inc:owned; sound:minecraft:item.totem.use">Buy</button>
+      </column>
+      <column class="card">
+        <item item="minecraft:tnt" size="28"/>
+        <label>TNT</label>
+        <label class="price">15</label>
+        <button class="buy" on-click="dec:coins=15; inc:owned; shake">Buy</button>
+      </column>
+      <column class="card">
+        <item item="minecraft:enchanted_golden_apple" size="28"/>
+        <label>Apple</label>
+        <label class="price">90</label>
+        <button class="buy" on-click="dec:coins=90; inc:owned">Buy</button>
+      </column>
+    </row>
+    <row gap="8">
+      <label>Bought: {{owned}}</label>
+      <button on-click="inc:coins=100; sound:minecraft:entity.player.levelup">+100 coins</button>
+      <label class="note" if="coins==0">Out of coins!</label>
+    </row>
+  </column>
+
+  <!-- Tab 2: settings with two-way binding -->
+  <column if="tab==2" gap="8">
+    <row class="setting"><label>Music</label><toggle bind="music"/><label class="note">{{music}}</label></row>
+    <row class="setting" enabled="music">
+      <label>Volume</label><slider bind="volume" min="0" max="100" step="1"/><label>{{volume|int}}%</label>
+    </row>
+    <row class="setting"><label>Volume</label><progress bind="volume" max="100" width="150"/></row>
+    <row class="setting"><label>Accent</label><color-picker bind="accent" on-change="applyAccent" width="150" height="80" alpha="false"/></row>
+    <row class="setting"><label></label><button class="danger" on-click="set:volume=60; set:music=true">Reset</button></row>
+  </column>
+
+  <!-- Tab 3: formatted text -->
+  <column if="tab==3" gap="6">
+    <p>Markup turns into <b>ordinary widgets</b> on load, so it <i>costs nothing</i> per frame.
+      Styles are <code>CSS</code> with selectors, <code>:hover</code> states, variables and <mark>@keyframes</mark>.</p>
+    <p>Logic: <code>{{name}}</code> in text, <code>bind</code> on fields, <code>on-click</code> on buttons,
+      <code>if</code> for visibility. Without Java: <code>&lt;state&gt;</code> and the actions <code>inc dec set toggle sound</code>.</p>
+    <p>The files live in <code>assets/luminatest/ui/</code> — override them with a resource pack and press <b>F3+T</b>.</p>
+  </column>
+</column>

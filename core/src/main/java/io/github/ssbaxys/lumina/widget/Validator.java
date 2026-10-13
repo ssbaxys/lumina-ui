@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import java.util.Locale;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -36,7 +37,7 @@ public interface Validator {
     }
 
     static Validator required() {
-        return required("Обязательное поле");
+        return required(I18n.ru("Обязательное поле"));
     }
 
     /** Не пусто (пробелы не в счёт). */
@@ -45,7 +46,7 @@ public interface Validator {
     }
 
     static Validator minLength(int min) {
-        return minLength(min, "Не короче " + min + " " + plural(min, "символа", "символов", "символов"));
+        return minLength(min, I18n.ru("Не короче ") + min + " " + plural(min, I18n.ru("символа"), I18n.ru("символов"), I18n.ru("символов")));
     }
 
     static Validator minLength(int min, String message) {
@@ -53,7 +54,7 @@ public interface Validator {
     }
 
     static Validator maxLength(int max) {
-        return maxLength(max, "Не длиннее " + max + " " + plural(max, "символа", "символов", "символов"));
+        return maxLength(max, I18n.ru("Не длиннее ") + max + " " + plural(max, I18n.ru("символа"), I18n.ru("символов"), I18n.ru("символов")));
     }
 
     static Validator maxLength(int max, String message) {
@@ -67,17 +68,17 @@ public interface Validator {
     }
 
     static Validator email() {
-        return pattern("[^@\\s]+@[^@\\s]+\\.[^@\\s]+", "Неверный адрес почты");
+        return pattern("[^@\\s]+@[^@\\s]+\\.[^@\\s]+", I18n.ru("Неверный адрес почты"));
     }
 
     /** Целое число. */
     static Validator integer() {
-        return pattern("[-+]?\\d+", "Нужно целое число");
+        return pattern("[-+]?\\d+", I18n.ru("Нужно целое число"));
     }
 
     /** Число в диапазоне (запятая тоже понимается как точка). */
     static Validator range(float min, float max) {
-        return range(min, max, "От " + format(min) + " до " + format(max));
+        return range(min, max, I18n.ru("От ") + format(min) + I18n.ru(" до ") + format(max));
     }
 
     static Validator range(float min, float max, String message) {
@@ -87,7 +88,7 @@ public interface Validator {
             }
             Float v = NumberField.parse(text);
             if (v == null) {
-                return "Нужно число";
+                return I18n.ru("Нужно число");
             }
             return v < min || v > max ? message : null;
         };

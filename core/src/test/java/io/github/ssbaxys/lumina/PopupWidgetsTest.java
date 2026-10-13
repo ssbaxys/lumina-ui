@@ -38,6 +38,11 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PopupWidgetsTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     private static final List<String> FRUITS = List.of("Яблоко", "Банан", "Вишня", "Груша", "Дыня",
             "Ежевика", "Земляника", "Инжир", "Киви", "Лайм", "Манго", "Нектарин");
 

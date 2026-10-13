@@ -79,20 +79,20 @@ final class FieldsPage {
 
     private static Panel variants() {
         Signal<String> nick = Signal.of("");
-        TextField outlined = new TextField(nick).placeholder("Имя игрока").width(Dim.px(150)).defaultValue("Steve");
-        TextField filled = new TextField().variant("filled").placeholder("С заливкой").width(Dim.px(150));
-        TextField underline = new TextField().variant("underline").placeholder("Подчёркивание").width(Dim.px(150));
-        TextField capsule = pill(new TextField().placeholder("Капсула").width(Dim.px(150)));
-        return Ui.section("Варианты оформления",
-                "Рамка плавно перетекает в акцентный цвет при фокусе; у подчёркивания линия растёт от центра.",
+        TextField outlined = new TextField(nick).placeholder(Tr.r("Имя игрока")).width(Dim.px(150)).defaultValue("Steve");
+        TextField filled = new TextField().variant("filled").placeholder(Tr.r("С заливкой")).width(Dim.px(150));
+        TextField underline = new TextField().variant("underline").placeholder(Tr.r("Подчёркивание")).width(Dim.px(150));
+        TextField capsule = pill(new TextField().placeholder(Tr.r("Капсула")).width(Dim.px(150)));
+        return Ui.section(Tr.r("Варианты оформления"),
+                Tr.r("Рамка плавно перетекает в акцентный цвет при фокусе; у подчёркивания линия растёт от центра."),
                 Ui.row(12,
                         Ui.labeled(outlined, "field"),
                         Ui.labeled(filled, "field filled"),
                         Ui.labeled(underline, "field underline"),
                         Ui.labeled(capsule, "field pill")),
                 Label.bound(nick.map(t -> t.isEmpty()
-                        ? "Значение обновляется на лету. Правая кнопка по полю — меню с отменой и сбросом."
-                        : "Привет, " + t + "!")).style(Ui.MUTED));
+                        ? Tr.r("Значение обновляется на лету. Правая кнопка по полю — меню с отменой и сбросом.")
+                        : Tr.r("Привет, ") + t + "!")).style(Ui.MUTED));
     }
 
     private static Panel search() {
@@ -100,24 +100,24 @@ final class FieldsPage {
         TextField field = pill(new TextField(query)
                 .icon(TextField.SEARCH)
                 .clearButton(true)
-                .placeholder("Поиск предметов...")
+                .placeholder(Tr.r("Поиск предметов..."))
                 .width(Dim.px(240)));
         Panel results = Ui.column(2);
         Runnable refresh = () -> {
             results.clearChildren();
             String q = query.peek().trim().toLowerCase(Locale.ROOT);
             for (String[] item : ITEMS) {
-                if (item[1].toLowerCase(Locale.ROOT).contains(q)) {
-                    results.add(Ui.row(6, Icon.item(item[0], 16), new Label(item[1])));
+                if (Tr.r(item[1]).toLowerCase(Locale.ROOT).contains(q)) {
+                    results.add(Ui.row(6, Icon.item(item[0], 16), new Label(Tr.r(item[1]))));
                 }
             }
             if (results.children().isEmpty()) {
-                results.add(Ui.muted("Ничего не найдено"));
+                results.add(Ui.muted(Tr.r("Ничего не найдено")));
             }
         };
         query.subscribe(q -> refresh.run());
         refresh.run();
-        return Ui.section("Поиск", "Значок, крестик очистки и фильтрация списка при каждом нажатии.",
+        return Ui.section(Tr.r("Поиск"), Tr.r("Значок, крестик очистки и фильтрация списка при каждом нажатии."),
                 field, results);
     }
 
@@ -127,20 +127,20 @@ final class FieldsPage {
                 .charFilter(c -> Character.digit(c, 16) >= 0).width(Dim.px(110));
         TextField size = new TextField(Signal.of("128")).suffix("px")
                 .charFilter(Character::isDigit).maxLength(4).width(Dim.px(90));
-        TextField password = new TextField().password(true).placeholder("Пароль").width(Dim.px(120));
-        TextField readOnly = new TextField(Signal.of("Только чтение")).readOnly(true).width(Dim.px(120));
-        TextField disabled = new TextField(Signal.of("Отключено")).enabled(false).width(Dim.px(110));
-        TextField message = new TextField(Signal.of("")).live(false).placeholder("Сообщение")
+        TextField password = new TextField().password(true).placeholder(Tr.r("Пароль")).width(Dim.px(120));
+        TextField readOnly = new TextField(Signal.of(Tr.r("Только чтение"))).readOnly(true).width(Dim.px(120));
+        TextField disabled = new TextField(Signal.of(Tr.r("Отключено"))).enabled(false).width(Dim.px(110));
+        TextField message = new TextField(Signal.of("")).live(false).placeholder(Tr.r("Сообщение"))
                 .onSubmit(text -> sent.set(text.isEmpty() ? "—" : text)).width(Dim.px(200));
-        return Ui.section("Префиксы, фильтры и состояния",
-                "Префикс и суффикс, допустимые символы, длина, пароль, только чтение. Ctrl+Z / Ctrl+Y — история.",
+        return Ui.section(Tr.r("Префиксы, фильтры и состояния"),
+                Tr.r("Префикс и суффикс, допустимые символы, длина, пароль, только чтение. Ctrl+Z / Ctrl+Y — история."),
                 Ui.row(12,
-                        Ui.labeled(hex, "# и hex, до 6"),
-                        Ui.labeled(size, "только цифры"),
+                        Ui.labeled(hex, Tr.r("# и hex, до 6")),
+                        Ui.labeled(size, Tr.r("только цифры")),
                         Ui.labeled(password, "password"),
                         Ui.labeled(readOnly, "readOnly"),
                         Ui.labeled(disabled, "disabled")),
-                Ui.row(8, message, Ui.muted("Enter — отправить, Esc — отменить ввод. Отправлено:"), Label.bound(sent)));
+                Ui.row(8, message, Ui.muted(Tr.r("Enter — отправить, Esc — отменить ввод. Отправлено:")), Label.bound(sent)));
     }
 
     private static Panel settings() {
@@ -149,10 +149,10 @@ final class FieldsPage {
         Signal<Float> opacity = Signal.of(100f);
         Signal<Float> blur = Signal.of(12f);
         Panel panel = Ui.column(6,
-                new SliderField("Толщина рамки", border, 0f, 4f).step(0.01f).decimals(2),
-                new SliderField("Скругление", radius, 0f, 24f).step(1f).decimals(0).suffix("px"),
-                new SliderField("Непрозрачность", opacity, 0f, 100f).step(1f).decimals(0).suffix("%"),
-                new SliderField("Размытие тени", blur, 0f, 30f).step(0.5f).decimals(1))
+                new SliderField(Tr.r("Толщина рамки"), border, 0f, 4f).step(0.01f).decimals(2),
+                new SliderField(Tr.r("Скругление"), radius, 0f, 24f).step(1f).decimals(0).suffix("px"),
+                new SliderField(Tr.r("Непрозрачность"), opacity, 0f, 100f).step(1f).decimals(0).suffix("%"),
+                new SliderField(Tr.r("Размытие тени"), blur, 0f, 30f).step(0.5f).decimals(1))
                 .width(Dim.px(380)).style(Ui.WELL).style(b -> b.set(Styles.PADDING, Insets.all(10)));
         for (UiElement row : panel.children()) {
             ((SliderField) row).field().width(Dim.px(70));
@@ -177,10 +177,10 @@ final class FieldsPage {
                 new NumberField(x, -999f, 999f).prefix("X").decimals(0).width(Dim.px(70)),
                 new NumberField(y, -999f, 999f).prefix("Y").decimals(0).width(Dim.px(70)),
                 new NumberField(scale, 0.1f, 10f).prefix("S").step(0.05f).decimals(2).defaultValue(1f).width(Dim.px(76)),
-                Ui.muted("Потяните за букву: значение меняется перетаскиванием"));
-        return Ui.section("Числа и ползунки",
-                "Ползунок и поле на одном сигнале. Колесо и стрелки вверх/вниз в фокусе меняют на шаг, Shift — на 10 шагов. "
-                        + "Неверный ввод вспыхивает красным.",
+                Ui.muted(Tr.r("Потяните за букву: значение меняется перетаскиванием")));
+        return Ui.section(Tr.r("Числа и ползунки"),
+                Tr.r("Ползунок и поле на одном сигнале. Колесо и стрелки вверх/вниз в фокусе меняют на шаг, Shift — на 10 шагов. ")
+                        + Tr.r("Неверный ввод вспыхивает красным."),
                 Ui.row(16, panel, preview).align(Align.CENTER),
                 transform);
     }
@@ -191,41 +191,41 @@ final class FieldsPage {
         ColorField hex = new ColorField(color).defaultValue(0xFF5B8CFF).width(Dim.px(120));
         ColorField opaque = new ColorField(Signal.of(0xFF34C38F)).alpha(false).variant("filled").width(Dim.px(120));
         ColorField translucent = new ColorField(Signal.of(0x80F0506E)).variant("underline").width(Dim.px(120));
-        return Ui.section("Цвета", "Hex \"#RRGGBB\" или \"#AARRGGBB\" с образцом на шахматке; верный ввод применяется сразу.",
+        return Ui.section(Tr.r("Цвета"), Tr.r("Hex \"#RRGGBB\" или \"#AARRGGBB\" с образцом на шахматке; верный ввод применяется сразу."),
                 Ui.row(16, picker, Ui.column(6,
-                        Ui.row(8, hex, Ui.muted("общий сигнал с палитрой")),
-                        Ui.row(8, opaque, Ui.muted("без прозрачности")),
-                        Ui.row(8, translucent, Ui.muted("полупрозрачный")))));
+                        Ui.row(8, hex, Ui.muted(Tr.r("общий сигнал с палитрой"))),
+                        Ui.row(8, opaque, Ui.muted(Tr.r("без прозрачности"))),
+                        Ui.row(8, translucent, Ui.muted(Tr.r("полупрозрачный"))))));
     }
 
     private static Panel contextMenu() {
         Signal<String> last = Signal.of("—");
-        Panel area = Ui.centered(new Label("Щёлкните здесь правой кнопкой мыши"))
+        Panel area = Ui.centered(new Label(Tr.r("Щёлкните здесь правой кнопкой мыши")))
                 .width(Dim.FILL).height(Dim.px(56)).style(Ui.WELL);
         area.on(PointerEvent.PRESS, e -> {
             if (e.button() == Keys.MOUSE_RIGHT && area.root() != null) {
                 new ContextMenu()
-                        .item("Новый мир", "Ctrl+N", () -> last.set("Новый мир"))
-                        .item("Открыть...", "Ctrl+O", () -> last.set("Открыть"))
+                        .item(Tr.r("Новый мир"), "Ctrl+N", () -> last.set(Tr.r("Новый мир")))
+                        .item(Tr.r("Открыть..."), "Ctrl+O", () -> last.set(Tr.r("Открыть")))
                         .separator()
-                        .item("Сохранить", "Ctrl+S", () -> last.set("Сохранить"))
-                        .item("Сохранить как...", "Ctrl+Shift+S", () -> last.set("Сохранить как"))
+                        .item(Tr.r("Сохранить"), "Ctrl+S", () -> last.set(Tr.r("Сохранить")))
+                        .item(Tr.r("Сохранить как..."), "Ctrl+Shift+S", () -> last.set(Tr.r("Сохранить как")))
                         .separator()
-                        .item("Печать", "Ctrl+P", false, () -> last.set("Печать"))
-                        .item("Выйти", () -> last.set("Выйти"))
+                        .item(Tr.r("Печать"), "Ctrl+P", false, () -> last.set(Tr.r("Печать")))
+                        .item(Tr.r("Выйти"), () -> last.set(Tr.r("Выйти")))
                         .show(area.root(), e.x(), e.y());
                 e.consume();
             }
         });
-        return Ui.section("Контекстное меню",
-                "Всплывающий слой поверх экрана: стрелки и Enter, Escape или клик мимо закрывают меню.",
-                area, Ui.row(6, Ui.muted("Последний пункт:"), Label.bound(last)));
+        return Ui.section(Tr.r("Контекстное меню"),
+                Tr.r("Всплывающий слой поверх экрана: стрелки и Enter, Escape или клик мимо закрывают меню."),
+                area, Ui.row(6, Ui.muted(Tr.r("Последний пункт:")), Label.bound(last)));
     }
 
     private static Panel markup() {
-        Markup.Built built = Markup.build(MARKUP, new Bindings());
-        Markdown source = new Markdown("```html\n" + MARKUP + "\n```").width(Dim.FILL);
-        return Ui.section("В разметке", "Теги <input>, <number> и <color-field> с привязкой к состоянию.",
+        Markup.Built built = Markup.build(Tr.r(MARKUP), new Bindings());
+        Markdown source = new Markdown("```html\n" + Tr.r(MARKUP) + "\n```").width(Dim.FILL);
+        return Ui.section(Tr.r("В разметке"), Tr.r("Теги <input>, <number> и <color-field> с привязкой к состоянию."),
                 built.root(), source);
     }
 }

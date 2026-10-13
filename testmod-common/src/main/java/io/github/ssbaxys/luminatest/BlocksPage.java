@@ -66,11 +66,11 @@ final class BlocksPage {
 
     static UiElement create() {
         return Ui.page(
-                Ui.section("Карта из блоков",
-                        "Каждая клетка — блок игры со своей текстурой; вода и огонь анимируются. Кликните по TNT.",
+                Ui.section(Tr.r("Карта из блоков"),
+                        Tr.r("Каждая клетка — блок игры со своей текстурой; вода и огонь анимируются. Кликните по TNT."),
                         scene()),
-                Ui.section("Редактор",
-                        "ЛКМ — поставить выбранный блок (можно вести мышью), ПКМ — сломать.",
+                Ui.section(Tr.r("Редактор"),
+                        Tr.r("ЛКМ — поставить выбранный блок (можно вести мышью), ПКМ — сломать."),
                         editor()));
     }
 
@@ -156,12 +156,12 @@ final class BlocksPage {
                 Ui.grid(9, 4, slots),
                 canvas,
                 Ui.row(6,
-                        new Button("Очистить", () -> map.clear().fill(0, 9, 31, 9, "minecraft:grass_block")),
-                        new Button("Как код", () -> {
+                        new Button(Tr.r("Очистить"), () -> map.clear().fill(0, 9, 31, 9, "minecraft:grass_block")),
+                        new Button(Tr.r("Как код"), () -> {
                             code.set(asCode(map));
                             exportCard.setVisible(true);
                         }).styleClass("button ghost"),
-                        Label.bound(brush.map(id -> "Блок: " + id)).style(Ui.MUTED)),
+                        Label.bound(brush.map(id -> Tr.r("Блок: ") + id)).style(Ui.MUTED)),
                 exportCard);
     }
 

@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.node;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.geom.Insets;
 import io.github.ssbaxys.lumina.input.Keys;
 import io.github.ssbaxys.lumina.render.Brush;
@@ -199,29 +200,29 @@ public final class Inspector {
             return out;
         }
         out.add(name(e));
-        out.add("класс: " + e.getClass().getName());
+        out.add(I18n.ru("класс: ") + e.getClass().getName());
         if (e.styleClass() != null) {
-            out.add("стиль: " + e.styleClass());
+            out.add(I18n.ru("стиль: ") + e.styleClass());
         }
-        out.add(String.format(Locale.ROOT, "место: %.1f, %.1f  размер: %.1f × %.1f",
+        out.add(String.format(Locale.ROOT, I18n.ru("место: %.1f, %.1f  размер: %.1f × %.1f"),
                 e.screenX(), e.screenY(), e.width(), e.height()));
         out.add("padding: " + insets(e.padding()));
         out.add("margin: " + insets(e.layoutParams().margin));
-        StringBuilder flags = new StringBuilder("флаги:");
+        StringBuilder flags = new StringBuilder(I18n.ru("флаги:"));
         if (e.isFocusable()) {
-            flags.append(" фокус");
+            flags.append(I18n.ru(" фокус"));
         }
         if (e.isFocused()) {
-            flags.append(" (в фокусе)");
+            flags.append(I18n.ru(" (в фокусе)"));
         }
         if (!e.isEnabled()) {
-            flags.append(" выключен");
+            flags.append(I18n.ru(" выключен"));
         }
         if (e.clipsChildren()) {
-            flags.append(" обрезает");
+            flags.append(I18n.ru(" обрезает"));
         }
-        out.add(flags.append(" детей: ").append(e.children().size()).toString());
-        out.add("— вычисленный стиль —");
+        out.add(flags.append(I18n.ru(" детей: ")).append(e.children().size()).toString());
+        out.add(I18n.ru("— вычисленный стиль —"));
         ComputedStyle cs = e.computedStyle();
         int count = StyleKey.count();
         for (int id = 0; id < count; id++) {
@@ -483,7 +484,7 @@ public final class Inspector {
         float ph = panelH();
         canvas.fillRoundRect(px, py, PANEL_W, ph, Radii.all(6f), Brush.solid(PANEL_BG));
         canvas.strokeRoundRect(px, py, PANEL_W, ph, Radii.all(6f), 1f, 0x40FFFFFF);
-        canvas.drawText("Инспектор (" + keyLabel(toggleKey) + ")", px + 6f, py + 4f, PANEL_TEXT, false);
+        canvas.drawText(I18n.ru("Инспектор (") + keyLabel(toggleKey) + ")", px + 6f, py + 4f, PANEL_TEXT, false);
         canvas.drawText("<>", px + PANEL_W - 32f, py + 4f, PANEL_MUTED, false);
         canvas.drawText("x", px + PANEL_W - 12f, py + 4f, PANEL_MUTED, false);
 
@@ -521,7 +522,7 @@ public final class Inspector {
         canvas.save();
         canvas.clipRect(px, y, PANEL_W, py + ph - y - 2f);
         if (t == null) {
-            canvas.drawText("Наведите мышь на элемент", px + 6f, y, PANEL_MUTED, false);
+            canvas.drawText(I18n.ru("Наведите мышь на элемент"), px + 6f, y, PANEL_MUTED, false);
         } else {
             for (String line : describe(t)) {
                 if (y > py + ph) {
@@ -536,7 +537,7 @@ public final class Inspector {
     }
 
     private static String keyLabel(int key) {
-        return key >= Keys.F1 && key <= Keys.F1 + 24 ? "F" + (key - Keys.F1 + 1) : "клавиша " + key;
+        return key >= Keys.F1 && key <= Keys.F1 + 24 ? "F" + (key - Keys.F1 + 1) : I18n.ru("клавиша ") + key;
     }
 
     /** Обрезать строку по ширине с многоточием. */

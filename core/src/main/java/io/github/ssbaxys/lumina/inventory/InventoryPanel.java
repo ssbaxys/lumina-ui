@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.inventory;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.geom.Insets;
 import io.github.ssbaxys.lumina.layout.Align;
 import io.github.ssbaxys.lumina.layout.FlexLayout;
@@ -94,7 +95,7 @@ public class InventoryPanel extends Widget<InventoryPanel> {
             main.quickMoveTo(player, 0, 9);
             hotbar.quickMoveTo(player, 9, 36);
         }
-        p.title("Инвентарь").add(main).add(hotbar, 1f);
+        p.title(I18n.ru("Инвентарь")).add(main).add(hotbar, 1f);
     }
 
     @Override

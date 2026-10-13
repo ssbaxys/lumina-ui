@@ -59,13 +59,13 @@ final class ColorsPage {
                     float[] lch = Color.toOklch(c, new float[3]);
                     return String.format(Locale.ROOT, "oklch(%.0f%% %.3f %.0f)", lch[0] * 100, lch[1], lch[2]);
                 })).style(Ui.MUTED),
-                Label.bound(color.map(c -> String.format(Locale.ROOT, "контраст с белым %.1f:1",
+                Label.bound(color.map(c -> String.format(Locale.ROOT, Tr.r("контраст с белым %.1f:1"),
                         Color.contrast(c, Color.WHITE)))).style(Ui.MUTED));
 
         Panel pickerRow = Panel.box(FlexLayout.row().gap(14).align(Align.START)).add(picker,
-                Ui.column(8, preview, Ui.row(6, new Toggle(live), new Label("Красить тему"))), info);
+                Ui.column(8, preview, Ui.row(6, new Toggle(live), new Label(Tr.r("Красить тему")))), info);
 
-        Panel chips = Ui.row(6, new Label("Готовые:"));
+        Panel chips = Ui.row(6, new Label(Tr.r("Готовые:")));
         for (String name : new String[]{"#5B8CFF", "tomato", "gold", "hsl(150, 70%, 45%)", "oklch(70% 0.2 300)",
                 "rgb(34 211 238)", "hotpink", "orange"}) {
             int c = Color.parse(name);
@@ -78,13 +78,13 @@ final class ColorsPage {
         }
 
         return Ui.page(
-                Ui.section("Выбор цвета", "Квадрат насыщенности и яркости, оттенок, прозрачность. "
-                        + "Цвет сразу становится акцентом темы", pickerRow, chips),
-                Ui.section("RGB и HSV", "Каналы двигаются вместе: меняете один — пересчитываются остальные",
+                Ui.section(Tr.r("Выбор цвета"), Tr.r("Квадрат насыщенности и яркости, оттенок, прозрачность. ")
+                        + Tr.r("Цвет сразу становится акцентом темы"), pickerRow, chips),
+                Ui.section(Tr.r("RGB и HSV"), Tr.r("Каналы двигаются вместе: меняете один — пересчитываются остальные"),
                         channelSliders(color)),
-                Ui.section("Операции над цветом", "Считаются в OKLCH — светлота и насыщенность ощущаются ровно",
+                Ui.section(Tr.r("Операции над цветом"), Tr.r("Считаются в OKLCH — светлота и насыщенность ощущаются ровно"),
                         operations(color)),
-                Ui.section("Смешивание в разных пространствах", "Один и тот же переход между двумя цветами",
+                Ui.section(Tr.r("Смешивание в разных пространствах"), Tr.r("Один и тот же переход между двумя цветами"),
                         mixing()));
     }
 
@@ -148,16 +148,16 @@ final class ColorsPage {
 
     private static Panel operations(Signal<Integer> color) {
         Panel row = Panel.box(FlexLayout.row().gap(8).align(Align.START)).width(Dim.FILL);
-        op(row, color, "исходный", c -> c);
-        op(row, color, "светлее", c -> Color.lighten(c, 0.15f));
-        op(row, color, "темнее", c -> Color.darken(c, 0.15f));
-        op(row, color, "насыщ.", c -> Color.saturate(c, 0.08f));
-        op(row, color, "тусклее", c -> Color.desaturate(c, 0.08f));
+        op(row, color, Tr.r("исходный"), c -> c);
+        op(row, color, Tr.r("светлее"), c -> Color.lighten(c, 0.15f));
+        op(row, color, Tr.r("темнее"), c -> Color.darken(c, 0.15f));
+        op(row, color, Tr.r("насыщ."), c -> Color.saturate(c, 0.08f));
+        op(row, color, Tr.r("тусклее"), c -> Color.desaturate(c, 0.08f));
         op(row, color, "+30°", c -> Color.rotateHue(c, 30f));
-        op(row, color, "дополн.", Color::complement);
-        op(row, color, "серый", Color::grayscale);
-        op(row, color, "инверсия", Color::invert);
-        op(row, color, "текст", c -> Color.readableOn(c));
+        op(row, color, Tr.r("дополн."), Color::complement);
+        op(row, color, Tr.r("серый"), Color::grayscale);
+        op(row, color, Tr.r("инверсия"), Color::invert);
+        op(row, color, Tr.r("текст"), c -> Color.readableOn(c));
         return row;
     }
 
@@ -179,7 +179,7 @@ final class ColorsPage {
             }
             col.add(row);
         }
-        col.add(Ui.muted("sRGB темнеет в середине, OKLAB ровный, OKLCH и HSV идут по кругу оттенков"));
+        col.add(Ui.muted(Tr.r("sRGB темнеет в середине, OKLAB ровный, OKLCH и HSV идут по кругу оттенков")));
         return col;
     }
 }

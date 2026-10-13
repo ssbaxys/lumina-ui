@@ -83,14 +83,14 @@ final class StylePage {
                 Ui.section("luminatest.style.states", "luminatest.style.states.hint", states),
                 Ui.section("luminatest.style.theme", "luminatest.style.theme.hint",
                         Ui.row(8, new Toggle(light), Ui.text("luminatest.light_theme"))),
-                Ui.section("Токен акцента", "theme.set(Tokens.ACCENT, цвет) — всё, что на нём построено, перекрашивается",
+                Ui.section(Tr.r("Токен акцента"), Tr.r("theme.set(Tokens.ACCENT, цвет) — всё, что на нём построено, перекрашивается"),
                         accents, accentDemo),
-                Ui.section("Токены темы", "Стили ссылаются на токены, а не на числа", tokens()),
-                Ui.section("Несколько классов", "styleClass(\"button danger pill\") — классы накладываются по порядку",
+                Ui.section(Tr.r("Токены темы"), Tr.r("Стили ссылаются на токены, а не на числа"), tokens()),
+                Ui.section(Tr.r("Несколько классов"), Tr.r("styleClass(\"button danger pill\") — классы накладываются по порядку"),
                         classes()),
-                Ui.section("Переходы по свойствам", "Transition.key(свойство, длительность, кривая, задержка)",
+                Ui.section(Tr.r("Переходы по свойствам"), Tr.r("Transition.key(свойство, длительность, кривая, задержка)"),
                         perProperty()),
-                Ui.section("Трансформации и шрифт", "TRANSLATE, SCALE_X/Y, FONT_SCALE, BLEND", transforms()));
+                Ui.section(Tr.r("Трансформации и шрифт"), "TRANSLATE, SCALE_X/Y, FONT_SCALE, BLEND", transforms()));
     }
 
     private static Panel swatch(String caption, Consumer<Style.Builder> edit) {
@@ -126,10 +126,10 @@ final class StylePage {
             }
         });
         col.add(Ui.row(8, new Label("CORNER").width(Dim.px(60)), cornerSlider,
-                Label.bound(corner.map(v -> Math.round(v) + " px")), Ui.muted("скругление всех панелей и кнопок")));
+                Label.bound(corner.map(v -> Math.round(v) + " px")), Ui.muted(Tr.r("скругление всех панелей и кнопок"))));
         col.add(Ui.row(8, new Label("MOTION").width(Dim.px(60)), motionSlider,
-                Label.bound(motion.map(v -> "×" + v)), Ui.muted("множитель всех переходов, 0 — без анимаций")));
-        col.add(Ui.row(6, new Button("Кнопка"), new Button("Ещё одна"), new Toggle(Signal.of(true)),
+                Label.bound(motion.map(v -> "×" + v)), Ui.muted(Tr.r("множитель всех переходов, 0 — без анимаций"))));
+        col.add(Ui.row(6, new Button(Tr.r("Кнопка")), new Button(Tr.r("Ещё одна")), new Toggle(Signal.of(true)),
                 new ProgressBar().progress(0.6f).width(Dim.px(80))));
         return col;
     }
@@ -146,7 +146,7 @@ final class StylePage {
 
     /** Каждое свойство со своей длительностью, кривой и задержкой. */
     private static Panel perProperty() {
-        Panel p = Ui.centered(new Label("наведи")).size(90, 34);
+        Panel p = Ui.centered(new Label(Tr.r("наведи"))).size(90, 34);
         p.style(b -> b
                 .set(Styles.BACKGROUND, Brush.solid(BASE))
                 .set(Styles.RADIUS, Radii.all(6))
@@ -162,10 +162,10 @@ final class StylePage {
                         .set(Styles.BORDER_WIDTH, 2f)
                         .set(Styles.BORDER_COLOR, Color.WHITE)));
         return Ui.row(14, p, Ui.column(2,
-                Ui.muted("масштаб: 0.5 с, OUT_ELASTIC"),
-                Ui.muted("заливка: 1.2 с, плавно"),
-                Ui.muted("скругление: после задержки 0.4 с"),
-                Ui.muted("рамка: мгновенно")));
+                Ui.muted(Tr.r("масштаб: 0.5 с, OUT_ELASTIC")),
+                Ui.muted(Tr.r("заливка: 1.2 с, плавно")),
+                Ui.muted(Tr.r("скругление: после задержки 0.4 с")),
+                Ui.muted(Tr.r("рамка: мгновенно"))));
     }
 
     private static Panel transforms() {
@@ -181,7 +181,7 @@ final class StylePage {
         Panel multiplied = Ui.box(0xFFF5A524, 30, 30);
         multiplied.style(b -> b.set(Styles.RADIUS, Radii.all(6)).set(Styles.BLEND, BlendMode.ADD)
                 .set(Styles.BACKGROUND, Brush.radial(0xFFFFE070, 0x00F5A524)));
-        return Ui.row(16, Ui.labeled(shifted, "сдвиг"), Ui.labeled(stretched, "растяжение"),
+        return Ui.row(16, Ui.labeled(shifted, Tr.r("сдвиг")), Ui.labeled(stretched, Tr.r("растяжение")),
                 Ui.labeled(multiplied, "ADD"), big);
     }
 }

@@ -28,6 +28,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Книга (страницы, перелистывание, оглавление) и подсветка кода в Markdown. */
 class BookSyntaxTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     @BeforeAll
     static void init() {
         TestSupport.init();

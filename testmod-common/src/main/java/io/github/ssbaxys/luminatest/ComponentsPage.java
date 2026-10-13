@@ -23,6 +23,10 @@ import java.util.Random;
 /** Таблицы, деревья, графики, текст с эффектами и индикаторы загрузки. */
 final class ComponentsPage {
     private record Ore(String name, String item, int level, int count, float chance) {
+        @Override
+        public String name() {
+            return Tr.r(name);
+        }
     }
 
     private static final List<Ore> ORES = List.of(
@@ -40,44 +44,44 @@ final class ComponentsPage {
 
     static UiElement create() {
         return Ui.page(
-                Ui.section("Текст с эффектами",
-                        "Градиент, радуга, обводка, волна, дрожание и печатная машинка — посимвольно обычным шрифтом.",
+                Ui.section(Tr.r("Текст с эффектами"),
+                        Tr.r("Градиент, радуга, обводка, волна, дрожание и печатная машинка — посимвольно обычным шрифтом."),
                         fancyText()),
-                Ui.section("Таблица",
-                        "Клик по заголовку сортирует (повторный — в обратную сторону), клик по строке выбирает.",
+                Ui.section(Tr.r("Таблица"),
+                        Tr.r("Клик по заголовку сортирует (повторный — в обратную сторону), клик по строке выбирает."),
                         table()),
-                Ui.section("Дерево", "Стрелка или двойной клик раскрывают узел; стрелки клавиатуры тоже работают.",
+                Ui.section(Tr.r("Дерево"), Tr.r("Стрелка или двойной клик раскрывают узел; стрелки клавиатуры тоже работают."),
                         tree()),
-                Ui.section("Графики", "Значения вырастают при появлении и плавно перетекают к новым; наведите на точку.",
+                Ui.section(Tr.r("Графики"), Tr.r("Значения вырастают при появлении и плавно перетекают к новым; наведите на точку."),
                         charts()),
-                Ui.section("Загрузка", "Спиннеры и скелетоны для экранов, которые ждут данных.", loaders()));
+                Ui.section(Tr.r("Загрузка"), Tr.r("Спиннеры и скелетоны для экранов, которые ждут данных."), loaders()));
     }
 
     private static UiElement fancyText() {
-        FancyText typer = new FancyText("Добро пожаловать в Lumina UI! Этот текст печатается сам.")
+        FancyText typer = new FancyText(Tr.r("Добро пожаловать в Lumina UI! Этот текст печатается сам."))
                 .typewriter(24f).typeSound("minecraft:ui.button.click");
         return Ui.column(8,
                 new FancyText("Lumina UI").scale(2.4f).gradient(0xFFFF8A00, 0xFFE52E71, 0xFF9B5CFF).flow(0.4f)
                         .outline(0xFF1A0F24),
                 Ui.row(16,
-                        new FancyText("Радуга").scale(1.5f).rainbow().flow(0.6f),
-                        new FancyText("Волна").scale(1.5f).gradient(0xFF4FE3FF, 0xFF2F6FD8).wave(2f, 6f),
-                        new FancyText("Тряска!").scale(1.5f).gradient(0xFFFF5050, 0xFFFFC14F).shake(0.8f),
-                        new FancyText("Обводка").scale(1.5f).gradient(0xFFFFFFFF, 0xFFFFFFFF).outline(0xFF3A6BFF)),
-                Ui.row(8, typer, new Button("Ещё раз", typer::retype).styleClass("button ghost")));
+                        new FancyText(Tr.r("Радуга")).scale(1.5f).rainbow().flow(0.6f),
+                        new FancyText(Tr.r("Волна")).scale(1.5f).gradient(0xFF4FE3FF, 0xFF2F6FD8).wave(2f, 6f),
+                        new FancyText(Tr.r("Тряска!")).scale(1.5f).gradient(0xFFFF5050, 0xFFFFC14F).shake(0.8f),
+                        new FancyText(Tr.r("Обводка")).scale(1.5f).gradient(0xFFFFFFFF, 0xFFFFFFFF).outline(0xFF3A6BFF)),
+                Ui.row(8, typer, new Button(Tr.r("Ещё раз"), typer::retype).styleClass("button ghost")));
     }
 
     private static UiElement table() {
         Table<Ore> table = new Table<Ore>()
                 .column("", 0.5f, (c, row, x, y, w, h) -> c.drawItem(row.item(), x, y + 1f, 14f), null)
-                .column("Руда", 2f, Ore::name)
-                .column("Кирка", 1.2f, o -> switch (o.level()) {
-                    case 0 -> "деревянная";
-                    case 1 -> "каменная";
-                    default -> "железная";
+                .column(Tr.r("Руда"), 2f, Ore::name)
+                .column(Tr.r("Кирка"), 1.2f, o -> switch (o.level()) {
+                    case 0 -> Tr.r("деревянная");
+                    case 1 -> Tr.r("каменная");
+                    default -> Tr.r("железная");
                 }, Comparator.comparingInt(Ore::level))
-                .column("Добыто", 1f, o -> String.valueOf(o.count()), Comparator.comparingInt(Ore::count))
-                .column("Шанс", 1.6f, (c, row, x, y, w, h) -> {
+                .column(Tr.r("Добыто"), 1f, o -> String.valueOf(o.count()), Comparator.comparingInt(Ore::count))
+                .column(Tr.r("Шанс"), 1.6f, (c, row, x, y, w, h) -> {
                     float share = Math.min(1f, row.chance() / 0.42f);
                     c.fillRoundRect(x, y + 5f, w, 6f, Radii.all(3f), Brush.solid(0x30808080));
                     c.fillRoundRect(x, y + 5f, Math.max(6f, w * share), 6f, Radii.all(3f),
@@ -85,47 +89,47 @@ final class ComponentsPage {
                 }, Comparator.comparingDouble(Ore::chance))
                 .rows(ORES)
                 .width(Dim.FILL);
-        Label picked = Label.bound(table.selection().map(o -> o == null ? "Ничего не выбрано"
-                : "Выбрано: " + o.name() + ", добыто " + o.count()));
+        Label picked = Label.bound(table.selection().map(o -> o == null ? Tr.r("Ничего не выбрано")
+                : Tr.r("Выбрано: ") + o.name() + Tr.r(", добыто ") + o.count()));
         return Ui.column(6, table, picked.style(Ui.MUTED));
     }
 
     private static UiElement tree() {
-        TreeView.Node world = TreeView.node("Мир", "minecraft:grass_block").add(
-                TreeView.node("Верхний мир", "minecraft:oak_sapling").add(
-                        TreeView.node("Деревня", "minecraft:bell").add(
-                                TreeView.node("Кузница", "minecraft:anvil"),
-                                TreeView.node("Библиотека", "minecraft:bookshelf")),
-                        TreeView.node("Шахта", "minecraft:rail")).expanded(true),
-                TreeView.node("Незер", "minecraft:netherrack").add(
-                        TreeView.node("Крепость", "minecraft:nether_bricks"),
-                        TreeView.node("Бастион", "minecraft:gilded_blackstone")),
-                TreeView.node("Энд", "minecraft:end_stone").add(
-                        TreeView.node("Город Энда", "minecraft:purpur_block")));
+        TreeView.Node world = TreeView.node(Tr.r("Мир"), "minecraft:grass_block").add(
+                TreeView.node(Tr.r("Верхний мир"), "minecraft:oak_sapling").add(
+                        TreeView.node(Tr.r("Деревня"), "minecraft:bell").add(
+                                TreeView.node(Tr.r("Кузница"), "minecraft:anvil"),
+                                TreeView.node(Tr.r("Библиотека"), "minecraft:bookshelf")),
+                        TreeView.node(Tr.r("Шахта"), "minecraft:rail")).expanded(true),
+                TreeView.node(Tr.r("Незер"), "minecraft:netherrack").add(
+                        TreeView.node(Tr.r("Крепость"), "minecraft:nether_bricks"),
+                        TreeView.node(Tr.r("Бастион"), "minecraft:gilded_blackstone")),
+                TreeView.node(Tr.r("Энд"), "minecraft:end_stone").add(
+                        TreeView.node(Tr.r("Город Энда"), "minecraft:purpur_block")));
         TreeView view = new TreeView(world);
-        Label picked = Label.bound(view.selection().map(n -> n == null ? "Выберите узел" : "Узел: " + n.label()));
+        Label picked = Label.bound(view.selection().map(n -> n == null ? Tr.r("Выберите узел") : Tr.r("Узел: ") + n.label()));
         return Ui.row(16, view.width(Dim.px(200)), picked.style(Ui.MUTED));
     }
 
     private static UiElement charts() {
         Chart bars = new Chart(Chart.Kind.BAR)
-                .labels("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
-                .series("Камень", 0xFF8AB4F8, 120, 180, 90, 210, 160, 260, 140)
-                .series("Руда", 0xFFF6C177, 30, 45, 20, 60, 55, 90, 35)
-                .unit(" шт.");
+                .labels(Tr.r("Пн"), Tr.r("Вт"), Tr.r("Ср"), Tr.r("Чт"), Tr.r("Пт"), Tr.r("Сб"), Tr.r("Вс"))
+                .series(Tr.r("Камень"), 0xFF8AB4F8, 120, 180, 90, 210, 160, 260, 140)
+                .series(Tr.r("Руда"), 0xFFF6C177, 30, 45, 20, 60, 55, 90, 35)
+                .unit(Tr.r(" шт."));
         bars.size(300, 130);
         Chart line = new Chart(Chart.Kind.AREA)
                 .labels("0", "4", "8", "12", "16", "20", "24")
-                .series("Игроки онлайн", 0xFF9CCFD8, 3, 1, 5, 12, 18, 24, 9)
+                .series(Tr.r("Игроки онлайн"), 0xFF9CCFD8, 3, 1, 5, 12, 18, 24, 9)
                 .legend(false);
         line.size(240, 130);
         Chart donut = new Chart(Chart.Kind.DONUT)
-                .labels("Камень", "Земля", "Дерево", "Руда")
-                .series("Блоки", 0, 52, 24, 16, 8)
+                .labels(Tr.r("Камень"), Tr.r("Земля"), Tr.r("Дерево"), Tr.r("Руда"))
+                .series(Tr.r("Блоки"), 0, 52, 24, 16, 8)
                 .unit("%");
         donut.size(200, 110);
         Random random = new Random();
-        Button shuffle = new Button("Новые данные", () -> {
+        Button shuffle = new Button(Tr.r("Новые данные"), () -> {
             float[] a = new float[7];
             float[] b = new float[7];
             float[] c = new float[7];
@@ -152,8 +156,8 @@ final class ComponentsPage {
                 .set(Styles.PADDING, io.github.ssbaxys.lumina.geom.Insets.all(10)));
         Panel loaded = Ui.column(6,
                 Ui.row(8, io.github.ssbaxys.lumina.widget.Icon.item("minecraft:player_head", 28),
-                        Ui.column(2, new Label("Steve"), Ui.muted("в сети · 12 ч"))),
-                Ui.muted("Любит строить башни из булыжника и терять кирки в лаве."));
+                        Ui.column(2, new Label("Steve"), Ui.muted(Tr.r("в сети · 12 ч")))),
+                Ui.muted(Tr.r("Любит строить башни из булыжника и терять кирки в лаве.")));
         loaded.width(Dim.px(240));
         loaded.setVisible(false);
         loading.subscribe(l -> {
@@ -162,11 +166,11 @@ final class ComponentsPage {
         });
         return Ui.column(10,
                 Ui.row(18,
-                        Ui.labeled(new Spinner(), "кольцо"),
-                        Ui.labeled(new Spinner(Spinner.Kind.DOTS, 16), "точки"),
-                        Ui.labeled(new Spinner(Spinner.Kind.BARS, 16), "полоски"),
-                        Ui.labeled(new Spinner(Spinner.Kind.PULSE, 20), "пульс")),
+                        Ui.labeled(new Spinner(), Tr.r("кольцо")),
+                        Ui.labeled(new Spinner(Spinner.Kind.DOTS, 16), Tr.r("точки")),
+                        Ui.labeled(new Spinner(Spinner.Kind.BARS, 16), Tr.r("полоски")),
+                        Ui.labeled(new Spinner(Spinner.Kind.PULSE, 20), Tr.r("пульс"))),
                 Ui.row(10, card, loaded,
-                        new Button("Загрузить / сбросить", () -> loading.set(!loading.peek())).styleClass("button ghost")));
+                        new Button(Tr.r("Загрузить / сбросить"), () -> loading.set(!loading.peek())).styleClass("button ghost")));
     }
 }

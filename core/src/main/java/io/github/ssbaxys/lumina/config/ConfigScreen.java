@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.config;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.geom.Insets;
 import io.github.ssbaxys.lumina.layout.Align;
 import io.github.ssbaxys.lumina.layout.Dim;
@@ -53,7 +54,7 @@ public class ConfigScreen extends Widget<ConfigScreen> {
     private final ConfigSpec spec;
     private final Signal<Integer> category = Signal.of(0);
     private final Signal<String> query = Signal.of("");
-    private final Label title = new Label("Настройки").scale(1.25f);
+    private final Label title = new Label(I18n.ru("Настройки")).scale(1.25f);
     private final Label status = new Label("");
     private final Panel rows = Panel.box(FlexLayout.column().gap(4).align(Align.STRETCH));
     private final ScrollPanel scroll;
@@ -75,10 +76,10 @@ public class ConfigScreen extends Widget<ConfigScreen> {
         nav.id("config-nav");
         nav.setVisible(spec.categories().size() > 1);
 
-        search = new TextField(query).placeholder("Поиск настроек").icon(FieldBase.SEARCH).clearButton(true)
+        search = new TextField(query).placeholder(I18n.ru("Поиск настроек")).icon(FieldBase.SEARCH).clearButton(true)
                 .width(Dim.px(150)).id("config-search");
-        Button reset = new Button("Сбросить всё", this::resetAll).styleClass("button ghost").id("config-reset");
-        Button save = new Button("Сохранить", this::save).id("config-save");
+        Button reset = new Button(I18n.ru("Сбросить всё"), this::resetAll).styleClass("button ghost").id("config-reset");
+        Button save = new Button(I18n.ru("Сохранить"), this::save).id("config-save");
         Panel header = Panel.box(FlexLayout.row().gap(8).align(Align.CENTER))
                 .add(title.grow(1), search, reset, save).width(Dim.FILL);
         status.style(MUTED).id("config-status");
@@ -135,19 +136,19 @@ public class ConfigScreen extends Widget<ConfigScreen> {
         boolean ok = spec.save();
         if (ok) {
             dirty = false;
-            status.text("Сохранено: " + spec.fileName());
+            status.text(I18n.ru("Сохранено: ") + spec.fileName());
             if (onSave != null) {
                 onSave.run();
             }
         } else {
-            status.text("Не удалось сохранить " + spec.fileName());
+            status.text(I18n.ru("Не удалось сохранить ") + spec.fileName());
         }
         return ok;
     }
 
     public void resetAll() {
         spec.resetAll();
-        status.text("Все параметры возвращены к значениям по умолчанию");
+        status.text(I18n.ru("Все параметры возвращены к значениям по умолчанию"));
     }
 
     @Override
@@ -174,7 +175,7 @@ public class ConfigScreen extends Widget<ConfigScreen> {
         if (autoSave) {
             save();
         } else {
-            status.text("Есть несохранённые изменения");
+            status.text(I18n.ru("Есть несохранённые изменения"));
         }
     }
 
@@ -201,7 +202,7 @@ public class ConfigScreen extends Widget<ConfigScreen> {
             shown = new ArrayList<>(spec.categories().get(i).options());
         }
         if (shown.isEmpty()) {
-            rows.add(new Label(searching ? "Ничего не найдено" : "Здесь пока пусто").style(MUTED));
+            rows.add(new Label(searching ? I18n.ru("Ничего не найдено") : I18n.ru("Здесь пока пусто")).style(MUTED));
         }
         String lastCategory = null;
         for (ConfigSpec.Option<?> o : shown) {
@@ -222,7 +223,7 @@ public class ConfigScreen extends Widget<ConfigScreen> {
         }
         UiElement control = control(o);
         Button reset = new Button("↺", o::reset).styleClass("button ghost");
-        reset.tooltip("По умолчанию");
+        reset.tooltip(I18n.ru("По умолчанию"));
         reset.setEnabled(!o.isDefault());
         rowSubscriptions.add(o.value().subscribe(v -> reset.setEnabled(!o.isDefault())));
         Panel row = Panel.box(FlexLayout.row().gap(8).align(Align.CENTER)).add(text, control, reset).width(Dim.FILL);

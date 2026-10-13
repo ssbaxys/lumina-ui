@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.AnimatedFloat;
 import io.github.ssbaxys.lumina.anim.Easing;
@@ -536,7 +537,7 @@ public class RadialMenu extends Widget<RadialMenu> {
         if (over != null) {
             label = over.label();
         } else if (!trail.isEmpty()) {
-            label = centerHot ? "Назад" : titles.peek();
+            label = centerHot ? I18n.ru("Назад") : titles.peek();
         } else {
             label = title;
         }

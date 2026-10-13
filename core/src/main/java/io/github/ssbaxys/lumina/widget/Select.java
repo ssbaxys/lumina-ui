@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.anim.AnimatedFloat;
 import io.github.ssbaxys.lumina.anim.Easing;
@@ -69,8 +70,8 @@ public class Select<T> extends Widget<Select<T>> {
     private Function<? super T, String> iconer;
     private boolean searchable;
     private String placeholder = "";
-    private String searchPlaceholder = "Поиск…";
-    private String emptyText = "Ничего не найдено";
+    private String searchPlaceholder = I18n.ru("Поиск…");
+    private String emptyText = I18n.ru("Ничего не найдено");
     private int maxRows = 8;
     private Consumer<? super T> onChange;
 

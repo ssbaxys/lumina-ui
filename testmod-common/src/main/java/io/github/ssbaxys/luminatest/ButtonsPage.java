@@ -36,18 +36,18 @@ final class ButtonsPage {
 
     static UiElement create() {
         return Ui.page(
-                Ui.section("Флажки", "Checkbox: свой вид анимации у каждого Kind; подпись тоже кликабельна, Space/Enter в фокусе",
+                Ui.section(Tr.r("Флажки"), Tr.r("Checkbox: свой вид анимации у каждого Kind; подпись тоже кликабельна, Space/Enter в фокусе"),
                         kinds()),
-                Ui.section("Неопределённое состояние", "Kind.CHECK: черта, когда выбрана только часть", selectAll()),
-                Ui.section("Радио-группы", "RadioGroup<T>: ровно один вариант в Signal<T>, стрелки двигают выбор", radios()),
-                Ui.section("Варианты кнопок", "styleClass(\"button outline\"): primary, outline, ghost, pill, gradient, danger, success, big",
+                Ui.section(Tr.r("Неопределённое состояние"), Tr.r("Kind.CHECK: черта, когда выбрана только часть"), selectAll()),
+                Ui.section(Tr.r("Радио-группы"), Tr.r("RadioGroup<T>: ровно один вариант в Signal<T>, стрелки двигают выбор"), radios()),
+                Ui.section(Tr.r("Варианты кнопок"), "styleClass(\"button outline\"): primary, outline, ghost, pill, gradient, danger, success, big",
                         variants()),
-                Ui.section("Иконки", ".item(\"minecraft:diamond\"), .icon(TextureRef), Button.round(...) — круглые кнопки-иконки",
+                Ui.section(Tr.r("Иконки"), Tr.r(".item(\"minecraft:diamond\"), .icon(TextureRef), Button.round(...) — круглые кнопки-иконки"),
                         icons()),
-                Ui.section("Загрузка", ".loading(true): спиннер вместо иконки, кнопка недоступна", loading()),
-                Ui.section("Кнопки-картинки", "ImageButton: картинка на всю кнопку, подпись снизу, при наведении — приближение",
+                Ui.section(Tr.r("Загрузка"), Tr.r(".loading(true): спиннер вместо иконки, кнопка недоступна"), loading()),
+                Ui.section(Tr.r("Кнопки-картинки"), Tr.r("ImageButton: картинка на всю кнопку, подпись снизу, при наведении — приближение"),
                         imageButtons()),
-                Ui.section("Картинки", "Image: CONTAIN, COVER, STRETCH и скругление; Images.fromFile читает PNG/JPG/GIF/BMP с диска",
+                Ui.section(Tr.r("Картинки"), Tr.r("Image: CONTAIN, COVER, STRETCH и скругление; Images.fromFile читает PNG/JPG/GIF/BMP с диска"),
                         images()));
     }
 
@@ -66,16 +66,16 @@ final class ButtonsPage {
             }
             boxes[i] = cb;
         }
-        Checkbox big = new Checkbox("Крупный", Signal.of(true)).boxSize(18);
-        Checkbox off = new Checkbox("Недоступный", Signal.of(true)).enabled(false);
+        Checkbox big = new Checkbox(Tr.r("Крупный"), Signal.of(true)).boxSize(18);
+        Checkbox off = new Checkbox(Tr.r("Недоступный"), Signal.of(true)).enabled(false);
         return Ui.column(8, Ui.grid(4, 14, boxes), Ui.row(14, big, off));
     }
 
     private static Panel selectAll() {
-        String[] names = {"Мечи", "Броня", "Зелья"};
+        String[] names = {Tr.r("Мечи"), Tr.r("Броня"), Tr.r("Зелья")};
         List<Signal<Boolean>> items = new ArrayList<>();
         Signal<Boolean> all = Signal.of(false);
-        Checkbox parent = new Checkbox("Выбрать всё", all);
+        Checkbox parent = new Checkbox(Tr.r("Выбрать всё"), all);
         Panel children = Ui.column(4);
         Runnable refresh = () -> {
             long count = items.stream().filter(s -> Boolean.TRUE.equals(s.peek())).count();
@@ -99,15 +99,15 @@ final class ButtonsPage {
     }
 
     private static Panel radios() {
-        Signal<String> difficulty = Signal.of("Нормальный");
-        RadioGroup<String> vertical = RadioGroup.of(difficulty, "Мирный", "Лёгкий", "Нормальный", "Сложный");
-        Label chosen = Label.bound(new Computed<>(() -> "Сложность: " + difficulty.get()));
+        Signal<String> difficulty = Signal.of(Tr.r("Нормальный"));
+        RadioGroup<String> vertical = RadioGroup.of(difficulty, Tr.r("Мирный"), Tr.r("Лёгкий"), Tr.r("Нормальный"), Tr.r("Сложный"));
+        Label chosen = Label.bound(new Computed<>(() -> Tr.r("Сложность: ") + difficulty.get()));
 
         Signal<Integer> size = Signal.of(16);
         RadioGroup<Integer> horizontal = RadioGroup.of(size, 8, 16, 32, 64).labels(v -> v + "px").horizontal().gap(12);
         RadioGroup<Integer> asFill = RadioGroup.of(size, 8, 16, 32, 64).labels(v -> v + "px")
                 .kind(Checkbox.Kind.FILL).horizontal().gap(12);
-        Label sizeLabel = Label.bound(new Computed<>(() -> "Размер: " + size.get() + " (одна переменная на две группы)"));
+        Label sizeLabel = Label.bound(new Computed<>(() -> Tr.r("Размер: ") + size.get() + Tr.r(" (одна переменная на две группы)")));
         return Ui.row(24, Ui.column(6, vertical, chosen), Ui.column(8, horizontal, asFill, sizeLabel));
     }
 
@@ -115,7 +115,7 @@ final class ButtonsPage {
 
     private static Panel variants() {
         String[][] all = {
-                {"Обычная", "button"}, {"Primary", "button primary"}, {"Outline", "button outline"},
+                {Tr.r("Обычная"), "button"}, {"Primary", "button primary"}, {"Outline", "button outline"},
                 {"Ghost", "button ghost"}, {"Pill", "button pill"}, {"Gradient", "button gradient"},
                 {"Danger", "button danger"}, {"Success", "button success"}, {"Gradient pill", "button gradient pill"},
                 {"Outline pill", "button outline pill"}
@@ -124,18 +124,18 @@ final class ButtonsPage {
         for (int i = 0; i < all.length; i++) {
             buttons[i] = new Button(all[i][0]).styleClass(all[i][1]);
         }
-        Button big = new Button("Большая кнопка").styleClass("button big gradient");
-        Button disabled = new Button("Недоступная").styleClass("button outline").enabled(false);
+        Button big = new Button(Tr.r("Большая кнопка")).styleClass("button big gradient");
+        Button disabled = new Button(Tr.r("Недоступная")).styleClass("button outline").enabled(false);
         return Ui.column(8, Ui.grid(5, 6, buttons), Ui.row(8, big, disabled));
     }
 
     private static Panel icons() {
         Panel items = Ui.row(6,
-                new Button("Алмаз").item("minecraft:diamond"),
-                new Button("Изумруд").item("minecraft:emerald").styleClass("button outline"),
-                new Button("Яблоко").icon(TextureRef.vanilla("item/apple")).styleClass("button pill"),
-                new Button("Жемчуг").icon(TextureRef.vanilla("item/ender_pearl")).styleClass("button ghost"),
-                new Button("Взорвать").item("minecraft:tnt").styleClass("button danger"));
+                new Button(Tr.r("Алмаз")).item("minecraft:diamond"),
+                new Button(Tr.r("Изумруд")).item("minecraft:emerald").styleClass("button outline"),
+                new Button(Tr.r("Яблоко")).icon(TextureRef.vanilla("item/apple")).styleClass("button pill"),
+                new Button(Tr.r("Жемчуг")).icon(TextureRef.vanilla("item/ender_pearl")).styleClass("button ghost"),
+                new Button(Tr.r("Взорвать")).item("minecraft:tnt").styleClass("button danger"));
         Panel round = Ui.row(6,
                 Button.roundItem("minecraft:diamond_sword", null),
                 Button.roundItem("minecraft:golden_apple", null).styleClass("button icon success"),
@@ -143,24 +143,24 @@ final class ButtonsPage {
                 Button.round(TextureRef.vanilla("item/clock_00"), null).styleClass("button icon ghost"),
                 Button.roundItem("minecraft:tnt", null).styleClass("button icon danger"),
                 Button.roundItem("minecraft:nether_star", null).styleClass("button icon gradient").iconSize(22),
-                Ui.muted("круглые: styleClass(\"button icon ...\")"));
-        Button play = new Button("Играть").item("minecraft:grass_block").iconSize(18).styleClass("button big gradient");
-        Button world = new Button("Новый мир").icon(TextureRef.vanilla("item/map")).iconSize(16).styleClass("button big outline");
+                Ui.muted(Tr.r("круглые: styleClass(\"button icon ...\")")));
+        Button play = new Button(Tr.r("Играть")).item("minecraft:grass_block").iconSize(18).styleClass("button big gradient");
+        Button world = new Button(Tr.r("Новый мир")).icon(TextureRef.vanilla("item/map")).iconSize(16).styleClass("button big outline");
         return Ui.column(8, items, round, Ui.row(8, play, world));
     }
 
     private static Panel loading() {
-        Button save = new Button("Сохранить").item("minecraft:writable_book");
+        Button save = new Button(Tr.r("Сохранить")).item("minecraft:writable_book");
         save.onPress(() -> fakeWork(save, 2f));
-        Button send = new Button("Отправить").styleClass("button gradient");
+        Button send = new Button(Tr.r("Отправить")).styleClass("button gradient");
         send.onPress(() -> fakeWork(send, 3f));
         Button round = Button.roundItem("minecraft:ender_eye", null).styleClass("button icon outline");
         round.onPress(() -> fakeWork(round, 1.5f));
 
         Signal<Boolean> busy = Signal.of(true);
-        Button bound = new Button("Ждём сервер").styleClass("button outline").loading(busy);
+        Button bound = new Button(Tr.r("Ждём сервер")).styleClass("button outline").loading(busy);
         return Ui.column(8,
-                Ui.row(8, save, send, round, Ui.muted("нажмите — пара секунд «работы»")),
+                Ui.row(8, save, send, round, Ui.muted(Tr.r("нажмите — пара секунд «работы»"))),
                 Ui.row(8, new Toggle(busy), new Label("loading(Signal)"), bound));
     }
 
@@ -174,16 +174,16 @@ final class ButtonsPage {
 
     private static Panel imageButtons() {
         Signal<String> picked = Signal.of("—");
-        String[] sides = {"Север", "Восток", "Юг", "Запад", "Небо", "Земля"};
+        String[] sides = {Tr.r("Север"), Tr.r("Восток"), Tr.r("Юг"), Tr.r("Запад"), Tr.r("Небо"), Tr.r("Земля")};
         UiElement[] cards = new UiElement[sides.length];
         for (int i = 0; i < sides.length; i++) {
             String side = sides[i];
-            cards[i] = new ImageButton(TextureRef.of(PANORAMA + i + ".png"), "Панорама: " + side,
+            cards[i] = new ImageButton(TextureRef.of(PANORAMA + i + ".png"), Tr.r("Панорама: ") + side,
                     () -> picked.set(side)).size(112, 70);
         }
         String[][] blocks = {
-                {"block/oak_planks", "Дуб"}, {"block/bricks", "Кирпичи"}, {"block/diamond_ore", "Алмазная руда"},
-                {"block/cherry_planks", "Вишня"}, {"block/amethyst_block", "Аметист"}
+                {"block/oak_planks", Tr.r("Дуб")}, {"block/bricks", Tr.r("Кирпичи")}, {"block/diamond_ore", Tr.r("Алмазная руда")},
+                {"block/cherry_planks", Tr.r("Вишня")}, {"block/amethyst_block", Tr.r("Аметист")}
         };
         UiElement[] tiles = new UiElement[blocks.length];
         for (int i = 0; i < blocks.length; i++) {
@@ -191,7 +191,7 @@ final class ButtonsPage {
             tiles[i] = new ImageButton(TextureRef.vanilla(blocks[i][0]), name, () -> picked.set(name)).size(64, 64);
         }
         return Ui.column(8, Ui.grid(3, 8, cards), Ui.row(8, tiles),
-                Label.bound(new Computed<>(() -> "Выбрано: " + picked.get())));
+                Label.bound(new Computed<>(() -> Tr.r("Выбрано: ") + picked.get())));
     }
 
     private static Panel images() {
@@ -225,14 +225,14 @@ final class ButtonsPage {
             }
         }
         if (last.isEmpty()) {
-            return Ui.muted("Сделайте скриншот (F2) — здесь появится последний из папки screenshots");
+            return Ui.muted(Tr.r("Сделайте скриншот (F2) — здесь появится последний из папки screenshots"));
         }
         TextureRef shot = Images.fromFile(last.get());
         if (shot == null) {
-            return Ui.muted("Не удалось загрузить " + last.get().getFileName());
+            return Ui.muted(Tr.r("Не удалось загрузить ") + last.get().getFileName());
         }
         Image image = Image.of(shot).fit(Image.Fit.COVER).size(192, 108).radius(10);
-        return Ui.row(10, image, Ui.column(4, new Label("Последний скриншот"), Ui.muted(last.get().getFileName().toString()),
+        return Ui.row(10, image, Ui.column(4, new Label(Tr.r("Последний скриншот")), Ui.muted(last.get().getFileName().toString()),
                 Ui.muted("Images.fromFile(path) → Image.fit(COVER)")));
     }
 

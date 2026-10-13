@@ -32,6 +32,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Описание настроек, файл TOML и автоматический экран настроек. */
 class ConfigSpecTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     enum Mode { FAST, FANCY, FABULOUS }
 
     @TempDir

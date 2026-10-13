@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.anim.Easing;
 import io.github.ssbaxys.lumina.layout.Align;
 import io.github.ssbaxys.lumina.layout.Dim;
@@ -41,8 +42,8 @@ public class Wizard extends Widget<Wizard> {
     private final Pages pages;
     private final Button back;
     private final Button next;
-    private String nextText = "Далее";
-    private String finishText = "Готово";
+    private String nextText = I18n.ru("Далее");
+    private String finishText = I18n.ru("Готово");
     private Runnable onFinish;
     private Subscription subscription;
     private boolean finished;
@@ -54,7 +55,7 @@ public class Wizard extends Widget<Wizard> {
         pages = new Pages(step).effect(Pages.Effect.SLIDE).duration(0.32f);
         pages.layoutParams().grow = 1f;
         pages.layoutParams().width = Dim.FILL;
-        back = new Button("Назад", this::back).styleClass("button ghost");
+        back = new Button(I18n.ru("Назад"), this::back).styleClass("button ghost");
         next = new Button(nextText, this::next);
         Panel nav = new Panel("wizard-nav", FlexLayout.row().gap(8).align(Align.CENTER))
                 .add(back, Panel.box(FlexLayout.row()).grow(1f), next);

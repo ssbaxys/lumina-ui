@@ -38,7 +38,7 @@ final class DataToolsPage {
     /** Предмет витрины: id для иконки, название, категория, редкость и количество. */
     record Item(int number, String id, String name, String category, int rarity, int count) {
         String rarityName() {
-            return RARITY[rarity];
+            return Tr.r(RARITY[rarity]);
         }
     }
 
@@ -76,16 +76,16 @@ final class DataToolsPage {
 
     static UiElement create() {
         return Ui.page(
-                Ui.section("Список на 10 000 предметов",
-                        "VirtualList рисует только видимые строки; поиск, фильтры и сортировка — DataView", itemList()),
-                Ui.section("Таблица со страницами",
-                        "Тот же поиск, по 10 строк на страницу; клик по заголовку сортирует все страницы", itemTable()),
-                Ui.section("Регистрация", "Проверки полей, ошибки под полями, кнопка проверяет всю форму",
+                Ui.section(Tr.r("Список на 10 000 предметов"),
+                        Tr.r("VirtualList рисует только видимые строки; поиск, фильтры и сортировка — DataView"), itemList()),
+                Ui.section(Tr.r("Таблица со страницами"),
+                        Tr.r("Тот же поиск, по 10 строк на страницу; клик по заголовку сортирует все страницы"), itemTable()),
+                Ui.section(Tr.r("Регистрация"), Tr.r("Проверки полей, ошибки под полями, кнопка проверяет всю форму"),
                         registration()),
-                Ui.section("Мастер настройки", "Шаги с проверкой: «Далее» не пустит дальше с ошибкой", wizard()),
-                Ui.section("Книга", "Страницы из Markdown, перелистывание стрелками, колесом и клавишами", books()),
-                Ui.section("Подсветка кода", "Блоки ```java, ```json, ```css и ```html раскрашиваются по теме",
-                        new Markdown(CODE)));
+                Ui.section(Tr.r("Мастер настройки"), Tr.r("Шаги с проверкой: «Далее» не пустит дальше с ошибкой"), wizard()),
+                Ui.section(Tr.r("Книга"), Tr.r("Страницы из Markdown, перелистывание стрелками, колесом и клавишами"), books()),
+                Ui.section(Tr.r("Подсветка кода"), Tr.r("Блоки ```java, ```json, ```css и ```html раскрашиваются по теме"),
+                        new Markdown(Tr.r(CODE))));
     }
 
     /** 10 000 предметов из базового набора: номер в названии, редкость и количество по номеру. */
@@ -94,7 +94,7 @@ final class DataToolsPage {
         for (int i = 0; i < ITEM_COUNT; i++) {
             String[] b = BASE[i % BASE.length];
             int rarity = (i * 7 + i / BASE.length) % 11 == 0 ? 3 : (i * 13) % 7 == 0 ? 2 : (i % 3 == 0 ? 1 : 0);
-            out.add(new Item(i + 1, b[0], b[1] + " №" + (i / BASE.length + 1), b[2], rarity, 1 + (i * 37) % 64));
+            out.add(new Item(i + 1, b[0], Tr.r(b[1]) + " №" + (i / BASE.length + 1), Tr.r(b[2]), rarity, 1 + (i * 37) % 64));
         }
         return out;
     }
@@ -105,37 +105,37 @@ final class DataToolsPage {
         DataView<Item> view = new DataView<>(items()).searchBy(i -> i.name() + " " + i.category());
         Signal<Boolean> onlyBlocks = Signal.of(false);
         Signal<Boolean> onlyRare = Signal.of(false);
-        view.filterWhen("блоки", onlyBlocks, i -> i.category().equals("Блоки"));
-        view.filterWhen("редкие", onlyRare, i -> i.rarity() >= 2);
+        view.filterWhen(Tr.r("блоки"), onlyBlocks, i -> i.category().equals(Tr.r("Блоки")));
+        view.filterWhen(Tr.r("редкие"), onlyRare, i -> i.rarity() >= 2);
 
-        Signal<String> sort = Signal.of("По номеру");
+        Signal<String> sort = Signal.of(Tr.r("По номеру"));
         sort.subscribe(s -> view.sort(switch (s) {
             case "По названию" -> Comparator.comparing(Item::name);
             case "По редкости" -> Comparator.comparingInt(Item::rarity).reversed().thenComparing(Item::number);
             default -> null;
         }));
 
-        TextField search = new TextField(view.query()).placeholder("Поиск: «алмаз», «еда 12»…")
+        TextField search = new TextField(view.query()).placeholder(Tr.r("Поиск: «алмаз», «еда 12»…"))
                 .icon(FieldBase.SEARCH).clearButton(true).width(Dim.px(190));
         Panel filters = Ui.row(10, search,
-                new Checkbox("Только блоки", onlyBlocks),
-                new Checkbox("Редкие и выше", onlyRare));
-        RadioGroup<String> order = RadioGroup.of(sort, "По номеру", "По названию", "По редкости").horizontal();
+                new Checkbox(Tr.r("Только блоки"), onlyBlocks),
+                new Checkbox(Tr.r("Редкие и выше"), onlyRare));
+        RadioGroup<String> order = RadioGroup.of(sort, Tr.r("По номеру"), Tr.r("По названию"), Tr.r("По редкости")).horizontal();
 
-        Label selected = new Label("Выберите предмет (двойной клик — «выдать»)");
+        Label selected = new Label(Tr.r("Выберите предмет (двойной клик — «выдать»)"));
         VirtualList<Item> list = new VirtualList<Item>(18, DataToolsPage::paintRow)
                 .bind(view.visible())
-                .emptyText("Ничего не найдено")
-                .onActivate(i -> selected.text("Выдано: " + i.name() + " ×" + i.count()))
+                .emptyText(Tr.r("Ничего не найдено"))
+                .onActivate(i -> selected.text(Tr.r("Выдано: ") + i.name() + " ×" + i.count()))
                 .width(Dim.FILL).height(Dim.px(180));
         list.selection().subscribe(i -> {
             if (i != null) {
-                selected.text("Выбрано: " + i.name() + " — " + i.category() + ", " + i.rarityName().toLowerCase());
+                selected.text(Tr.r("Выбрано: ") + i.name() + " — " + i.category() + ", " + i.rarityName().toLowerCase());
             }
         });
 
-        Label found = Label.bound(view.total().map(n -> "Найдено: " + n + " из " + ITEM_COUNT));
-        return Ui.column(6, filters, Ui.row(10, Ui.muted("Порядок:"), order, Ui.spacer(), found).width(Dim.FILL),
+        Label found = Label.bound(view.total().map(n -> Tr.r("Найдено: ") + n + Tr.r(" из ") + ITEM_COUNT));
+        return Ui.column(6, filters, Ui.row(10, Ui.muted(Tr.r("Порядок:")), order, Ui.spacer(), found).width(Dim.FILL),
                 list, selected).width(Dim.FILL);
     }
 
@@ -162,21 +162,21 @@ final class DataToolsPage {
 
     private static UiElement itemTable() {
         DataView<Item> view = new DataView<>(items()).searchBy(Item::name).pageSize(10);
-        TextField search = new TextField(view.query()).placeholder("Поиск по названию").icon(FieldBase.SEARCH)
+        TextField search = new TextField(view.query()).placeholder(Tr.r("Поиск по названию")).icon(FieldBase.SEARCH)
                 .clearButton(true).width(Dim.px(170));
         Table<Item> table = new Table<Item>()
                 .column("№", 0.6f, i -> String.valueOf(i.number()), Comparator.comparingInt(Item::number))
-                .column("Предмет", 2.4f, Item::name)
-                .column("Категория", 1.4f, Item::category)
-                .column("Редкость", 1.2f, (c, i, x, y, w, h) -> {
+                .column(Tr.r("Предмет"), 2.4f, Item::name)
+                .column(Tr.r("Категория"), 1.4f, Item::category)
+                .column(Tr.r("Редкость"), 1.2f, (c, i, x, y, w, h) -> {
                     c.fillCircle(x + 3f, y + h / 2f, 3f, Brush.solid(RARITY_COLOR[i.rarity()]));
                     c.drawText(i.rarityName(), x + 10f, y + 4f, Color.mulAlpha(RARITY_COLOR[i.rarity()], 0.95f), false);
                 }, Comparator.comparingInt(Item::rarity))
-                .column("Кол-во", 0.8f, i -> String.valueOf(i.count()), Comparator.comparingInt(Item::count))
+                .column(Tr.r("Кол-во"), 0.8f, i -> String.valueOf(i.count()), Comparator.comparingInt(Item::count))
                 .bind(view)
                 .width(Dim.FILL);
-        Label pages = Label.bound(new Computed<>(() -> "Страница " + (view.page().get() + 1) + " из "
-                + view.pageCount().get() + " · строк: " + view.total().get()));
+        Label pages = Label.bound(new Computed<>(() -> Tr.r("Страница ") + (view.page().get() + 1) + Tr.r(" из ")
+                + view.pageCount().get() + Tr.r(" · строк: ") + view.total().get()));
         return Ui.column(6, Ui.row(10, search, Ui.spacer(), pages).width(Dim.FILL), table,
                 Ui.row(0, Ui.spacer(), new Paginator(view), Ui.spacer()).width(Dim.FILL)).width(Dim.FILL);
     }
@@ -190,21 +190,21 @@ final class DataToolsPage {
         Signal<String> repeat = Signal.of("");
         Signal<Float> age = Signal.of(0f);
         Signal<Boolean> agree = Signal.of(false);
-        Label result = Ui.muted("Заполните форму и нажмите «Создать аккаунт»");
+        Label result = Ui.muted(Tr.r("Заполните форму и нажмите «Создать аккаунт»"));
 
         Form form = new Form();
         TextField nickField = new TextField(nick).placeholder("Steve_2009").maxLength(16)
-                .validate(Validator.required("Придумайте ник"), Validator.minLength(3),
-                        Validator.pattern("[A-Za-z0-9_]+", "Только латиница, цифры и _"));
+                .validate(Validator.required(Tr.r("Придумайте ник")), Validator.minLength(3),
+                        Validator.pattern("[A-Za-z0-9_]+", Tr.r("Только латиница, цифры и _")));
         TextField mailField = new TextField(mail).placeholder("steve@mail.ru")
                 .validate(Validator.required(), Validator.email());
-        TextField passField = new TextField(password).password(true).placeholder("не меньше 6 символов")
+        TextField passField = new TextField(password).password(true).placeholder(Tr.r("не меньше 6 символов"))
                 .validate(Validator.required(), Validator.minLength(6),
-                        Validator.of(s -> s.chars().anyMatch(Character::isDigit), "Добавьте хотя бы одну цифру"));
+                        Validator.of(s -> s.chars().anyMatch(Character::isDigit), Tr.r("Добавьте хотя бы одну цифру")));
         TextField repeatField = new TextField(repeat).password(true)
-                .validate(Validator.required("Повторите пароль"), Validator.sameAs(password::peek, "Пароли не совпадают"));
+                .validate(Validator.required(Tr.r("Повторите пароль")), Validator.sameAs(password::peek, Tr.r("Пароли не совпадают")));
         NumberField ageField = new NumberField(age).decimals(0).range(0, 200)
-                .validate(Validator.range(13, 120, "Возраст от 13 до 120 лет")).width(Dim.px(70));
+                .validate(Validator.range(13, 120, Tr.r("Возраст от 13 до 120 лет"))).width(Dim.px(70));
         // Если пароль поменяли после повтора — повтор перепроверяется.
         password.subscribe(p -> {
             if (repeatField.error().get() != null) {
@@ -212,11 +212,11 @@ final class DataToolsPage {
             }
         });
 
-        Checkbox rules = new Checkbox("Согласен с правилами сервера", agree);
+        Checkbox rules = new Checkbox(Tr.r("Согласен с правилами сервера"), agree);
         Label rulesError = new Label("").styleClass("form-error");
         form.check(() -> {
             boolean ok = Boolean.TRUE.equals(agree.peek());
-            rulesError.text(ok ? "" : "Нужно согласиться с правилами");
+            rulesError.text(ok ? "" : Tr.r("Нужно согласиться с правилами"));
             return ok;
         });
         agree.subscribe(v -> {
@@ -224,11 +224,11 @@ final class DataToolsPage {
                 rulesError.text("");
             }
         });
-        form.onSubmit(() -> result.text("Аккаунт «" + nick.peek() + "» создан! Письмо отправлено на " + mail.peek()))
-                .onInvalid(() -> result.text("Исправьте ошибки: " + form.errors().size()));
+        form.onSubmit(() -> result.text(Tr.r("Аккаунт «") + nick.peek() + Tr.r("» создан! Письмо отправлено на ") + mail.peek()))
+                .onInvalid(() -> result.text(Tr.r("Исправьте ошибки: ") + form.errors().size()));
 
-        Button submit = form.submitButton(new Button("Создать аккаунт"), false);
-        Button reset = new Button("Сбросить", () -> {
+        Button submit = form.submitButton(new Button(Tr.r("Создать аккаунт")), false);
+        Button reset = new Button(Tr.r("Сбросить"), () -> {
             nick.set("");
             mail.set("");
             password.set("");
@@ -237,17 +237,17 @@ final class DataToolsPage {
             agree.set(false);
             form.reset();
             rulesError.text("");
-            result.text("Форма очищена");
+            result.text(Tr.r("Форма очищена"));
         }).styleClass("button ghost");
-        Label status = Label.bound(form.valid().map(ok -> ok ? "✔ Все поля заполнены верно" : "Есть незаполненные поля"));
+        Label status = Label.bound(form.valid().map(ok -> ok ? Tr.r("✔ Все поля заполнены верно") : Tr.r("Есть незаполненные поля")));
 
         Panel left = Ui.column(8,
-                form.field("Ник", nickField).hint("3–16 символов"),
-                form.field("Почта", mailField),
-                form.field("Возраст", ageField));
+                form.field(Tr.r("Ник"), nickField).hint(Tr.r("3–16 символов")),
+                form.field(Tr.r("Почта"), mailField),
+                form.field(Tr.r("Возраст"), ageField));
         Panel right = Ui.column(8,
-                form.field("Пароль", passField),
-                form.field("Повтор пароля", repeatField));
+                form.field(Tr.r("Пароль"), passField),
+                form.field(Tr.r("Повтор пароля"), repeatField));
         Panel columns = Ui.row(24, left, right);
         columns.align(Align.START);
         return Ui.column(8, columns, Ui.column(2, rules, rulesError), Ui.row(8, submit, reset, status), result);
@@ -257,36 +257,36 @@ final class DataToolsPage {
 
     private static UiElement wizard() {
         Signal<String> name = Signal.of("");
-        Signal<String> mode = Signal.of("Выживание");
+        Signal<String> mode = Signal.of(Tr.r("Выживание"));
         Signal<Float> players = Signal.of(10f);
         Label done = Ui.muted("");
 
         Form serverForm = new Form();
         Panel serverPage = Ui.column(8,
-                Ui.muted("Как будет называться сервер?"),
-                serverForm.field("Название", new TextField(name).placeholder("Мой сервер")
-                        .validate(Validator.required("Введите название"), Validator.maxLength(24))));
+                Ui.muted(Tr.r("Как будет называться сервер?")),
+                serverForm.field(Tr.r("Название"), new TextField(name).placeholder(Tr.r("Мой сервер"))
+                        .validate(Validator.required(Tr.r("Введите название")), Validator.maxLength(24))));
 
         Form playersForm = new Form();
         Panel playersPage = Ui.column(8,
-                Ui.muted("Сколько игроков смогут зайти одновременно?"),
-                playersForm.field("Слотов", new NumberField(players).decimals(0).range(0, 1000)
-                        .validate(Validator.range(1, 100, "От 1 до 100 игроков")).width(Dim.px(70))));
+                Ui.muted(Tr.r("Сколько игроков смогут зайти одновременно?")),
+                playersForm.field(Tr.r("Слотов"), new NumberField(players).decimals(0).range(0, 1000)
+                        .validate(Validator.range(1, 100, Tr.r("От 1 до 100 игроков"))).width(Dim.px(70))));
 
         Wizard wizard = new Wizard()
-                .step("Сервер", serverPage, serverForm)
-                .step("Режим", () -> Ui.column(8, Ui.muted("Выберите режим игры"),
-                        RadioGroup.of(mode, "Выживание", "Творческий", "Хардкор", "Приключение")))
-                .step("Игроки", playersPage, playersForm)
-                .step("Готово", () -> Ui.column(6,
-                        Ui.heading("Проверьте настройки"),
-                        Label.bound(name.map(n -> "Название: " + n)),
-                        Label.bound(mode.map(m -> "Режим: " + m)),
-                        Label.bound(players.map(p -> "Игроков: " + Math.round(p)))))
-                .labels("Назад", "Далее", "Создать сервер")
+                .step(Tr.r("Сервер"), serverPage, serverForm)
+                .step(Tr.r("Режим"), () -> Ui.column(8, Ui.muted(Tr.r("Выберите режим игры")),
+                        RadioGroup.of(mode, Tr.r("Выживание"), Tr.r("Творческий"), Tr.r("Хардкор"), Tr.r("Приключение"))))
+                .step(Tr.r("Игроки"), playersPage, playersForm)
+                .step(Tr.r("Готово"), () -> Ui.column(6,
+                        Ui.heading(Tr.r("Проверьте настройки")),
+                        Label.bound(name.map(n -> Tr.r("Название: ") + n)),
+                        Label.bound(mode.map(m -> Tr.r("Режим: ") + m)),
+                        Label.bound(players.map(p -> Tr.r("Игроков: ") + Math.round(p)))))
+                .labels(Tr.r("Назад"), Tr.r("Далее"), Tr.r("Создать сервер"))
                 .width(Dim.FILL).height(Dim.px(210));
-        wizard.onFinish(() -> done.text("Сервер «" + name.peek() + "» создан: " + mode.peek().toLowerCase()
-                + ", " + Math.round(players.peek()) + " слотов"));
+        wizard.onFinish(() -> done.text(Tr.r("Сервер «") + name.peek() + Tr.r("» создан: ") + mode.peek().toLowerCase()
+                + ", " + Math.round(players.peek()) + Tr.r(" слотов")));
         return Ui.column(6, wizard, done).width(Dim.FILL);
     }
 
@@ -318,21 +318,21 @@ final class DataToolsPage {
             """;
 
     private static UiElement books() {
-        Book vanilla = new Book(STORY);
-        Book modern = new Book(STORY).look(Book.Look.MODERN).tableOfContents(true)
+        Book vanilla = new Book(Tr.r(STORY));
+        Book modern = new Book(Tr.r(STORY)).look(Book.Look.MODERN).tableOfContents(true)
                 .width(Dim.px(340)).height(Dim.px(210));
-        Label counter = Label.bound(new Computed<>(() -> "Современная книга: страница "
-                + (modern.page().get() + 1) + " из " + modern.pageCount().get()));
+        Label counter = Label.bound(new Computed<>(() -> Tr.r("Современная книга: страница ")
+                + (modern.page().get() + 1) + Tr.r(" из ") + modern.pageCount().get()));
         Panel controls = Ui.row(8,
-                new Button("« Оглавление", () -> modern.goTo(0)).styleClass("button ghost"),
+                new Button(Tr.r("« Оглавление"), () -> modern.goTo(0)).styleClass("button ghost"),
                 new Button("‹", modern::previous).styleClass("button ghost"),
                 new Button("›", modern::next).styleClass("button ghost"),
                 counter);
         return Ui.column(10,
                 Ui.row(12, vanilla, Ui.column(4,
-                        Ui.muted("Ванильный вид: текстура книги игры,"),
-                        Ui.muted("одна страница и стрелки внизу."),
-                        Ui.muted("Разрыв страницы — <!-- page -->."))),
+                        Ui.muted(Tr.r("Ванильный вид: текстура книги игры,")),
+                        Ui.muted(Tr.r("одна страница и стрелки внизу.")),
+                        Ui.muted(Tr.r("Разрыв страницы — <!-- page -->.")))),
                 modern, controls);
     }
 

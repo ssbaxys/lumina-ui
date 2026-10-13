@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.event.ScrollEvent;
 import io.github.ssbaxys.lumina.event.UiEvent;
@@ -232,7 +233,7 @@ public class MiniMap extends Widget<MiniMap> {
         last = s;
         TextMetrics tm = canvas.textMetrics();
         if (s == null) {
-            String msg = "Нет карты";
+            String msg = I18n.ru("Нет карты");
             canvas.drawText(msg, cx - tm.width(msg) / 2f, cy - tm.lineHeight() / 2f, 0x90FFFFFF, false);
             paintFrame(canvas, fx, fy, fw, fh, frame);
             return;
@@ -252,7 +253,7 @@ public class MiniMap extends Widget<MiniMap> {
             float nx = cx + p[0] / len * edge;
             float ny = cy + p[1] / len * edge;
             canvas.fillCircle(nx, ny, 5f, Brush.solid(0xD0101418));
-            canvas.drawText("С", nx - tm.width("С") / 2f, ny - tm.lineHeight() / 2f + 0.5f, 0xFFFF6B6B, false);
+            canvas.drawText(I18n.ru("С"), nx - tm.width(I18n.ru("С")) / 2f, ny - tm.lineHeight() / 2f + 0.5f, 0xFFFF6B6B, false);
         }
         paintFrame(canvas, fx, fy, fw, fh, frame);
         if (showCoordinates) {

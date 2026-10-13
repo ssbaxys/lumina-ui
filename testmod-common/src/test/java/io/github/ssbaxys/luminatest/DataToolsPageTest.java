@@ -35,6 +35,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Страница инструментов данных: всё строится, рисуется и откликается — без исключений. */
 class DataToolsPageTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     private static final TextMetrics METRICS = new TextMetrics() {
         @Override
         public float width(String text) {

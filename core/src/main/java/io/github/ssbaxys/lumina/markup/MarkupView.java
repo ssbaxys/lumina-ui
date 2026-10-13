@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.markup;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.anim.Animation;
 import io.github.ssbaxys.lumina.layout.Align;
 import io.github.ssbaxys.lumina.layout.Dim;
@@ -126,7 +127,7 @@ public class MarkupView extends Widget<MarkupView> implements Animation {
             texts.add(html);
         }
         if (html == null) {
-            addChild(new Label("Не найден ресурс " + resourceId));
+            addChild(new Label(I18n.ru("Не найден ресурс ") + resourceId));
             watched = files;
             watchedTexts = texts;
             return;
@@ -139,7 +140,7 @@ public class MarkupView extends Widget<MarkupView> implements Animation {
                 texts.add(resources.read(linked));
             }
         } catch (RuntimeException e) {
-            addChild(new Label("Ошибка разметки: " + e));
+            addChild(new Label(I18n.ru("Ошибка разметки: ") + e));
         }
         watched = files;
         watchedTexts = texts;

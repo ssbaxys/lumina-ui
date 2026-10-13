@@ -33,6 +33,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Стопки, модель инвентаря, слоты и перетаскивание мышью. */
 class InventoryTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     static boolean shift;
 
     @BeforeEach

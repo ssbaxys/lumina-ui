@@ -45,47 +45,47 @@ final class ItemsPage {
 
     static UiElement create() {
         SlotGroup group = new SlotGroup();
-        Label status = Ui.muted("Перенесите что-нибудь: здесь появится, что и куда ушло.");
-        group.onTransfer((from, to, moved) -> status.text("Перенесено: " + moved.count() + " × "
-                + moved.displayName() + (to == null ? " (Shift+клик или выброшено)" : " → ячейка " + to.index())));
+        Label status = Ui.muted(Tr.r("Перенесите что-нибудь: здесь появится, что и куда ушло."));
+        group.onTransfer((from, to, moved) -> status.text(Tr.r("Перенесено: ") + moved.count() + " × "
+                + moved.displayName() + (to == null ? Tr.r(" (Shift+клик или выброшено)") : Tr.r(" → ячейка ") + to.index())));
         // Мимо слотов — «выбросить»: предмет пропадает.
         group.onDropOutside((from, stack) -> true);
 
         Inventory chest = chest();
         Inventory player = player();
         return Ui.page(
-                Ui.section("Сундук и инвентарь",
-                        "ЛКМ-перетаскивание — вся стопка, ПКМ — половина, Shift+клик — быстрый перенос, мимо окна — "
-                                + "выбросить. Справа тот же сундук в современном виде: оба окна показывают одни данные.",
+                Ui.section(Tr.r("Сундук и инвентарь"),
+                        Tr.r("ЛКМ-перетаскивание — вся стопка, ПКМ — половина, Shift+клик — быстрый перенос, мимо окна — ")
+                                + Tr.r("выбросить. Справа тот же сундук в современном виде: оба окна показывают одни данные."),
                         Ui.row(12, vanilla(chest, player, group), modern(chest, player, group)).align(Align.START),
                         status),
-                Ui.section("Броня и мусорка",
-                        "В ячейки брони ложится только своя броня (фильтр инвентаря), мусорка уничтожает всё, что в неё "
-                                + "положили. Пустые ячейки брони показывают бледный силуэт.",
+                Ui.section(Tr.r("Броня и мусорка"),
+                        Tr.r("В ячейки брони ложится только своя броня (фильтр инвентаря), мусорка уничтожает всё, что в неё ")
+                                + Tr.r("положили. Пустые ячейки брони показывают бледный силуэт."),
                         armor(player, group)),
-                Ui.section("Мобы",
-                        "Каждого можно крутить мышью; переключатель включает автовращение. Мобы рисуются игрой, как "
-                                + "игрок в окне инвентаря, поэтому видны только в мире (не в главном меню).",
+                Ui.section(Tr.r("Мобы"),
+                        Tr.r("Каждого можно крутить мышью; переключатель включает автовращение. Мобы рисуются игрой, как ")
+                                + Tr.r("игрок в окне инвентаря, поэтому видны только в мире (не в главном меню)."),
                         mobs()),
-                Ui.section("Игрок",
-                        "Вы сами в своей броне и с предметами в руках. Слева — смотрит на курсор, справа — вращается.",
+                Ui.section(Tr.r("Игрок"),
+                        Tr.r("Вы сами в своей броне и с предметами в руках. Слева — смотрит на курсор, справа — вращается."),
                         Ui.row(16,
                                 Ui.labeled(EntityView.player().followMouse(true).zoomable(false).size(110, 150),
-                                        "Следит за мышью"),
+                                        Tr.r("Следит за мышью")),
                                 Ui.labeled(EntityView.player().autoRotate(true).zoomable(false).size(110, 150),
-                                        "Автовращение"))),
-                Ui.section("Крупные предметы",
-                        "Предметы в 3D: блоки объёмные, остальное — как выброшенное на землю. Крутятся мышью и сами.",
+                                        Tr.r("Автовращение")))),
+                Ui.section(Tr.r("Крупные предметы"),
+                        Tr.r("Предметы в 3D: блоки объёмные, остальное — как выброшенное на землю. Крутятся мышью и сами."),
                         Ui.row(16,
                                 Ui.labeled(new ItemView("minecraft:grass_block").autoRotate(true).zoomable(false)
-                                        .size(72, 72), "Блок"),
+                                        .size(72, 72), Tr.r("Блок")),
                                 Ui.labeled(new ItemView(Stack.of("minecraft:diamond_sword").withGlint(true))
-                                        .autoRotate(40f).zoomable(false).size(72, 72), "Зачарованный меч"),
+                                        .autoRotate(40f).zoomable(false).size(72, 72), Tr.r("Зачарованный меч")),
                                 Ui.labeled(new ItemView("minecraft:totem_of_undying").camera(20f, 10f).zoomable(false)
-                                        .size(72, 72), "Тотем (мышью)"))),
-                Ui.section("Из разметки",
-                        "Теги <slot>, <entity>, <player> и <item-view>.",
-                        Markup.build("""
+                                        .size(72, 72), Tr.r("Тотем (мышью)")))),
+                Ui.section(Tr.r("Из разметки"),
+                        Tr.r("Теги <slot>, <entity>, <player> и <item-view>."),
+                        Markup.build(Tr.r("""
                                 <row gap="10">
                                   <slot item="minecraft:golden_apple" count="3" glint name="Чарованное яблоко"
                                         lore="Даёт поглощение|И регенерацию"/>
@@ -95,7 +95,7 @@ final class ItemsPage {
                                   <player follow-mouse zoomable="false" width="60" height="80"/>
                                   <item-view item="minecraft:beacon" auto-rotate="60" zoomable="false" size="48"/>
                                 </row>
-                                """, new Bindings()).root()));
+                                """), new Bindings()).root()));
     }
 
     // ---------------------------------------------------------------- инвентари
@@ -106,8 +106,8 @@ final class ItemsPage {
         chest.set(1, Stack.of("minecraft:iron_ingot", 32));
         chest.set(2, Stack.of("minecraft:gold_ingot", 7));
         chest.set(3, Stack.of("minecraft:emerald", 5));
-        chest.set(4, Stack.of("minecraft:diamond_sword").withName("Экскалибур")
-                .withLore("Выкован в недрах Незера", "Острый, как в первый день").withGlint(true).withDurability(400, 1561));
+        chest.set(4, Stack.of("minecraft:diamond_sword").withName(Tr.r("Экскалибур"))
+                .withLore(Tr.r("Выкован в недрах Незера"), Tr.r("Острый, как в первый день")).withGlint(true).withDurability(400, 1561));
         chest.set(5, Stack.of("minecraft:bow").withDurability(300, 384));
         chest.set(6, Stack.of("minecraft:ender_pearl", 16).withMaxStackSize(16));
         chest.set(9, Stack.of("minecraft:oak_log", 20));
@@ -136,13 +136,13 @@ final class ItemsPage {
     }
 
     private static UiElement vanilla(Inventory chest, Inventory player, SlotGroup group) {
-        InventoryPanel panel = InventoryPanel.chest("Сундук", chest, player, Slot.Look.VANILLA);
+        InventoryPanel panel = InventoryPanel.chest(Tr.r("Сундук"), chest, player, Slot.Look.VANILLA);
         setGroup(panel, group);
         return panel;
     }
 
     private static UiElement modern(Inventory chest, Inventory player, SlotGroup group) {
-        InventoryPanel panel = InventoryPanel.chest("Сундук", chest, player, Slot.Look.MODERN);
+        InventoryPanel panel = InventoryPanel.chest(Tr.r("Сундук"), chest, player, Slot.Look.MODERN);
         setGroup(panel, group);
         return panel;
     }
@@ -181,9 +181,9 @@ final class ItemsPage {
                 Stack.of("minecraft:leather_chestplate"), Stack.of("minecraft:rotten_flesh", 30));
         SlotGrid lootGrid = new SlotGrid(loot, 4).look(Slot.Look.MODERN).slotSize(22).group(group).quickMoveTo(armor);
         return Ui.row(16,
-                Ui.labeled(column, "Броня"),
-                Ui.labeled(lootGrid, "Добыча (Shift+клик — надеть)"),
-                Ui.labeled(bin, "Мусорка")).align(Align.START);
+                Ui.labeled(column, Tr.r("Броня")),
+                Ui.labeled(lootGrid, Tr.r("Добыча (Shift+клик — надеть)")),
+                Ui.labeled(bin, Tr.r("Мусорка"))).align(Align.START);
     }
 
     // ---------------------------------------------------------------- мобы
@@ -200,17 +200,17 @@ final class ItemsPage {
                 v.equip("mainhand", "minecraft:bow");
             }
             views.add(v);
-            cells.add(Ui.labeled(v, mob[1]));
+            cells.add(Ui.labeled(v, Tr.r(mob[1])));
         }
         EntityView babyZombie = new EntityView("minecraft:zombie").baby(true).zoomable(false).size(64, 80);
         views.add(babyZombie);
-        cells.add(Ui.labeled(babyZombie, "Зомби-ребёнок"));
+        cells.add(Ui.labeled(babyZombie, Tr.r("Зомби-ребёнок")));
         spin.subscribe(on -> {
             for (EntityView v : views) {
                 v.autoRotate(on);
             }
         });
         Panel gallery = Ui.grid(7, 10, cells.toArray(new UiElement[0]));
-        return Ui.column(8, Ui.row(8, new Toggle(spin), new Label("Автовращение")), gallery);
+        return Ui.column(8, Ui.row(8, new Toggle(spin), new Label(Tr.r("Автовращение"))), gallery);
     }
 }

@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.layout.Align;
 import io.github.ssbaxys.lumina.layout.Dim;
@@ -48,27 +49,27 @@ public class ThemeEditor extends Widget<ThemeEditor> {
         super("theme-editor");
         setLayout(FlexLayout.column().gap(6).align(Align.STRETCH));
 
-        addChild(row("Акцент", new ColorField(accent).alpha(false)));
-        addChild(row("Текст", new ColorField(text).alpha(false)));
-        addChild(row("Фон", new ColorField(surface)));
-        addChild(new SliderField("Скругление", corner, 0f, 16f).step(1f).decimals(0));
-        addChild(new SliderField("Скорость анимаций", motion, 0f, 2f).step(0.1f).decimals(1));
+        addChild(row(I18n.ru("Акцент"), new ColorField(accent).alpha(false)));
+        addChild(row(I18n.ru("Текст"), new ColorField(text).alpha(false)));
+        addChild(row(I18n.ru("Фон"), new ColorField(surface)));
+        addChild(new SliderField(I18n.ru("Скругление"), corner, 0f, 16f).step(1f).decimals(0));
+        addChild(new SliderField(I18n.ru("Скорость анимаций"), motion, 0f, 2f).step(0.1f).decimals(1));
 
         preview = Panel.column().gap(6);
-        preview.add(new Label("Предпросмотр"),
+        preview.add(new Label(I18n.ru("Предпросмотр")),
                 Panel.box(FlexLayout.row().gap(6).align(Align.CENTER)).add(
-                        new Button("Кнопка"),
-                        new Button("Контур").styleClass("button outline"),
+                        new Button(I18n.ru("Кнопка")),
+                        new Button(I18n.ru("Контур")).styleClass("button outline"),
                         new Toggle(Signal.of(true))),
                 new Slider(Signal.of(0.6f), 0f, 1f).width(Dim.FILL));
         preview.width(Dim.FILL);
         addChild(preview);
 
         addChild(Panel.box(FlexLayout.row().gap(6).align(Align.CENTER)).add(
-                new Button("Экспорт", this::exportTheme).id("theme-export"),
-                new Button("Импорт", this::importTheme).id("theme-import"),
-                new Button("Из буфера", this::importClipboard).styleClass("button ghost"),
-                new Button("Сброс", this::resetTheme).styleClass("button ghost")));
+                new Button(I18n.ru("Экспорт"), this::exportTheme).id("theme-export"),
+                new Button(I18n.ru("Импорт"), this::importTheme).id("theme-import"),
+                new Button(I18n.ru("Из буфера"), this::importClipboard).styleClass("button ghost"),
+                new Button(I18n.ru("Сброс"), this::resetTheme).styleClass("button ghost")));
         status.setStyle(Style.builder().set(Styles.OPACITY, 0.7f).build());
         addChild(status);
 
@@ -184,32 +185,32 @@ public class ThemeEditor extends Widget<ThemeEditor> {
         if (Lumina.isInitialized()) {
             Lumina.platform().setClipboard(lastExport);
         }
-        status.text(saved ? "Сохранено в themes/" + fileName + " и скопировано" : "Скопировано в буфер (файл не записан)");
+        status.text(saved ? I18n.ru("Сохранено в themes/") + fileName + I18n.ru(" и скопировано") : I18n.ru("Скопировано в буфер (файл не записан)"));
     }
 
     /** Импорт из файла {@link #fileName()}. */
     public void importTheme() {
         Theme t = ThemeCss.loadFile(fileName);
         if (t == null) {
-            status.text("Нет файла themes/" + fileName);
+            status.text(I18n.ru("Нет файла themes/") + fileName);
             return;
         }
         load(t);
-        status.text("Загружено из themes/" + fileName);
+        status.text(I18n.ru("Загружено из themes/") + fileName);
     }
 
     /** Импорт из буфера обмена. */
     public void importClipboard() {
         String css = Lumina.isInitialized() ? Lumina.platform().getClipboard() : null;
         if (css == null || css.indexOf('{') < 0) {
-            status.text("В буфере нет темы");
+            status.text(I18n.ru("В буфере нет темы"));
             return;
         }
         try {
             load(ThemeCss.load(css, ThemeCss.base(baseName)));
-            status.text("Загружено из буфера");
+            status.text(I18n.ru("Загружено из буфера"));
         } catch (RuntimeException e) {
-            status.text("Ошибка в теме: " + e.getMessage());
+            status.text(I18n.ru("Ошибка в теме: ") + e.getMessage());
         }
     }
 
@@ -218,7 +219,7 @@ public class ThemeEditor extends Widget<ThemeEditor> {
         Theme base = ThemeCss.base(baseName);
         if (base != null) {
             load(base);
-            status.text("Сброшено к «" + baseName + "»");
+            status.text(I18n.ru("Сброшено к «") + baseName + "»");
         }
     }
 

@@ -35,6 +35,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Инспектор интерфейса и управление с геймпада (пространственная навигация, A/B, бамперы). */
 class InspectorGamepadTest {
+    @org.junit.jupiter.api.BeforeEach
+    void russianTexts() {
+        io.github.ssbaxys.lumina.i18n.I18n.setLanguage("ru_ru");
+    }
+
     Gamepad.State pad;
 
     @BeforeEach

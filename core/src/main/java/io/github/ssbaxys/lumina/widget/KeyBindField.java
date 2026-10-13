@@ -1,5 +1,6 @@
 package io.github.ssbaxys.lumina.widget;
 
+import io.github.ssbaxys.lumina.i18n.I18n;
 import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.event.CharEvent;
 import io.github.ssbaxys.lumina.event.FocusEvent;
@@ -38,7 +39,7 @@ public class KeyBindField extends Widget<KeyBindField> {
 
     private final Signal<Integer> value;
     private int defaultKey = NONE;
-    private String waitingText = "> Нажмите клавишу <";
+    private String waitingText = I18n.ru("> Нажмите клавишу <");
     private IntConsumer onBind;
     private Subscription subscription;
 
@@ -163,7 +164,7 @@ public class KeyBindField extends Widget<KeyBindField> {
     @Override
     protected void measureContent(float maxWidth, float maxHeight) {
         TextMetrics m = Lumina.platform().textMetrics();
-        float w = Math.max(m.width(waitingText), Math.max(m.width(keyName(key())), m.width("Пробел")));
+        float w = Math.max(m.width(waitingText), Math.max(m.width(keyName(key())), m.width(I18n.ru("Пробел"))));
         setContentSize(w, m.lineHeight());
     }
 
@@ -271,7 +272,7 @@ public class KeyBindField extends Widget<KeyBindField> {
     /** Название клавиши по коду GLFW: "R", "Пробел", "Левый Shift", "F5", "Num 7"... */
     public static String keyName(int key) {
         if (key == NONE) {
-            return "Не задано";
+            return I18n.ru("Не задано");
         }
         if ((key >= Keys.A && key <= Keys.Z) || (key >= '0' && key <= '9')) {
             return String.valueOf((char) key);
@@ -283,7 +284,7 @@ public class KeyBindField extends Widget<KeyBindField> {
             return "Num " + (key - 320);
         }
         return switch (key) {
-            case Keys.SPACE -> "Пробел";
+            case Keys.SPACE -> I18n.ru("Пробел");
             case 39 -> "'";
             case 44 -> ",";
             case 45 -> "-";
@@ -301,10 +302,10 @@ public class KeyBindField extends Widget<KeyBindField> {
             case Keys.BACKSPACE -> "Backspace";
             case 260 -> "Insert";
             case Keys.DELETE -> "Delete";
-            case Keys.RIGHT -> "Вправо";
-            case Keys.LEFT -> "Влево";
-            case Keys.DOWN -> "Вниз";
-            case Keys.UP -> "Вверх";
+            case Keys.RIGHT -> I18n.ru("Вправо");
+            case Keys.LEFT -> I18n.ru("Влево");
+            case Keys.DOWN -> I18n.ru("Вниз");
+            case Keys.UP -> I18n.ru("Вверх");
             case Keys.PAGE_UP -> "Page Up";
             case Keys.PAGE_DOWN -> "Page Down";
             case Keys.HOME -> "Home";
@@ -321,16 +322,16 @@ public class KeyBindField extends Widget<KeyBindField> {
             case 334 -> "Num +";
             case Keys.KP_ENTER -> "Num Enter";
             case 336 -> "Num =";
-            case 340 -> "Левый Shift";
-            case 341 -> "Левый Ctrl";
-            case 342 -> "Левый Alt";
-            case 343 -> "Левый Win";
-            case 344 -> "Правый Shift";
-            case 345 -> "Правый Ctrl";
-            case 346 -> "Правый Alt";
-            case 347 -> "Правый Win";
-            case 348 -> "Меню";
-            default -> "Клавиша " + key;
+            case 340 -> I18n.ru("Левый Shift");
+            case 341 -> I18n.ru("Левый Ctrl");
+            case 342 -> I18n.ru("Левый Alt");
+            case 343 -> I18n.ru("Левый Win");
+            case 344 -> I18n.ru("Правый Shift");
+            case 345 -> I18n.ru("Правый Ctrl");
+            case 346 -> I18n.ru("Правый Alt");
+            case 347 -> I18n.ru("Правый Win");
+            case 348 -> I18n.ru("Меню");
+            default -> I18n.ru("Клавиша ") + key;
         };
     }
 }

@@ -226,6 +226,10 @@ public final class Markup {
             if (spin != null && !"false".equals(spin)) {
                 model.autoRotate(spin.isEmpty() || "true".equals(spin) ? BlockModel.DEFAULT_SPIN : degrees(spin));
             }
+            String persp = n.attr("perspective");
+            if (persp != null && !"false".equals(persp)) {
+                model.perspective(persp.isEmpty() || "true".equals(persp) ? 0.45f : Float.parseFloat(persp.trim()));
+            }
             if (n.attr("zoom") != null) {
                 model.zoom(CssValues.number(n.attr("zoom")));
             }

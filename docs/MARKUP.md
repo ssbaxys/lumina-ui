@@ -60,7 +60,7 @@ button.primary:hover { transform: scale(1.06); glow: 6px var(--accent); transiti
 | `img` | текстура | `src`, `size` |
 | `fx` | эффект из реестра FX | `effect="minecraft:snow"` |
 | `blocks` | 2D-карта из блоков, ряды — текстом внутри тега, `.` — пусто | `tile`, `key="G=minecraft:grass_block; S=minecraft:stone"`, `brush` (редактор), `grid="true"` |
-| `structure` | 3D-постройка, слои — текстом через строки `---` (нижний первым), `.` — воздух | `key`, `tile`, `yaw`, `pitch`, `auto-rotate` (без значения или °/с), `zoom`, `shadow="false"`, `interactive="false"` |
+| `structure` | 3D-постройка, слои — текстом через строки `---` (нижний первым), `.` — воздух | `key`, `tile`, `yaw`, `pitch`, `auto-rotate` (без значения или °/с), `perspective` (без значения или сила 0–1), `zoom`, `shadow="false"`, `interactive="false"` |
 | `slot` | слот инвентаря со своей ячейкой; перетаскивается в другие слоты | `item="minecraft:diamond"` (или `item="coal*12"`), `count`, `name`, `lore="строка\|строка"`, `glint`, `durability="осталось/всего"`, `max-stack`, `look="modern"`, `size` (18), `placeholder="id"`, `takeable="false"`, `droppable="false"` |
 | `entity` | сущность в 3D, крутится мышью | `type="minecraft:zombie"`, `yaw`, `pitch`, `auto-rotate` (без значения или °/с), `zoom`, `follow-mouse`, `baby`, `mainhand` `offhand` `head` `chest` `legs` `feet` (id предмета), `interactive="false"`, `zoomable="false"`, `size` |
 | `player` | игрок в своей броне (как `entity`, без `type`, `baby` и снаряжения) | `follow-mouse`, `yaw`, `pitch`, `auto-rotate`, `zoom`, `interactive`, `zoomable`, `size` |

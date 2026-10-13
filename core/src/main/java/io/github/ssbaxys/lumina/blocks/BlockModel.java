@@ -18,8 +18,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 3D-модель постройки ({@link BlockStructure}) в ортографической проекции: камера с поворотом
- * (yaw) и наклоном (pitch), по умолчанию — классическая изометрия 45°/30°. Мышью модель вращается
+ * 3D-модель постройки ({@link BlockStructure}): камера с поворотом (yaw) и наклоном (pitch), по умолчанию —
+ * классическая изометрия 45°/30° без перспективы; {@link #perspective(float)} включает настоящую перспективу
+ * (дальнее меньше ближнего). Мышью модель вращается
  * (с инерцией), колесом — приближается; можно включить медленное автовращение.
  *
  * <p>Рисуются только грани, не закрытые непрозрачным соседом; стекло, листва, вода, огонь, факелы
@@ -117,6 +118,7 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
     private float pYaw;
     private float pPitch;
     private float pScale;
+    private float pPersp;
     private float pW;
     private float pH;
     private float shadowX;
@@ -128,6 +130,7 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
     private float pitch = 30f;
     private float zoom = 1f;
     private float zoomTarget = 1f;
+    private float perspective;
     private float tile;
     private float spin;
     private float yawVelocity;
@@ -224,6 +227,19 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
     /** Приближение колесом (по умолчанию включено). */
     public BlockModel zoomable(boolean zoomable) {
         this.zoomable = zoomable;
+        return self();
+    }
+
+    public float perspective() {
+        return perspective;
+    }
+
+    /**
+     * Сила перспективы от 0 (изометрия, параллельные рёбра остаются параллельными) до 1 (камера совсем
+     * близко); 0.3–0.5 выглядит как обычная камера. Размер модели при вращении не меняется.
+     */
+    public BlockModel perspective(float strength) {
+        this.perspective = Math.max(0f, Math.min(1f, strength));
         return self();
     }
 
@@ -422,13 +438,24 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
         if (b == null) {
             return 1f;
         }
-        float sp = Math.abs((float) Math.sin(Math.toRadians(pitch)));
-        float cp = (float) Math.cos(Math.toRadians(pitch));
-        float rh = 0.5f * (float) Math.sqrt(b.sizeX() * b.sizeX() + b.sizeZ() * b.sizeZ());
-        float hh = 0.5f * b.sizeY();
-        float sw = w * 0.86f / (2f * rh);
-        float sh = h * 0.86f / (2f * (rh * sp + hh * cp));
-        return Math.max(0.01f, Math.min(sw, sh));
+        // Вписываем описанную сферу, а не текущий силуэт: иначе модель при вращении то растёт, то сжимается.
+        float r = radius(b);
+        float s = Math.min(w, h) * 0.86f / (2f * r);
+        if (perspective > 0f) {
+            float d = cameraDistance(r);
+            s *= (d - r) / d;
+        }
+        return Math.max(0.01f, s);
+    }
+
+    private static float radius(BlockStructure.Bounds b) {
+        return Math.max(0.5f, 0.5f * (float) Math.sqrt(
+                b.sizeX() * b.sizeX() + b.sizeY() * b.sizeY() + b.sizeZ() * b.sizeZ()));
+    }
+
+    /** Расстояние от центра модели до камеры в блоках: чем сильнее перспектива, тем ближе. */
+    private float cameraDistance(float radius) {
+        return radius * (1f + 1.5f / perspective);
     }
 
     private float viewWidth() {
@@ -444,13 +471,15 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
         float w = viewWidth();
         float h = viewHeight();
         float scale = (tile > 0f ? tile : fitScale(w, h)) * zoom;
-        if (projected && pYaw == yaw && pPitch == pitch && pScale == scale && pW == w && pH == h) {
+        if (projected && pYaw == yaw && pPitch == pitch && pScale == scale && pPersp == perspective
+                && pW == w && pH == h) {
             return;
         }
         projected = true;
         pYaw = yaw;
         pPitch = pitch;
         pScale = scale;
+        pPersp = perspective;
         pW = w;
         pH = h;
         drawCount = 0;
@@ -476,29 +505,55 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
         float cz = (b.minZ() + b.maxZ() + 1) * 0.5f;
         float ox = w * 0.5f;
         float oy = h * 0.5f;
+        boolean persp = perspective > 0f;
+        float camD = persp ? cameraDistance(radius(b)) : 0f;
         for (int i = 0; i < faceCount; i++) {
             int dir = fdir[i];
-            if (dir < 6) {
-                int[] n = NORMALS[dir];
-                if (n[0] * dX + n[1] * dY + n[2] * dZ <= 1e-4f) {
-                    continue;
-                }
-            }
             float bx = fx[i] - cx;
             float by = fy[i] - cyy;
             float bz = fz[i] - cz;
-            fdepth[i] = (bx + 0.5f) * dX + (by + 0.5f) * dY + (bz + 0.5f) * dZ;
+            // центр грани (у «креста» — центр блока)
+            float mx = bx + 0.5f;
+            float my = by + 0.5f;
+            float mz = bz + 0.5f;
+            if (dir < 6) {
+                int[] n = NORMALS[dir];
+                mx += n[0] * 0.5f;
+                my += n[1] * 0.5f;
+                mz += n[2] * 0.5f;
+                // грань видна, если смотрит на камеру: при перспективе — на её точку, а не только по направлению
+                float vx = persp ? dX * camD - mx : dX;
+                float vy = persp ? dY * camD - my : dY;
+                float vz = persp ? dZ * camD - mz : dZ;
+                if (n[0] * vx + n[1] * vy + n[2] * vz <= 1e-4f) {
+                    continue;
+                }
+            }
+            // Глубина по центру грани, а не блока: иначе верх соседнего блока мог лечь поверх ближней стены.
+            if (persp) {
+                float ex = dX * camD - mx;
+                float ey = dY * camD - my;
+                float ez = dZ * camD - mz;
+                fdepth[i] = -(float) Math.sqrt(ex * ex + ey * ey + ez * ez);
+            } else {
+                fdepth[i] = mx * dX + my * dY + mz * dZ;
+            }
             order[drawCount++] = i;
-            float sx0 = ox + bx * exX + bz * ezX;
-            float sy0 = oy + bx * exY + by * eyY + bz * ezY;
             float[] c = CORNERS[dir];
             int o = i * 8;
             for (int k = 0; k < 4; k++) {
-                float px = c[k * 3];
-                float py = c[k * 3 + 1];
-                float pz = c[k * 3 + 2];
-                screen[o + k * 2] = sx0 + px * exX + pz * ezX;
-                screen[o + k * 2 + 1] = sy0 + px * exY + py * eyY + pz * ezY;
+                float px = bx + c[k * 3];
+                float py = by + c[k * 3 + 1];
+                float pz = bz + c[k * 3 + 2];
+                float sx = px * exX + pz * ezX;
+                float sy2 = px * exY + py * eyY + pz * ezY;
+                if (persp) {
+                    float f = camD / Math.max(0.05f, camD - (px * dX + py * dY + pz * dZ));
+                    sx *= f;
+                    sy2 *= f;
+                }
+                screen[o + k * 2] = ox + sx;
+                screen[o + k * 2 + 1] = oy + sy2;
             }
         }
         sortByDepth();

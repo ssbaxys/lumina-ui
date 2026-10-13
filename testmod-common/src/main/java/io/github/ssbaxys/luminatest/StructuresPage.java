@@ -72,11 +72,14 @@ final class StructuresPage {
         Signal<Boolean> spin = Signal.of(true);
         spin.subscribe(model::autoRotate);
 
+        Signal<Boolean> perspective = Signal.of(true);
+        perspective.subscribe(on -> model.perspective(on ? 0.45f : 0f));
         return Ui.column(6,
                 Ui.row(6, buttons),
                 stage(model),
                 Ui.row(8,
                         new Toggle(spin), new Label("Автовращение"),
+                        new Toggle(perspective), new Label("Перспектива"),
                         new Button("Изометрия", () -> model.camera(45f, 30f).zoom(1f)).styleClass("button ghost"),
                         new Button("Сверху", () -> model.camera(model.yaw(), 89f)).styleClass("button ghost"),
                         Ui.muted("Перетащите модель мышью")));

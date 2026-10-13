@@ -195,10 +195,11 @@ String[] rows = map.toRows();             // обратно в ряды + map.ke
 
 ## Постройки в 3D
 
-`BlockStructure` — разреженная 3D-сетка блоков (y вверх), `BlockModel` рисует её в ортографической проекции:
-изометрия 45°/30° по умолчанию, вращение мышью с инерцией, приближение колесом, автовращение. Рисуются только
-открытые грани (стекло, листва, вода, огонь, факелы соседей не закрывают), от дальних к ближним, с затенением как
-в игре; верх и низ берутся из `_top`/`_bottom`/`_end` (`BlockTextures.top/bottom`). Без текстуры грань заливается
+`BlockStructure` — разреженная 3D-сетка блоков (y вверх), `BlockModel` рисует её: изометрия 45°/30° по умолчанию,
+`perspective(0.45f)` — настоящая перспектива (дальнее меньше ближнего), вращение мышью с инерцией, приближение
+колесом, автовращение. Модель вписана по описанной сфере, поэтому при вращении не меняет размер. Рисуются только
+открытые грани (стекло, листва, вода, огонь, факелы соседей не закрывают), от дальних к ближним по центру грани,
+с затенением как в игре; верх и низ берутся из `_top`/`_bottom`/`_end` (`BlockTextures.top/bottom`). Без текстуры грань заливается
 цветом из id блока.
 
 ```java
@@ -209,7 +210,7 @@ BlockStructure house = BlockStructure.fromLayers(Map.of('P', "minecraft:oak_plan
 house.fill(0, 2, 0, 2, 2, 1, "minecraft:spruce_planks");
 BlockStructure wall = BlockStructure.extrude(blockMap, 3);   // 2D-карта → 3D
 BlockModel model = new BlockModel(house).autoRotate(true).size(200, 200);
-model.camera(30, 20).cutAbove(1);                             // ракурс и срез по слою
+model.camera(30, 20).cutAbove(1).perspective(0.45f);         // ракурс, срез по слою, перспектива
 BlockModel.drawBlockIcon(canvas, "minecraft:tnt", x, y, 16, time);  // один блок в изометрии
 ```
 

@@ -142,6 +142,89 @@ class BlockStructureTest {
     }
 
     @Test
+    void sizeStaysTheSameWhileRotatingAndPerspectiveShrinksFarFaces() {
+        // Блок без текстуры рисуется заливкой — её четырёхугольники видны в записи с координатами.
+        BlockStructure house = new BlockStructure().fill(0, 0, 0, 4, 2, 3, "test:cube");
+        BlockModel model = new BlockModel(house).size(120, 120);
+        UiRoot root = new UiRoot(Panel.box(FlexLayout.column()).fill().add(model), Theme.dark());
+        root.resize(200, 200);
+        root.tick(0f);
+        // Модель вписана в виджет при любом ракурсе и не «дышит» при наклоне.
+        float[] first = null;
+        for (float pitch : new float[]{0f, 15f, 30f, 60f, 89f}) {
+            for (float yaw : new float[]{0f, 45f, 130f}) {
+                float[] box = extent(root, model.camera(yaw, pitch));
+                assertTrue(box[0] >= 0f && box[1] >= 0f && box[2] <= 120f && box[3] <= 120f,
+                        "fits at " + yaw + "/" + pitch + ": " + java.util.Arrays.toString(box));
+                if (first == null) {
+                    first = box;
+                }
+            }
+        }
+        // Перспектива: у ряда одинаковых блоков ближний (большой z при yaw 0) крупнее дальнего.
+        BlockStructure row = new BlockStructure();
+        for (int z = 0; z < 6; z++) {
+            row.set(0, 0, z, "test:cube");
+        }
+        model.structure(row).camera(0f, 30f).perspective(0.6f);
+        List<String> ops = paint(root);
+        assertTrue(model.visibleFaceCount() > 0);
+        List<Float> tops = new ArrayList<>();
+        for (String op : ops) {
+            if (op.startsWith("freequad ")) {
+                tops.add(quadWidth(op));
+            }
+        }
+        assertTrue(tops.size() >= 6, String.valueOf(ops));
+        float min = Float.MAX_VALUE;
+        float max = 0f;
+        for (float t : tops) {
+            min = Math.min(min, t);
+            max = Math.max(max, t);
+        }
+        assertTrue(max > min * 1.1f, "near faces are drawn larger: " + tops);
+    }
+
+    private static float[] extent(UiRoot root, BlockModel model) {
+        float x0 = Float.MAX_VALUE, y0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE, y1 = -Float.MAX_VALUE;
+        for (String op : paint(root)) {
+            if (!op.startsWith("freequad ")) {
+                continue;
+            }
+            String[] pts = op.substring(op.indexOf(' ') + 1).split(" ");
+            for (int k = 0; k < 4; k++) {
+                String[] xy = pts[k].split(",");
+                float x = Float.parseFloat(xy[0]) - model.screenX();
+                float y = Float.parseFloat(xy[1]) - model.screenY();
+                x0 = Math.min(x0, x);
+                y0 = Math.min(y0, y);
+                x1 = Math.max(x1, x);
+                y1 = Math.max(y1, y);
+            }
+        }
+        return new float[]{x0, y0, x1, y1};
+    }
+
+    private static float quadWidth(String op) {
+        String[] pts = op.substring(op.indexOf(' ') + 1).split(" ");
+        float x0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE;
+        for (int k = 0; k < 4; k++) {
+            float x = Float.parseFloat(pts[k].split(",")[0]);
+            x0 = Math.min(x0, x);
+            x1 = Math.max(x1, x);
+        }
+        return x1 - x0;
+    }
+
+    private static List<String> paint(UiRoot root) {
+        TestSupport.RecordingCanvas canvas = new TestSupport.RecordingCanvas();
+        canvas.begin(200, 200);
+        root.render(canvas, 0f);
+        canvas.end();
+        return canvas.ops;
+    }
+
+    @Test
     void dragRotatesAndScrollZooms() {
         BlockModel model = new BlockModel(new BlockStructure().fill(0, 0, 0, 2, 2, 2, STONE)).size(100, 100);
         UiRoot root = new UiRoot(Panel.box(FlexLayout.column()).fill().add(model), Theme.dark());

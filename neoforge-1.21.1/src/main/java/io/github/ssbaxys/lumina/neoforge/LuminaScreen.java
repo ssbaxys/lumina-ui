@@ -10,28 +10,25 @@ import java.util.function.Function;
 /**
  * Экран Minecraft, в котором живёт {@link UiRoot}. Весь ввод пересылается в ядро;
  * то, что UI не обработал, уходит в стандартную логику Screen (например, Esc).
+ * Окна контейнеров с сервером — {@link LuminaMenuScreen}.
  */
 public class LuminaScreen extends Screen {
-    private final UiRoot ui;
-    private final McCanvas canvas = new McCanvas();
+    private final UiHost host;
     private boolean pauseGame;
     private Screen parent;
 
     public LuminaScreen(Component title, Function<? super LuminaScreen, UiRoot> factory) {
         super(title);
-        this.ui = factory.apply(this);
-        if (ui.gamepad().onBack() == null) {
-            // кнопка B геймпада, которую UI не обработал, — как Esc
-            ui.gamepad().onBack(() -> {
-                if (shouldCloseOnEsc()) {
-                    onClose();
-                }
-            });
-        }
+        // кнопка B геймпада, которую UI не обработал, — как Esc
+        this.host = new UiHost(factory.apply(this), () -> {
+            if (shouldCloseOnEsc()) {
+                onClose();
+            }
+        });
     }
 
     public UiRoot ui() {
-        return ui;
+        return host.ui();
     }
 
     /** Экран, на который вернуться при закрытии (например, меню паузы или титульный экран). */
@@ -47,60 +44,55 @@ public class LuminaScreen extends Screen {
 
     @Override
     protected void init() {
-        ui.resize(width, height);
+        host.resize(width, height);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
-        canvas.begin(graphics, width, height);
-        try {
-            ui.render(canvas, partialTick);
-        } finally {
-            canvas.end();
-        }
+        host.render(graphics, width, height, partialTick);
     }
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        ui.pointerMove((float) mouseX, (float) mouseY);
+        host.mouseMoved(mouseX, mouseY);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return ui.pointerDown((float) mouseX, (float) mouseY, button) || super.mouseClicked(mouseX, mouseY, button);
+        return host.mouseClicked(mouseX, mouseY, button) || super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        return ui.pointerUp((float) mouseX, (float) mouseY, button) || super.mouseReleased(mouseX, mouseY, button);
+        return host.mouseReleased(mouseX, mouseY, button) || super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        ui.pointerMove((float) mouseX, (float) mouseY);
+        host.mouseMoved(mouseX, mouseY);
         return true;
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        return ui.scroll((float) mouseX, (float) mouseY, (float) scrollX, (float) scrollY)
+        return host.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
                 || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return ui.keyDown(keyCode, scanCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers);
+        return host.keyPressed(keyCode, scanCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        return ui.keyUp(keyCode, scanCode, modifiers) || super.keyReleased(keyCode, scanCode, modifiers);
+        return host.keyReleased(keyCode, scanCode, modifiers) || super.keyReleased(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        return ui.charTyped(codePoint, modifiers) || super.charTyped(codePoint, modifiers);
+        return host.charTyped(codePoint, modifiers) || super.charTyped(codePoint, modifiers);
     }
 
     @Override
@@ -119,8 +111,7 @@ public class LuminaScreen extends Screen {
 
     @Override
     public void removed() {
-        ui.dispose();
-        canvas.dispose();
+        host.dispose();
         super.removed();
     }
 }

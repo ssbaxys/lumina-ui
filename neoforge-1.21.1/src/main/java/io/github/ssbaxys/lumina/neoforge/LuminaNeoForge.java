@@ -8,7 +8,8 @@ import net.neoforged.fml.loading.FMLEnvironment;
 @Mod(Lumina.MOD_ID)
 public final class LuminaNeoForge {
     public LuminaNeoForge(IEventBus modBus) {
-        // Клиентские классы загружаются только на клиенте; на сервере мод ничего не делает.
+        // Клиентские классы загружаются только на клиенте. Серверу нужны лишь классы меню (LuminaMenu,
+        // LuminaMenuType), которые регистрирует сам мод-пользователь, — инициализировать нечего.
         if (FMLEnvironment.dist.isClient()) {
             LuminaNeoForgeClient.init(modBus);
         }

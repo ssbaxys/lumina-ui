@@ -5,6 +5,7 @@ import io.github.ssbaxys.lumina.anim.Easing;
 import io.github.ssbaxys.lumina.blocks.BlockMap;
 import io.github.ssbaxys.lumina.blocks.BlockModel;
 import io.github.ssbaxys.lumina.blocks.BlockStructure;
+import io.github.ssbaxys.lumina.blocks.DemoWorld;
 import io.github.ssbaxys.lumina.event.PointerEvent;
 import io.github.ssbaxys.lumina.fx.FxLayer;
 import io.github.ssbaxys.lumina.layout.Align;
@@ -49,6 +50,7 @@ import io.github.ssbaxys.lumina.widget.RingProgress;
 import io.github.ssbaxys.lumina.widget.ScrollPanel;
 import io.github.ssbaxys.lumina.widget.Select;
 import io.github.ssbaxys.lumina.widget.Slider;
+import io.github.ssbaxys.lumina.widget.StructurePreview;
 import io.github.ssbaxys.lumina.widget.TextField;
 import io.github.ssbaxys.lumina.widget.Toggle;
 import io.github.ssbaxys.lumina.widget.Tooltip;
@@ -85,7 +87,7 @@ import java.util.regex.Pattern;
  * }</pre>
  *
  * Теги: {@code div column row stack scroll panel label span h1 h2 h3 p markdown button toggle slider
- * progress ring color-picker input number color-field item img fx blocks structure checkbox radio-group image
+ * progress ring color-picker input number color-field item img fx blocks structure world-preview checkbox radio-group image
  * select keybind date-picker calendar field form book slot entity player item-view spacer hr state style link}. Свои теги — {@link #tag}.
  * Атрибуты: {@code id class style width height grow gap align justify padding margin if enabled bind
  * on-click tooltip} и атрибуты конкретного тега. Логика — через {@link Bindings}.
@@ -106,7 +108,7 @@ public final class Markup {
     private static final Map<String, TagFactory> TAGS = new HashMap<>();
     private static final Set<String> VOID = Set.of("img", "item", "br", "hr", "state", "link", "spacer", "toggle",
             "slider", "progress", "ring", "color-picker", "fx", "input", "number", "color-field", "meta",
-            "keybind", "date-picker", "calendar", "slot", "entity", "player", "item-view");
+            "keybind", "date-picker", "calendar", "slot", "entity", "player", "item-view", "world-preview");
     private static final Set<String> RAW = Set.of("style", "markdown", "script", "blocks", "structure", "book");
     private static final Pattern TEMPLATE = Pattern.compile("\\{\\{\\s*([\\w.-]+)\\s*(?:\\|\\s*(\\w+)\\s*)?}}");
 
@@ -215,33 +217,44 @@ public final class Markup {
             String data = n.attr("data");
             BlockModel model = new BlockModel(data != null ? BlockStructure.decode(data)
                     : BlockStructure.parse(n.attr("key"), n.text));
-            if (n.attr("tile") != null) {
-                model.tile(n.floatAttr("tile", 16f));
+            return blockModel(model, n);
+        });
+        // Превью мира вокруг игрока; без мира — выдуманный (demo="false" — пусто, demo="7" — свой seed)
+        tag("world-preview", (n, c) -> {
+            StructurePreview preview = new StructurePreview();
+            String demo = n.attr("demo");
+            if (!"false".equals(demo)) {
+                preview.fallback(new DemoWorld(demoSeed(demo)));
             }
-            if (n.attr("yaw") != null) {
-                model.yaw(degrees(n.attr("yaw")));
+            if (n.attr("radius") != null) {
+                preview.radius(Math.round(CssValues.number(n.attr("radius"))));
             }
-            if (n.attr("pitch") != null) {
-                model.pitch(degrees(n.attr("pitch")));
+            if (n.attr("below") != null || n.attr("above") != null) {
+                preview.height(n.attr("below") != null ? Math.round(CssValues.number(n.attr("below"))) : preview.below(),
+                        n.attr("above") != null ? Math.round(CssValues.number(n.attr("above"))) : preview.above());
             }
-            String spin = n.attr("auto-rotate");
-            if (spin != null && !"false".equals(spin)) {
-                model.autoRotate(spin.isEmpty() || "true".equals(spin) ? BlockModel.DEFAULT_SPIN : degrees(spin));
+            if ("false".equals(n.attr("follow"))) {
+                preview.follow(false);
             }
-            String persp = n.attr("perspective");
-            if (persp != null && !"false".equals(persp)) {
-                model.perspective(persp.isEmpty() || "true".equals(persp) ? 0.45f : Float.parseFloat(persp.trim()));
+            if (n.attr("interval") != null) {
+                preview.refreshInterval(CssValues.number(n.attr("interval")));
             }
-            if (n.attr("zoom") != null) {
-                model.zoom(CssValues.number(n.attr("zoom")));
+            if (n.attr("peel") != null) {
+                preview.peel(Math.round(CssValues.number(n.attr("peel"))));
             }
-            if ("false".equals(n.attr("shadow"))) {
-                model.shadow(false);
+            String cut = n.attr("cut-at-player");
+            if (cut != null && !"false".equals(cut)) {
+                preview.cutAtPlayer(true);
             }
-            if ("false".equals(n.attr("interactive"))) {
-                model.interactive(false);
+            if ("false".equals(n.attr("marker"))) {
+                preview.showMarker(false);
             }
-            return model;
+            if (n.attr("size") != null) {
+                float size = n.floatAttr("size", 160f);
+                preview.size(size, size);
+            }
+            blockModel(preview, n);
+            return preview;
         });
         // Флажки, радио-группы, картинки; иконка и загрузка у <button>. Эти теги не пустые:
         // пишите <checkbox .../> и <image .../> с косой чертой (или с закрывающим тегом).
@@ -663,6 +676,49 @@ public final class Markup {
     }
 
     /** "45", "45deg" → 45. */
+    /** Общие атрибуты 3D-моделей: {@code tile yaw pitch auto-rotate perspective zoom shadow interactive}. */
+    private static BlockModel blockModel(BlockModel model, Node n) {
+        if (n.attr("tile") != null) {
+            model.tile(n.floatAttr("tile", 16f));
+        }
+        if (n.attr("yaw") != null) {
+            model.yaw(degrees(n.attr("yaw")));
+        }
+        if (n.attr("pitch") != null) {
+            model.pitch(degrees(n.attr("pitch")));
+        }
+        String spin = n.attr("auto-rotate");
+        if (spin != null && !"false".equals(spin)) {
+            model.autoRotate(spin.isEmpty() || "true".equals(spin) ? BlockModel.DEFAULT_SPIN : degrees(spin));
+        }
+        String persp = n.attr("perspective");
+        if (persp != null && !"false".equals(persp)) {
+            model.perspective(persp.isEmpty() || "true".equals(persp) ? 0.45f : Float.parseFloat(persp.trim()));
+        }
+        if (n.attr("zoom") != null) {
+            model.zoom(CssValues.number(n.attr("zoom")));
+        }
+        if ("false".equals(n.attr("shadow"))) {
+            model.shadow(false);
+        }
+        if ("false".equals(n.attr("interactive"))) {
+            model.interactive(false);
+        }
+        return model;
+    }
+
+    /** Seed демо-мира: число из атрибута, иначе хэш текста; без значения — 42. */
+    private static long demoSeed(String v) {
+        if (v == null || v.isBlank() || "true".equals(v)) {
+            return 42L;
+        }
+        try {
+            return Long.parseLong(v.strip());
+        } catch (NumberFormatException e) {
+            return v.strip().hashCode();
+        }
+    }
+
     private static float degrees(String v) {
         String t = v.strip().toLowerCase(Locale.ROOT);
         return Float.parseFloat(t.endsWith("deg") ? t.substring(0, t.length() - 3).strip() : t);

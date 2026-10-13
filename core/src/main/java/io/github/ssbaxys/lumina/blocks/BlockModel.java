@@ -98,6 +98,7 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
     private int builtRevision = -1;
     private int builtCut;
     private int cutAbove = Integer.MAX_VALUE;
+    private BlockStructure.Bounds frame;
 
     // грани (параллельные массивы)
     private int faceCount;
@@ -124,6 +125,20 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
     private float shadowX;
     private float shadowY;
     private float shadowR;
+    // параметры последней проекции для project(): экран = O + x·ex + y·ey + z·ez относительно центра
+    private float qExX;
+    private float qExY;
+    private float qEyY;
+    private float qEzX;
+    private float qEzY;
+    private float qDX;
+    private float qDY;
+    private float qDZ;
+    private float qCx;
+    private float qCy;
+    private float qCz;
+    private float qCamD;
+    private boolean qValid;
 
     // камера
     private float yaw = 45f;
@@ -146,7 +161,12 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
     private boolean alive;
 
     public BlockModel(BlockStructure structure) {
-        super("block-model");
+        this("block-model", structure);
+    }
+
+    /** Для наследников со своим классом стиля. */
+    protected BlockModel(String styleClass, BlockStructure structure) {
+        super(styleClass);
         this.structure = structure == null ? new BlockStructure() : structure;
     }
 
@@ -268,6 +288,68 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
     /** Показывать все слои. */
     public BlockModel showAllLayers() {
         return cutAbove(Integer.MAX_VALUE);
+    }
+
+    /** Верхний показанный слой ({@link Integer#MAX_VALUE} — все). */
+    public int cutAboveLayer() {
+        return cutAbove;
+    }
+
+    public BlockStructure.Bounds frame() {
+        return frame;
+    }
+
+    /**
+     * Постоянная рамка: модель вписывается и центрируется по ней, а не по габаритам постройки. Нужна, когда
+     * постройка меняется на глазах (снимок мира дочитывается порциями), чтобы вид не прыгал. {@code null} —
+     * снова по габаритам.
+     */
+    public BlockModel frame(BlockStructure.Bounds box) {
+        if (java.util.Objects.equals(frame, box)) {
+            return self();
+        }
+        this.frame = box;
+        projected = false;
+        if (tile > 0f) {
+            invalidateLayout();
+        }
+        return self();
+    }
+
+    /** Рамка или габариты постройки ({@code null}, если нет ни того, ни другого). */
+    private BlockStructure.Bounds framing() {
+        return frame != null ? frame : structure.bounds();
+    }
+
+    /**
+     * Точка постройки (в блоках, {@code (x, y, z)} — угол блока, {@code x + 0.5} — середина) на экране при текущей
+     * камере: {@code out[0], out[1]} — координаты внутри виджета, {@code out[2]} — глубина (больше — ближе).
+     * Для меток поверх модели (игрок, точки интереса).
+     *
+     * @return {@code false}, если модель пуста и проекции нет
+     */
+    public boolean project(float x, float y, float z, float[] out) {
+        ensureProjection();
+        if (!qValid) {
+            return false;
+        }
+        float bx = x - qCx;
+        float by = y - qCy;
+        float bz = z - qCz;
+        float sx = bx * qExX + bz * qEzX;
+        float sy = bx * qExY + by * qEyY + bz * qEzY;
+        float depth = bx * qDX + by * qDY + bz * qDZ;
+        if (qCamD > 0f) {
+            float f = qCamD / Math.max(0.05f, qCamD - depth);
+            sx *= f;
+            sy *= f;
+        }
+        out[0] = pW * 0.5f + sx;
+        out[1] = pH * 0.5f + sy;
+        if (out.length > 2) {
+            out[2] = depth;
+        }
+        return true;
     }
 
     // ---------------------------------------------------------------- геометрия
@@ -434,7 +516,7 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
     // ---------------------------------------------------------------- проекция
 
     private float fitScale(float w, float h) {
-        BlockStructure.Bounds b = structure.bounds();
+        BlockStructure.Bounds b = framing();
         if (b == null) {
             return 1f;
         }
@@ -483,7 +565,8 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
         pW = w;
         pH = h;
         drawCount = 0;
-        BlockStructure.Bounds b = structure.bounds();
+        qValid = false;
+        BlockStructure.Bounds b = framing();
         if (b == null) {
             return;
         }
@@ -507,6 +590,19 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
         float oy = h * 0.5f;
         boolean persp = perspective > 0f;
         float camD = persp ? cameraDistance(radius(b)) : 0f;
+        qExX = exX;
+        qExY = exY;
+        qEyY = eyY;
+        qEzX = ezX;
+        qEzY = ezY;
+        qDX = dX;
+        qDY = dY;
+        qDZ = dZ;
+        qCx = cx;
+        qCy = cyy;
+        qCz = cz;
+        qCamD = camD;
+        qValid = true;
         for (int i = 0; i < faceCount; i++) {
             int dir = fdir[i];
             float bx = fx[i] - cx;
@@ -681,7 +777,7 @@ public class BlockModel extends Widget<BlockModel> implements Animation {
 
     @Override
     protected void measureContent(float maxWidth, float maxHeight) {
-        BlockStructure.Bounds b = structure.bounds();
+        BlockStructure.Bounds b = framing();
         if (tile <= 0f || b == null) {
             setContentSize(160f, 160f);
             return;

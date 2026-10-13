@@ -34,6 +34,7 @@ public final class Inventory {
     private Listener[] listeners = new Listener[0];
     private Filter filter;
     private int limit = 99;
+    private RemoteInventory remote;
 
     public Inventory(int size) {
         if (size < 0) {
@@ -99,6 +100,21 @@ public final class Inventory {
     public Inventory limit(int maxPerSlot) {
         this.limit = Math.max(1, maxPerSlot);
         return this;
+    }
+
+    /**
+     * Ячейки живут на другой стороне (сервере): слоты над этим инвентарём не меняют его сами, а просят
+     * {@code remote} (перетаскивание, Shift+клик, выброс), а содержимое сюда кладёт тот, кто синхронизирует.
+     * {@code null} — обычный локальный инвентарь (по умолчанию).
+     */
+    public Inventory remote(RemoteInventory remote) {
+        this.remote = remote;
+        return this;
+    }
+
+    /** Хозяин ячеек на сервере или {@code null}, если инвентарь локальный. */
+    public RemoteInventory remote() {
+        return remote;
     }
 
     /** Можно ли положить стопку в ячейку (фильтр). Пустую можно всегда. */

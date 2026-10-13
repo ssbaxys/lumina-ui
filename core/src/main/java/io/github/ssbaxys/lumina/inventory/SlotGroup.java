@@ -26,6 +26,10 @@ import java.util.List;
  *       из {@link Slot#quickMoveTo}.</li>
  * </ul>
  *
+ * <p>Над удалённым инвентарём ({@link Inventory#remote}) всё выглядит так же, но сброс, Shift+клик и выброс
+ * не меняют модель, а отправляют запрос {@link RemoteInventory}; перетаскивать можно только между ячейками
+ * одного хозяина.</p>
+ *
  * <pre>{@code
  * SlotGroup group = new SlotGroup()
  *         .validator((from, to, stack) -> to.inventory() != shop)       // в магазин не класть
@@ -70,6 +74,7 @@ public final class SlotGroup {
     private Stack picked = Stack.EMPTY;
     private Stack carried = Stack.EMPTY;
     private Stack remainder = Stack.EMPTY;
+    private boolean half;
     private Ghost ghost;
 
     /** Группа слотов без своей. */
@@ -153,6 +158,7 @@ public final class SlotGroup {
         }
         int amount = half ? (stack.count() + 1) / 2 : stack.count();
         source = from;
+        this.half = amount < stack.count();
         picked = stack;
         carried = stack.withCount(amount);
         remainder = stack.withCount(stack.count() - amount);
@@ -196,10 +202,18 @@ public final class SlotGroup {
             cancel();
             return false;
         }
+        RemoteInventory remote = from.inventory().remote();
+        boolean halfDrag = half;
         if (target == null) {
             if (outsideHandler != null && outsideHandler.dropOutside(from, stack)) {
                 end();
-                from.inventory().set(from.index(), original.grow(-stack.count()));
+                if (remote != null) {
+                    if (!remote.requestDrop(from.inventory(), from.index(), halfDrag)) {
+                        return false;
+                    }
+                } else {
+                    from.inventory().set(from.index(), original.grow(-stack.count()));
+                }
                 fire(from, null, stack);
                 return true;
             }
@@ -207,6 +221,15 @@ public final class SlotGroup {
             return false;
         }
         int moved = placeable(from, target, stack);
+        if (remote != null && moved != 0) {
+            // Ячейки на сервере: модель обновит синхронизация, отсюда — только запрос.
+            end();
+            if (!remote.requestMove(from.inventory(), from.index(), target.inventory(), target.index(), halfDrag)) {
+                return false;
+            }
+            fire(from, target, moved > 0 ? stack.withCount(moved) : stack);
+            return true;
+        }
         if (moved > 0) {
             end();
             Inventory ti = target.inventory();
@@ -257,7 +280,7 @@ public final class SlotGroup {
      * 0 — нельзя.
      */
     private int placeable(Slot from, Slot target, Stack stack) {
-        if (target == from || !target.isDropTarget()
+        if (target == from || !target.isDropTarget() || target.inventory().remote() != from.inventory().remote()
                 || (target.inventory() == from.inventory() && target.index() == from.index())) {
             return 0;
         }
@@ -291,6 +314,7 @@ public final class SlotGroup {
     private void end() {
         boolean was = source != null;
         source = null;
+        half = false;
         picked = Stack.EMPTY;
         carried = Stack.EMPTY;
         remainder = Stack.EMPTY;
@@ -331,6 +355,15 @@ public final class SlotGroup {
             return false;
         }
         if (quickMoveHandler != null && quickMoveHandler.quickMove(slot, stack)) {
+            return true;
+        }
+        RemoteInventory remote = slot.inventory().remote();
+        if (remote != null) {
+            // Куда уйдёт стопка, решает сервер; Slot.quickMoveTo здесь не участвует.
+            if (!remote.requestQuickMove(slot.inventory(), slot.index())) {
+                return false;
+            }
+            fire(slot, null, stack);
             return true;
         }
         Stack rest = stack;

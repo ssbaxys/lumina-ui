@@ -43,6 +43,9 @@ import java.util.List;
  *
  * <p>ЛКМ-перетаскивание берёт стопку целиком, ПКМ — половину; Shift+клик — быстрый перенос. Подсказка
  * (название, описание, прочность) показывается у непустого слота и прячется, пока стопку несут.</p>
+ *
+ * <p>Если ячейки живут на сервере ({@link Inventory#remote}), слот выглядит и ведёт себя так же, но вместо
+ * изменения модели отправляет запрос (см. {@link RemoteInventory}).</p>
  */
 public class Slot extends Widget<Slot> {
     /** Оформление слота. */
@@ -327,6 +330,12 @@ public class Slot extends Widget<Slot> {
         if (type == PointerEvent.PRESS) {
             armed = false;
             int b = p.button();
+            RemoteInventory remote = inventory.remote();
+            if (remote != null && !g.isDragging() && remote.press(inventory, index, b)) {
+                // Сервер оставил стопку на курсоре: щелчок кладёт её сюда.
+                event.consume();
+                return;
+            }
             if ((b != Keys.MOUSE_LEFT && b != Keys.MOUSE_RIGHT) || !isTakeable() || stack().isEmpty()) {
                 return;
             }
@@ -450,7 +459,12 @@ public class Slot extends Widget<Slot> {
         if (stack.isEmpty()) {
             return;
         }
-        canvas.drawItem(stack.itemId(), x, y, size, stack.hasGlint());
+        Object platform = stack.platformStack();
+        if (platform != null) {
+            canvas.drawPlatformItem(platform, stack.itemId(), x, y, size, stack.hasGlint());
+        } else {
+            canvas.drawItem(stack.itemId(), x, y, size, stack.hasGlint());
+        }
         float k = size / 16f;
         if (stack.isDamaged()) {
             float d = stack.durability();

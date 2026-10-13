@@ -4,6 +4,7 @@ import io.github.ssbaxys.lumina.Lumina;
 import io.github.ssbaxys.lumina.blocks.BlockMap;
 import io.github.ssbaxys.lumina.blocks.BlockModel;
 import io.github.ssbaxys.lumina.blocks.BlockStructure;
+import io.github.ssbaxys.lumina.blocks.DemoWorld;
 import io.github.ssbaxys.lumina.layout.Align;
 import io.github.ssbaxys.lumina.layout.Dim;
 import io.github.ssbaxys.lumina.layout.StackLayout;
@@ -18,12 +19,13 @@ import io.github.ssbaxys.lumina.widget.Button;
 import io.github.ssbaxys.lumina.widget.Label;
 import io.github.ssbaxys.lumina.widget.Panel;
 import io.github.ssbaxys.lumina.widget.Slider;
+import io.github.ssbaxys.lumina.widget.StructurePreview;
 import io.github.ssbaxys.lumina.widget.Toggle;
 import io.github.ssbaxys.lumina.widget.Widget;
 
 import java.util.Map;
 
-/** 3D-постройки из блоков: готовые модели с вращением мышью и редактор по слоям. */
+/** 3D-постройки из блоков: готовые модели с вращением мышью, редактор по слоям и превью мира вокруг игрока. */
 final class StructuresPage {
     private static final String[] NAMES = {"Дом", "Дерево", "Портал", "Пирамида TNT", "Бассейн"};
 
@@ -51,7 +53,76 @@ final class StructuresPage {
                         gallery(model, presets)),
                 Ui.section("Редактор по слоям",
                         "Слева — выбранный слой сверху (ЛКМ — поставить, ПКМ — сломать), справа — живой предпросмотр.",
-                        editor(model)));
+                        editor(model)),
+                Ui.section("Превью мира",
+                        "Блоки вокруг игрока читаются из мира порциями по кадрам и перечитываются раз в 2 с; коробка "
+                                + "идёт за игроком. В главном меню мира нет — показан выдуманный, игрок гуляет по кругу.",
+                        worldPreview(model)));
+    }
+
+    // ---------------------------------------------------------------- превью мира
+
+    private static UiElement worldPreview(BlockModel gallery) {
+        StructurePreview preview = new StructurePreview().radius(10).height(5, 9).fallback(new DemoWorld(7));
+        preview.perspective(0.4f).size(380, 250).id("world-preview");
+
+        Label status = Ui.muted("Читаем мир…");
+        Label layers = Ui.muted("Все слои");
+        Runnable showStatus = () -> {
+            BlockStructure.Bounds box = preview.capture().worldBox();
+            String where = preview.hasWorld() ? "мир" : "демо-мир";
+            status.text(box == null ? where : where + " · " + box.sizeX() + "×" + box.sizeY() + "×" + box.sizeZ()
+                    + " · блоков: " + preview.structure().size()
+                    + (preview.capture().unloadedCount() > 0 ? " · не загружено: " + preview.capture().unloadedCount() : ""));
+        };
+        preview.onRefresh(showStatus);
+
+        Signal<Boolean> follow = Signal.of(true);
+        follow.subscribe(preview::follow);
+        Signal<Boolean> perspective = Signal.of(true);
+        perspective.subscribe(on -> preview.perspective(on ? 0.4f : 0f));
+        Signal<Boolean> head = Signal.of(false);
+        Runnable showLayers = () -> layers.text(preview.cutsAtPlayer() ? "Срез по игроку"
+                : preview.peel() == 0 ? "Все слои" : "Снято слоёв: " + preview.peel());
+        head.subscribe(on -> {
+            preview.cutAtPlayer(on);
+            showLayers.run();
+        });
+        Runnable peel = () -> {
+            head.set(false);
+            showLayers.run();
+        };
+
+        return Ui.column(6,
+                stage(preview),
+                Ui.row(6,
+                        new Button("Обновить", preview::refresh).id("world-refresh"),
+                        new Button("Снять слой", () -> {
+                            preview.peel(Math.min(preview.below() + preview.above(), preview.peel() + 1));
+                            peel.run();
+                        }).id("world-peel").styleClass("button ghost"),
+                        new Button("Вернуть слой", () -> {
+                            preview.peel(Math.max(0, preview.peel() - 1));
+                            peel.run();
+                        }).id("world-unpeel").styleClass("button ghost"),
+                        new Button("Все слои", () -> {
+                            preview.peel(0);
+                            peel.run();
+                        }).styleClass("button ghost"),
+                        layers),
+                Ui.row(8,
+                        new Toggle(follow), new Label("За игроком"),
+                        new Toggle(perspective), new Label("Перспектива"),
+                        new Toggle(head), new Label("Срез по игроку")),
+                Ui.row(6,
+                        new Button("В галерею", () -> gallery.structure(preview.snapshot())).id("world-to-gallery")
+                                .styleClass("button ghost"),
+                        new Button("Копировать текстом", () -> {
+                            String text = preview.snapshot().encode();
+                            Lumina.platform().setClipboard(text);
+                            status.text("Скопировано: " + text.length() + " символов (BlockStructure.decode вернёт постройку)");
+                        }).id("world-copy").styleClass("button ghost"),
+                        status));
     }
 
     // ---------------------------------------------------------------- галерея

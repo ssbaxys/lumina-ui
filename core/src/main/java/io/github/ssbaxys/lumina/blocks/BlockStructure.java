@@ -159,6 +159,246 @@ public final class BlockStructure {
         return s;
     }
 
+    /** Копия, сдвинутая так, что минимальный угол габаритов стал (0, 0, 0). Пустая постройка — пустая копия. */
+    public BlockStructure normalized() {
+        Bounds b = bounds();
+        BlockStructure s = new BlockStructure();
+        if (b != null) {
+            forEach((x, y, z, id) -> s.set(x - b.minX, y - b.minY, z - b.minZ, id));
+        }
+        return s;
+    }
+
+    // ---------------------------------------------------------------- текстовый формат
+
+    /** Начало строки {@link #encode()}: формат и его версия. */
+    public static final String FORMAT = "lumina:1";
+    /** Символы палитры: первые 52 блока — одной буквой, дальше — {@code _} и две буквы. */
+    private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    /** Больше блоков в палитре не бывает: 52 одиночных символа + 52² двойных. */
+    public static final int MAX_PALETTE = ALPHABET.length() + ALPHABET.length() * ALPHABET.length();
+
+    /**
+     * Постройка одной строкой, чтобы делиться ей, как схематикой:
+     * {@code lumina:1;5x4x3;0,0,0;minecraft:stone,minecraft:glass;3AB.4A...}. Части через {@code ;}:
+     * формат, размер (x×y×z), минимальный угол, палитра через запятую и блоки по слоям снизу вверх
+     * (внутри слоя — ряды по z, в ряду — x). Блок — буква палитры ({@code A} — первый, {@code _Ab} — 53-й и
+     * дальше), {@code .} — воздух; число перед символом — сколько раз он повторяется. Воздух в конце не пишется.
+     * Обратно — {@link #decode(String)}.
+     *
+     * @throws IllegalArgumentException если в id есть {@code , ;} или пробелы либо разных блоков больше
+     *                                  {@link #MAX_PALETTE}
+     */
+    public String encode() {
+        Bounds b = bounds();
+        if (b == null) {
+            return FORMAT + ";0x0x0;0,0,0;;";
+        }
+        Map<String, Integer> palette = new LinkedHashMap<>();
+        StringBuilder data = new StringBuilder();
+        String prev = null;
+        int run = 0;
+        int pendingAir = 0;
+        for (int y = b.minY; y <= b.maxY; y++) {
+            for (int z = b.minZ; z <= b.maxZ; z++) {
+                for (int x = b.minX; x <= b.maxX; x++) {
+                    String id = get(x, y, z);
+                    String sym;
+                    if (id == null) {
+                        sym = ".";
+                    } else {
+                        Integer index = palette.get(id);
+                        if (index == null) {
+                            checkId(id);
+                            index = palette.size();
+                            if (index >= MAX_PALETTE) {
+                                throw new IllegalArgumentException("too many different blocks: " + (index + 1));
+                            }
+                            palette.put(id, index);
+                        }
+                        sym = symbol(index);
+                    }
+                    if (sym.equals(prev)) {
+                        run++;
+                        continue;
+                    }
+                    pendingAir = flushRun(data, prev, run, pendingAir);
+                    prev = sym;
+                    run = 1;
+                }
+            }
+        }
+        flushRun(data, prev, run, pendingAir);
+        StringBuilder out = new StringBuilder(FORMAT.length() + data.length() + 16 * palette.size() + 32);
+        out.append(FORMAT).append(';')
+                .append(b.sizeX()).append('x').append(b.sizeY()).append('x').append(b.sizeZ()).append(';')
+                .append(b.minX).append(',').append(b.minY).append(',').append(b.minZ).append(';')
+                .append(String.join(",", palette.keySet())).append(';')
+                .append(data);
+        return out.toString();
+    }
+
+    /** Дописать серию символов; воздух откладывается, чтобы не писать его в конце. Возвращает отложенный воздух. */
+    private static int flushRun(StringBuilder data, String sym, int run, int pendingAir) {
+        if (sym == null || run == 0) {
+            return pendingAir;
+        }
+        if (sym.equals(".")) {
+            return pendingAir + run;
+        }
+        if (pendingAir > 0) {
+            appendRun(data, ".", pendingAir);
+        }
+        appendRun(data, sym, run);
+        return 0;
+    }
+
+    private static void appendRun(StringBuilder data, String sym, int run) {
+        if (run > 1) {
+            data.append(run);
+        }
+        data.append(sym);
+    }
+
+    private static String symbol(int index) {
+        int n = ALPHABET.length();
+        if (index < n) {
+            return String.valueOf(ALPHABET.charAt(index));
+        }
+        int i = index - n;
+        return "_" + ALPHABET.charAt(i / n) + ALPHABET.charAt(i % n);
+    }
+
+    private static void checkId(String id) {
+        for (int i = 0; i < id.length(); i++) {
+            char c = id.charAt(i);
+            if (c == ',' || c == ';' || Character.isWhitespace(c)) {
+                throw new IllegalArgumentException("block id can't be encoded: '" + id + "'");
+            }
+        }
+        if (id.isEmpty()) {
+            throw new IllegalArgumentException("empty block id");
+        }
+    }
+
+    /**
+     * Постройка из строки {@link #encode()}. Пробелы и переводы строк внутри блоков пропускаются (строку можно
+     * переносить); минимальный угол можно опустить ({@code lumina:1;5x4x3;;палитра;блоки} — с нуля).
+     *
+     * @throws IllegalArgumentException если строка не в этом формате или повреждена
+     */
+    public static BlockStructure decode(String text) {
+        if (text == null) {
+            throw new IllegalArgumentException("null structure");
+        }
+        String[] parts = text.strip().split(";", -1);
+        if (parts.length != 5 || !parts[0].strip().equals(FORMAT)) {
+            throw new IllegalArgumentException("not a " + FORMAT + " structure");
+        }
+        String[] size = parts[1].strip().split("x");
+        if (size.length != 3) {
+            throw new IllegalArgumentException("bad size: " + parts[1]);
+        }
+        int sx = parseInt(size[0], "size");
+        int sy = parseInt(size[1], "size");
+        int sz = parseInt(size[2], "size");
+        int ox = 0;
+        int oy = 0;
+        int oz = 0;
+        if (!parts[2].isBlank()) {
+            String[] o = parts[2].strip().split(",");
+            if (o.length != 3) {
+                throw new IllegalArgumentException("bad origin: " + parts[2]);
+            }
+            ox = parseInt(o[0], "origin");
+            oy = parseInt(o[1], "origin");
+            oz = parseInt(o[2], "origin");
+        }
+        if (sx < 0 || sy < 0 || sz < 0) {
+            throw new IllegalArgumentException("negative size: " + parts[1]);
+        }
+        long volume = (long) sx * sy * sz;
+        List<String> palette = new ArrayList<>();
+        if (!parts[3].isBlank()) {
+            for (String id : parts[3].split(",")) {
+                palette.add(id.strip());
+            }
+        }
+        BlockStructure s = new BlockStructure();
+        String data = parts[4].replaceAll("\\s+", "");
+        long pos = 0;
+        int i = 0;
+        int n = data.length();
+        while (i < n) {
+            char c = data.charAt(i);
+            long count = 1;
+            if (c >= '0' && c <= '9') {
+                count = 0;
+                while (i < n && data.charAt(i) >= '0' && data.charAt(i) <= '9') {
+                    count = count * 10 + (data.charAt(i) - '0');
+                    if (count > volume) {
+                        throw new IllegalArgumentException("run longer than the structure");
+                    }
+                    i++;
+                }
+                if (i >= n) {
+                    throw new IllegalArgumentException("count without a block at the end");
+                }
+                c = data.charAt(i);
+            }
+            String id;
+            if (c == '.') {
+                id = null;
+                i++;
+            } else {
+                int index;
+                if (c == '_') {
+                    if (i + 2 >= n) {
+                        throw new IllegalArgumentException("truncated palette symbol");
+                    }
+                    int hi = ALPHABET.indexOf(data.charAt(i + 1));
+                    int lo = ALPHABET.indexOf(data.charAt(i + 2));
+                    if (hi < 0 || lo < 0) {
+                        throw new IllegalArgumentException("bad palette symbol at " + i);
+                    }
+                    index = ALPHABET.length() + hi * ALPHABET.length() + lo;
+                    i += 3;
+                } else {
+                    index = ALPHABET.indexOf(c);
+                    if (index < 0) {
+                        throw new IllegalArgumentException("unexpected '" + c + "' at " + i);
+                    }
+                    i++;
+                }
+                if (index >= palette.size()) {
+                    throw new IllegalArgumentException("block #" + (index + 1) + " is not in the palette");
+                }
+                id = palette.get(index);
+            }
+            if (pos + count > volume) {
+                throw new IllegalArgumentException("more blocks than " + sx + "x" + sy + "x" + sz);
+            }
+            if (id != null) {
+                for (long k = pos; k < pos + count; k++) {
+                    int x = (int) (k % sx);
+                    int z = (int) (k / sx % sz);
+                    int y = (int) (k / ((long) sx * sz));
+                    s.set(ox + x, oy + y, oz + z, id);
+                }
+            }
+            pos += count;
+        }
+        return s;
+    }
+
+    private static int parseInt(String s, String what) {
+        try {
+            return Integer.parseInt(s.strip());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("bad " + what + ": " + s);
+        }
+    }
+
     // ---------------------------------------------------------------- блоки
 
     private static long pack(int x, int y, int z) {

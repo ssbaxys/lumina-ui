@@ -210,9 +210,11 @@ public final class Markup {
             }
             return map.grid("true".equals(n.attr("grid")));
         });
-        // 3D-постройка: слои через строки "---", нижний первым; '.' — воздух
+        // 3D-постройка: слои через строки "---", нижний первым; '.' — воздух; или строка BlockStructure.encode в data
         tag("structure", (n, c) -> {
-            BlockModel model = new BlockModel(BlockStructure.parse(n.attr("key"), n.text));
+            String data = n.attr("data");
+            BlockModel model = new BlockModel(data != null ? BlockStructure.decode(data)
+                    : BlockStructure.parse(n.attr("key"), n.text));
             if (n.attr("tile") != null) {
                 model.tile(n.floatAttr("tile", 16f));
             }

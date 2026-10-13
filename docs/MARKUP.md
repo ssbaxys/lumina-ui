@@ -60,7 +60,8 @@ button.primary:hover { transform: scale(1.06); glow: 6px var(--accent); transiti
 | `img` | текстура | `src`, `size` |
 | `fx` | эффект из реестра FX | `effect="minecraft:snow"` |
 | `blocks` | 2D-карта из блоков, ряды — текстом внутри тега, `.` — пусто | `tile`, `key="G=minecraft:grass_block; S=minecraft:stone"`, `brush` (редактор), `grid="true"` |
-| `structure` | 3D-постройка, слои — текстом через строки `---` (нижний первым), `.` — воздух | `key`, `tile`, `yaw`, `pitch`, `auto-rotate` (без значения или °/с), `perspective` (без значения или сила 0–1), `zoom`, `shadow="false"`, `interactive="false"` |
+| `structure` | 3D-постройка, слои — текстом через строки `---` (нижний первым), `.` — воздух; или строка `BlockStructure.encode()` в `data` | `key`, `data="lumina:1;…"`, `tile`, `yaw`, `pitch`, `auto-rotate` (без значения или °/с), `perspective` (без значения или сила 0–1), `zoom`, `shadow="false"`, `interactive="false"` |
+| `world-preview` | 3D-превью мира вокруг игрока с его меткой; без мира — демо-мир | `radius` (8), `below` (6), `above` (8), `follow="false"`, `interval` (с, 2; 0 — не перечитывать), `peel` (снять верхних слоёв), `cut-at-player`, `marker="false"`, `demo` (seed или `false` — без демо), `size`, а также `yaw`, `pitch`, `auto-rotate`, `perspective`, `zoom`, `shadow`, `interactive` как у `structure` |
 | `slot` | слот инвентаря со своей ячейкой; перетаскивается в другие слоты | `item="minecraft:diamond"` (или `item="coal*12"`), `count`, `name`, `lore="строка\|строка"`, `glint`, `durability="осталось/всего"`, `max-stack`, `look="modern"`, `size` (18), `placeholder="id"`, `takeable="false"`, `droppable="false"` |
 | `entity` | сущность в 3D, крутится мышью | `type="minecraft:zombie"`, `yaw`, `pitch`, `auto-rotate` (без значения или °/с), `zoom`, `follow-mouse`, `baby`, `mainhand` `offhand` `head` `chest` `legs` `feet` (id предмета), `interactive="false"`, `zoomable="false"`, `size` |
 | `player` | игрок в своей броне (как `entity`, без `type`, `baby` и снаряжения) | `follow-mouse`, `yaw`, `pitch`, `auto-rotate`, `zoom`, `interactive`, `zoomable`, `size` |
@@ -111,6 +112,14 @@ button.primary:hover { transform: scale(1.06); glow: 6px var(--accent); transiti
 
 Слоты из разметки перетаскиваются между собой и в слоты из Java (общая `SlotGroup.shared()`); подробнее о слотах,
 перетаскивании и 3D — в [STYLING.md](STYLING.md#слоты-инвентаря-сущности-и-предметы-в-3d).
+
+`world-preview` тоже пустой; в мире показывает блоки вокруг игрока, в главном меню — демо-мир:
+
+```html
+<world-preview radius="10" below="5" above="9" peel="2" perspective width="380" height="250"/>
+```
+
+Подробнее — в [STYLING.md](STYLING.md#превью-мира-widgetstructurepreview).
 
 Теги `keybind`, `date-picker` и `calendar` пустые (как `input`), `select` — нет: пишите `<select …/>` или с `</select>`.
 `bind` у `select` хранит значение варианта (число из `<state>` останется числом), у `keybind` — код клавиши,

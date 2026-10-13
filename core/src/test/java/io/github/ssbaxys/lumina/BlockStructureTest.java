@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlockStructureTest {
@@ -301,5 +302,56 @@ class BlockStructureTest {
         BlockModel.drawBlockIcon(canvas, "minecraft:poppy", 32, 0, 32, 0f);
         canvas.end();
         assertEquals(5, canvas.ops.stream().filter(op -> op.startsWith("freequad")).count());
+    }
+
+    @Test
+    void encodesAndDecodesCompactText() {
+        BlockStructure s = BlockStructure.fromLayers(Map.of('S', STONE, 'G', "minecraft:glass"),
+                "SSS", "SGS", "---", "S..", "...");
+        String text = s.encode();
+        assertEquals("lumina:1;3x2x2;0,0,0;minecraft:stone,minecraft:glass;4AB2A", text);
+        BlockStructure back = BlockStructure.decode(text);
+        assertSame(s, back);
+
+        // отрицательные координаты, воздух внутри, перенос строк и пробелы при вставке
+        BlockStructure odd = new BlockStructure().set(-3, -1, 2, "minecraft:tnt").set(4, 5, -6, STONE);
+        String enc = odd.encode();
+        assertTrue(enc.startsWith("lumina:1;8x7x9;-3,-1,-6;"), enc);
+        assertSame(odd, BlockStructure.decode(enc));
+        String wrapped = enc.substring(0, enc.length() - 3) + "\n  " + enc.substring(enc.length() - 3);
+        assertSame(odd, BlockStructure.decode(wrapped));
+        // угол можно опустить — постройка с нуля
+        assertEquals(STONE, BlockStructure.decode("lumina:1;2x1x1;;minecraft:stone;.A").get(1, 0, 0));
+
+        // больше 52 разных блоков: двойные символы палитры
+        BlockStructure many = new BlockStructure();
+        for (int i = 0; i < 120; i++) {
+            many.set(i % 10, i / 100, i / 10 % 10, "test:block_" + i);
+        }
+        String big = many.encode();
+        assertTrue(big.contains("_A"), big);
+        assertSame(many, BlockStructure.decode(big));
+
+        // пустая и испорченные строки
+        assertTrue(BlockStructure.decode(new BlockStructure().encode()).isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> BlockStructure.decode("hello"));
+        assertThrows(IllegalArgumentException.class, () -> BlockStructure.decode("lumina:1;2x1x1;0,0,0;minecraft:stone;3A"));
+        assertThrows(IllegalArgumentException.class, () -> BlockStructure.decode("lumina:1;2x1x1;0,0,0;minecraft:stone;B"));
+        assertThrows(IllegalArgumentException.class, () -> BlockStructure.decode("lumina:1;2x1x1;0,0,0;minecraft:stone;A?"));
+        assertThrows(IllegalArgumentException.class, () -> new BlockStructure().set(0, 0, 0, "bad;id").encode());
+
+        // normalized: минимальный угол — в ноль
+        BlockStructure.Bounds b = odd.normalized().bounds();
+        assertEquals(new BlockStructure.Bounds(0, 0, 0, 7, 6, 8), b);
+
+        // в разметке — атрибут data
+        BlockModel model = (BlockModel) Markup.build("<structure data=\"" + text + "\"></structure>", new Bindings()).root();
+        assertSame(s, model.structure());
+    }
+
+    /** Одинаковые блоки в одинаковых местах. */
+    private static void assertSame(BlockStructure expected, BlockStructure actual) {
+        assertEquals(expected.size(), actual.size());
+        expected.forEach((x, y, z, id) -> assertEquals(id, actual.get(x, y, z), x + "," + y + "," + z));
     }
 }

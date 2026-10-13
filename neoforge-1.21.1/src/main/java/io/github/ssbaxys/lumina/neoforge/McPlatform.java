@@ -272,6 +272,12 @@ final class McPlatform implements Platform {
         return mapSampler.sample(player.getX(), player.getZ(), player.getYRot(), radius, System.nanoTime());
     }
 
+    /** Блоки мира для снимков ({@code StructurePreview}): {@link McWorldBlocks}, один на мир. */
+    @Override
+    public io.github.ssbaxys.lumina.blocks.WorldBlocks worldBlocks() {
+        return McWorldBlocks.current();
+    }
+
     @Override
     public Gamepad.State pollGamepad() {
         return McGamepad.poll();

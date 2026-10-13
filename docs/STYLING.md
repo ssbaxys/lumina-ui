@@ -216,6 +216,49 @@ BlockModel.drawBlockIcon(canvas, "minecraft:tnt", x, y, 16, time);  // один 
 
 В разметке — тег `<structure>` (см. [MARKUP.md](MARKUP.md)).
 
+### Обмен постройками текстом
+
+`encode()` превращает постройку в одну строку, как схематику: формат, размер, угол, палитра и блоки по слоям
+с повторами (`3A` — три первых блока палитры подряд, `.` — воздух, после 52 разных блоков — `_Ab`).
+`BlockStructure.decode(text)` возвращает её обратно; пробелы и переносы внутри блоков не мешают, так что строку
+можно вставить из чата. `normalized()` сдвигает постройку к (0, 0, 0).
+
+```java
+String text = house.encode();   // "lumina:1;3x2x2;0,0,0;minecraft:stone,minecraft:glass;4AB2A"
+BlockStructure copy = BlockStructure.decode(text);
+```
+
+### Превью мира (`widget.StructurePreview`)
+
+3D-вид блоков вокруг игрока: коробка `radius` в стороны, `below`/`above` слоёв от ног (не больше 48 по оси)
+читается из клиентского мира порциями по кадрам (`blocks.WorldCapture`, по умолчанию 8192 блока за кадр, слоями
+снизу вверх). Воздух не хранится, незагруженные чанки оставляют прежние блоки и дочитываются через секунду,
+а в постройку пишутся только изменения — модель перестраивается, лишь когда мир правда поменялся. Сверху — метка
+игрока со стрелкой взгляда. Это `BlockModel`, поэтому вращение мышью, колесо и `perspective(...)` работают как обычно;
+вписывается модель по коробке (`frame`), а не по блокам, и не прыгает, пока снимок дочитывается.
+
+```java
+StructurePreview preview = new StructurePreview()
+        .radius(10).height(5, 9)          // 21×15×21 вокруг игрока
+        .fallback(new DemoWorld(7))       // без мира (главное меню) — выдуманный мир, игрок гуляет по кругу
+        .follow(true)                     // коробка идёт за игроком (сдвиг через каждые 2 блока)
+        .refreshInterval(2f)              // перечитывать раз в 2 с; 0 — только refresh()
+        .onRefresh(() -> status.text("блоков: " + preview.structure().size()));
+preview.perspective(0.4f).size(380, 250);
+preview.peel(3);                          // снять 3 верхних слоя
+preview.cutAtPlayer(true);                // срез по голове игрока — заглянуть под крышу
+preview.refresh();                        // перечитать сейчас и поставить коробку вокруг игрока
+String shared = preview.snapshot().encode();   // снимок от угла коробки — строкой
+```
+
+Мир даёт `Platform.worldBlocks()` — объект `blocks.WorldBlocks` (`blockAt(x, y, z)` → id, `null` — воздух,
+`WorldBlocks.UNLOADED` — чанк не загружен; положение и поворот игрока). Загрузчики читают
+`ClientLevel.getBlockState`, id кэшируют на каждый блок, незагруженные чанки (`hasChunk`) не трогают. Свой
+источник — `source(() -> myWorld)`. Разовый снимок без кадров — `Platform.captureWorld(x0, y0, z0, x1, y1, z1)`
+(постройка от минимального угла, тоже до 48 по оси) или `WorldCapture.capture(world, ...)`.
+
+В разметке — тег `<world-preview>` (см. [MARKUP.md](MARKUP.md)).
+
 ## Слоты инвентаря, сущности и предметы в 3D
 
 ### Стопки и инвентарь (`inventory.Stack`, `inventory.Inventory`)
@@ -762,6 +805,8 @@ new Panel("grid", new GridLayout(3, 8, 6));                   // просто р
 | `hudState()` | `0` | флаги F1 / F3 / чат / экран для правил видимости HUD, каждый кадр |
 | `createTexture(key, w, h, argb)` | `null` | текстура из пикселей (кадры GIF, мини-карта) |
 | `sampleMap(radius)` | `null` | цвета карты вокруг игрока для `MiniMap` |
+| `worldBlocks()` | `null` | блоки клиентского мира по одному для `StructurePreview` и `WorldCapture` |
+| `captureWorld(x0, y0, z0, x1, y1, z1)` | через `worldBlocks()` | коробка мира разом одной постройкой |
 | `pollGamepad()` | `null` | состояние геймпада для навигации |
 
 Пример всего вместе — страница `ThemesPage` в тестовом моде.

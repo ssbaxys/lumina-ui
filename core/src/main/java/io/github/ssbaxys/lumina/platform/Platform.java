@@ -161,6 +161,24 @@ public interface Platform {
     }
 
     /**
+     * Блоки клиентского мира по одному для снимков ({@code blocks.WorldCapture}, {@code StructurePreview}) или
+     * {@code null}, если мира нет (по умолчанию). Загрузчик держит один объект на мир: при смене мира или
+     * измерения возвращает новый.
+     */
+    default io.github.ssbaxys.lumina.blocks.WorldBlocks worldBlocks() {
+        return null;
+    }
+
+    /**
+     * Блоки мира в коробке (углы включительно) одной постройкой с началом в минимальном углу, или {@code null},
+     * если мира нет. Читает всё сразу, поэтому коробка обрезается до 48 блоков по оси; для живого вида, который
+     * дочитывается по кадрам, — {@code blocks.WorldCapture}.
+     */
+    default io.github.ssbaxys.lumina.blocks.BlockStructure captureWorld(int x0, int y0, int z0, int x1, int y1, int z1) {
+        return io.github.ssbaxys.lumina.blocks.WorldCapture.capture(worldBlocks(), x0, y0, z0, x1, y1, z1);
+    }
+
+    /**
      * Состояние первого подключённого геймпада или {@code null}, если его нет (по умолчанию — нет).
      * Корень опрашивает его каждый кадр для навигации ({@code GamepadNavigator}).
      */

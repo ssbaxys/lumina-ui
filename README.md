@@ -11,6 +11,8 @@
 - Виджет Markdown (таблицы, списки, задачи, ссылки, иконки предметов), выбор цвета, круговой прогресс
 - Встроенная смена языка на лету: lang-файлы мода или таблицы из кода, готовая кнопка-переключатель, выбор сохраняется
 
+Руководство разработчика (подключение, первый экран, весь API): [docs/API.md](docs/API.md), in English: [docs/API.en.md](docs/API.en.md).
+
 Архитектура: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Оформление, анимации, эффекты и Markdown: [docs/STYLING.md](docs/STYLING.md). Интерфейс на HTML и CSS с логикой: [docs/MARKUP.md](docs/MARKUP.md).
 
 ## Сборка

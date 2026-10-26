@@ -87,7 +87,7 @@ Forge 1.20.1, `META-INF/mods.toml`:
 [[dependencies.mymod]]
 modId = "luminaui"
 mandatory = true
-versionRange = "[0.1.0,)"
+versionRange = "[1.0.0,)"
 ordering = "AFTER"
 side = "BOTH"
 ```
@@ -98,7 +98,7 @@ NeoForge 1.21.1, `META-INF/neoforge.mods.toml`:
 [[dependencies.mymod]]
 modId = "luminaui"
 type = "required"
-versionRange = "[0.1.0,)"
+versionRange = "[1.0.0,)"
 ordering = "AFTER"
 side = "BOTH"
 ```

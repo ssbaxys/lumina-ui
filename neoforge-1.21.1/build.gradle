@@ -61,6 +61,12 @@ tasks.named('sourcesJar', Jar) {
     from core.sourceSets.main.allSource
 }
 
+// Тексты лицензии (LGPL-3.0 и GPL-3.0, на которую она ссылается) кладутся в jar библиотеки.
+tasks.named('jar', Jar) {
+    from(rootProject.file('COPYING'))
+    from(rootProject.file('COPYING.LESSER'))
+}
+
 processResources {
     from core.sourceSets.main.resources
     def props = [

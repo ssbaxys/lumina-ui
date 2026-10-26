@@ -96,3 +96,14 @@ tasks.named('processTestmodResources', ProcessResources) {
         expand props
     }
 }
+
+// Отдельный jar тестового мода: build/libs/luminatest-neoforge-1.21.1-<version>.jar.
+// На 1.21.1 игра работает на мэппингах Mojang, поэтому реобфускация не нужна.
+def testmodJar = tasks.register('testmodJar', Jar) {
+    archiveBaseName = 'luminatest-neoforge-1.21.1'
+    from sourceSets.testmod.output
+}
+
+tasks.named('assemble') {
+    dependsOn testmodJar
+}

@@ -3,11 +3,13 @@
 This guide is for mod authors who want to build interfaces with Lumina UI: how to add the library, open your first
 screen, what the API is made of and how to extend it. Русская версия: [API.md](API.md).
 
-In-depth references (in Russian, with code examples that read the same in any language):
+In-depth references with more code examples:
 
-- [STYLING.md](STYLING.md) — colors, gradients, themes, animations, effects, Markdown, every widget, HUD, inventory, 3D;
-- [MARKUP.md](MARKUP.md) — interfaces in HTML and CSS with logic bindings;
-- [ARCHITECTURE.md](ARCHITECTURE.md) — how the library works inside.
+- [en/STYLING.md](en/STYLING.md) — colors, gradients, themes, animations, effects, Markdown, every widget, HUD, inventory, 3D;
+- [en/MARKUP.md](en/MARKUP.md) — interfaces in HTML and CSS with logic bindings;
+- [en/ARCHITECTURE.md](en/ARCHITECTURE.md) — how the library works inside.
+
+The same material, split into topics, is on the [wiki](https://github.com/ssbaxys/lumina-ui/wiki/English).
 
 ## Contents
 
@@ -227,7 +229,7 @@ theme.edit("button", b -> b.set(Styles.BORDER_WIDTH, 1f));   // extend a class s
 ```
 
 Everything about colors (RGB, HSV, HSL, OKLCH), gradients, blend modes, backdrop blur, NineSlice and style
-properties is in [STYLING.md](STYLING.md).
+properties is in [en/STYLING.md](en/STYLING.md).
 
 ## Data and signals
 
@@ -290,7 +292,7 @@ x.animateTo(100);
 ```
 
 23 easing curves (`Easing`), `cubicBezier`, `steps`, springs. Vanilla effects (fire, explosions, TNT, snow,
-particles) come from the `FxLayer` layer and `VanillaFx`, see [STYLING.md](STYLING.md).
+particles) come from the `FxLayer` layer and `VanillaFx`, see [en/STYLING.md](en/STYLING.md).
 
 ## Widget catalog
 
@@ -308,7 +310,7 @@ particles) come from the `FxLayer` layer and `VanillaFx`, see [STYLING.md](STYLI
 | Decoration | `Backdrop` (live wallpapers), `FxLayer` (effects), `ThemeEditor`, `LanguageButton` |
 | HUD | `Hud`, `SegmentedBar`, `RadialGauge`, `BossBar`, `TimerDisplay`, `Toast`, `NotificationFeed` |
 
-Code examples for each are in [STYLING.md](STYLING.md) and on the showcase pages in `testmod-common/`.
+Code examples for each are in [en/STYLING.md](en/STYLING.md) and on the showcase pages in `testmod-common/`.
 
 ## HTML and CSS
 
@@ -333,7 +335,7 @@ UiElement screen = MarkupView.resource("mymod:ui/settings.html", new Bindings()
 ```
 
 Files live in `assets/<mod>/...` and can be overridden by resource packs. All tags, CSS properties, actions and form
-validation are in [MARKUP.md](MARKUP.md).
+validation are in [en/MARKUP.md](en/MARKUP.md).
 
 ## Languages
 
@@ -367,7 +369,7 @@ hud.feed().post("minecraft:diamond", "+1 diamond", Toast.SUCCESS);
 ```
 
 `GameData` provides live game signals: health, food, armor, air, experience, position, biome, FPS and more.
-An empty HUD costs nothing. Details: the HUD section of [STYLING.md](STYLING.md).
+An empty HUD costs nothing. Details: the HUD section of [en/STYLING.md](en/STYLING.md).
 
 ## Server-synced container screens
 
@@ -390,7 +392,7 @@ LuminaMenuScreen.register(CHEST, menu -> new UiRoot(InventoryPanel.chest(menu.ti
 ```
 
 The game syncs the slots, numbers go through `DataSlot`, and your own buttons use `menu.sendAction(id, value)` with no
-custom network channel. Details: the container screens section of [STYLING.md](STYLING.md).
+custom network channel. Details: the container screens section of [en/STYLING.md](en/STYLING.md).
 
 ## Config screen
 

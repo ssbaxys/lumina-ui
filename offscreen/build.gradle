@@ -1,0 +1,42 @@
+// Программный бэкенд Canvas: рисует интерфейс ядра в PNG без Minecraft и без видеокарты.
+// Нужны ванильные шрифт и текстуры: по умолчанию берутся из client-extra-*.jar сборки Forge
+// (появляется после первой сборки forge-1.20.1), либо -PmcAssets=<jar или папка с assets/>.
+//
+//   gradlew :offscreen:modrinthArt   -> offscreen/build/art/{en,ru}/*.png (баннер, галерея, иконка)
+//   gradlew :offscreen:pageShots     -> offscreen/build/pages/*.png (все страницы витрины)
+dependencies {
+    implementation project(':core')
+    implementation project(':testmod-common')
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+}
+
+def mcAssets = providers.gradleProperty('mcAssets').orElse(providers.provider {
+    def dir = rootProject.file('forge-1.20.1/build/moddev/artifacts')
+    def jar = dir.listFiles()?.find { it.name.startsWith('client-extra-') && it.name.endsWith('.jar') }
+    if (jar == null) {
+        throw new GradleException('No vanilla assets: build forge-1.20.1 once or pass -PmcAssets=<client-extra jar or folder>')
+    }
+    jar.absolutePath
+})
+
+tasks.register('modrinthArt', JavaExec) {
+    group = 'lumina'
+    description = 'Renders the Modrinth banner, gallery images and icon to build/art'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'io.github.ssbaxys.lumina.offscreen.ArtRenderer'
+    maxHeapSize = '3g'
+    def lang = providers.gradleProperty('artLang').orElse('all')
+    argumentProviders.add({ [mcAssets.get(), layout.buildDirectory.dir('art').get().asFile.absolutePath, lang.get()] } as CommandLineArgumentProvider)
+}
+
+tasks.register('pageShots', JavaExec) {
+    group = 'lumina'
+    description = 'Renders every showcase page to build/pages'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'io.github.ssbaxys.lumina.offscreen.PageShots'
+    maxHeapSize = '3g'
+    argumentProviders.add({ [mcAssets.get(), layout.buildDirectory.dir('pages').get().asFile.absolutePath, '2'] } as CommandLineArgumentProvider)
+}

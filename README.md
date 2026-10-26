@@ -46,6 +46,20 @@ gradlew build                                # jar библиотеки в */bui
 
 Библиотека сама по себе тоже содержит маленькое демо: `/lumina demo`.
 
+## Картинки без игры
+
+Модуль `offscreen` — программный бэкенд Canvas: рисует интерфейс ядра в PNG (с прозрачностью) без
+Minecraft и видеокарты, по той же SDF-формуле и с теми же градиентами, что шейдер, и шрифтом игры.
+Ванильные шрифт и текстуры берутся из `client-extra-*.jar` после первой сборки `forge-1.20.1`
+(или `-PmcAssets=<jar или папка с assets/>`).
+
+```
+gradlew :offscreen:modrinthArt   # баннер, галерея и иконка для Modrinth → offscreen/build/art/{en,ru}
+gradlew :offscreen:pageShots     # все страницы витрины → offscreen/build/pages
+```
+
+Сцены картинок — `testmod-common/.../ModrinthArt.java` (обычные виджеты библиотеки).
+
 ## Лицензия
 
 Lumina UI распространяется по лицензии [GNU LGPL 3.0](COPYING.LESSER) (она дополняет [GNU GPL 3.0](COPYING)).

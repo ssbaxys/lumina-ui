@@ -18,3 +18,5 @@ include 'forge-1.20.1'
 include 'neoforge-1.21.1'
 // Тестовый мод (витрина): общий код; загрузочная часть живёт в source set `testmod` модулей выше.
 include 'testmod-common'
+// Рендер без игры и видеокарты: картинки для страницы мода и снимки витрины в PNG.
+include 'offscreen'
